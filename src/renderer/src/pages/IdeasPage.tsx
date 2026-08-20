@@ -5,6 +5,7 @@ import type { Idea, IdeaStatus } from '@shared/types'
 import { IDEA_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useAllTags } from '@/hooks/useVocab'
 import { Badge, Button, EmptyState, Input, Select } from '@/components/ui'
 
 import { friendlyDateTime } from '@/lib/date'
@@ -22,6 +23,7 @@ export default function IdeasPage() {
   const updateIdea = useStore((s) => s.updateIdea)
   const deleteIdea = useStore((s) => s.deleteIdea)
   const navigate = useNav((s) => s.navigate)
+  const allTags = useAllTags()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | IdeaStatus>('all')
@@ -31,11 +33,6 @@ export default function IdeasPage() {
   const [editContent, setEditContent] = useState('')
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
-  const allTags = useMemo(() => {
-    const set = new Set<string>()
-    ideas.forEach((i) => i.tags.forEach((t) => set.add(t)))
-    return [...set].sort()
-  }, [ideas])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -68,7 +65,7 @@ export default function IdeasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-7 py-6">
+    <div className="mx-auto max-w-4xl px-4 py-5 sm:px-7 sm:py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">灵感</h1>
         <span className="text-[12px] text-text-3">

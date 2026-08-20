@@ -5,6 +5,7 @@ import type { Priority, Task } from '@shared/types'
 import { TASK_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useAllTags } from '@/hooks/useVocab'
 import { Button, EmptyState, Input, Select } from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
@@ -16,6 +17,7 @@ export default function TasksPage() {
   const tasks = useStore((s) => s.tasks)
   const projects = useStore((s) => s.projects)
   const navigate = useNav((s) => s.navigate)
+  const allTags = useAllTags()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [filterProject, setFilterProject] = useState('all')
@@ -23,12 +25,6 @@ export default function TasksPage() {
   const [filterTag, setFilterTag] = useState('all')
   const [filterDueFrom, setFilterDueFrom] = useState('')
   const [filterDueTo, setFilterDueTo] = useState('')
-
-  const allTags = useMemo(() => {
-    const set = new Set<string>()
-    tasks.forEach((t) => t.tags.forEach((tag) => set.add(tag)))
-    return [...set].sort()
-  }, [tasks])
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -79,7 +75,7 @@ export default function TasksPage() {
   }, [filtered, projects])
 
   return (
-    <div className="mx-auto max-w-4xl px-7 py-6">
+    <div className="mx-auto max-w-4xl px-4 py-5 sm:px-7 sm:py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">任务</h1>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>

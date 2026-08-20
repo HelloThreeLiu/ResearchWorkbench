@@ -8,10 +8,12 @@ import path from 'node:path'
 import {
   COLLECTION_FILES,
   DEFAULT_REMIND_DAYS,
+  DEFAULT_VOCAB,
   type AllCollections,
   type AppSettings,
   type CollectionName,
-  type ToolFileData
+  type ToolFileData,
+  type VocabFileData
 } from '@shared/types'
 import { seedToolData } from './seed'
 
@@ -78,7 +80,8 @@ function emptyCollections(): AllCollections {
     milestones: [],
     ideas: [],
     logs: [],
-    tools: { groups: [], items: [] }
+    tools: { groups: [], items: [] },
+    vocab: DEFAULT_VOCAB
   }
 }
 
@@ -99,6 +102,10 @@ export function loadAll(): AllCollections {
       if (name === 'tools') {
         const t = raw as ToolFileData
         result.tools = { groups: t.groups ?? [], items: t.items ?? [] }
+      } else if (name === 'vocab') {
+        const v = raw as VocabFileData
+        // 旧目录无 vocab.json 时兜底为默认词汇库
+        result.vocab = { tags: v.tags ?? [], milestoneTypes: v.milestoneTypes ?? DEFAULT_VOCAB.milestoneTypes }
       } else {
         // 其余集合均为数组
         const arr = raw as unknown[]
@@ -200,14 +207,15 @@ export async function chooseDataDir(): Promise<string | null> {
   return dir
 }
 
-/** 初始化数据目录：创建缺失的集合文件（tools 带预置示例收藏） */
+/** 初始化数据目录：创建缺失的集合文件（tools 带预置示例收藏，vocab 带内置节点类型） */
 export function initDataDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true })
   fs.mkdirSync(path.join(dir, 'backups'), { recursive: true })
   for (const name of COLLECTION_NAMES) {
     const file = path.join(dir, COLLECTION_FILES[name])
     if (!fs.existsSync(file)) {
-      const initial = name === 'tools' ? seedToolData() : []
+      const initial =
+        name === 'tools' ? seedToolData() : name === 'vocab' ? DEFAULT_VOCAB : []
       fs.writeFileSync(file, JSON.stringify(initial, null, 2), 'utf-8')
     }
   }

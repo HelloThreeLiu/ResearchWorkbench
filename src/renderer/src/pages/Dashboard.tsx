@@ -2,9 +2,9 @@
 import { useMemo, useState } from 'react'
 import { CalendarPlus, Flag, Lightbulb, ListPlus, Plus } from 'lucide-react'
 import type { Milestone } from '@shared/types'
-import { MILESTONE_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { Badge, Button, CheckBox, EmptyState } from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
@@ -65,21 +65,23 @@ export default function Dashboard() {
   const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
 
   return (
-    <div className="mx-auto max-w-5xl px-7 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-7 sm:py-6">
       {/* 头部问候 + 快速操作 */}
-      <div className="flex items-end justify-between">
-        <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-lg font-semibold">
             {greeting}，今天是 {dayjs().format('YYYY年M月D日 dddd')}
           </h1>
-          <div className="mt-1 flex items-center gap-2 text-[12px] text-text-3">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: lastWriteAt ? 'var(--color-success)' : 'var(--color-text-3)' }}
-            />
-            {lastWriteAt
-              ? `数据最近写入：${friendlyDateTime(lastWriteAt)}（网盘将自动同步）`
-              : '今天还没有数据写入'}
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-text-3">
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: lastWriteAt ? 'var(--color-success)' : 'var(--color-text-3)' }}
+              />
+              {lastWriteAt
+                ? `数据最近写入：${friendlyDateTime(lastWriteAt)}（网盘将自动同步）`
+                : '今天还没有数据写入'}
+            </span>
             {dataDir && (
               <button className="hover:text-accent cursor-pointer" onClick={() => navigate({ name: 'settings' })}>
                 · 查看数据目录
@@ -87,7 +89,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button variant="primary" onClick={() => setTaskModalOpen(true)}>
             <Plus size={14} /> 新建任务
           </Button>
@@ -99,15 +101,15 @@ export default function Dashboard() {
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5">
         {/* 左列：任务 */}
-        <section className="rounded-xl border border-border bg-surface p-4 lg:col-span-3">
-          <div className="mb-1.5 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[14px] font-semibold">
-              <ListPlus size={15} className="text-accent" />
-              今日到期与逾期任务
+        <section className="min-w-0 rounded-xl border border-border bg-surface p-3.5 sm:p-4 lg:col-span-3">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+              <ListPlus size={15} className="shrink-0 text-accent" />
+              <span className="truncate">今日到期与逾期任务</span>
               {todayTasks.length > 0 && <Badge>{todayTasks.length}</Badge>}
             </h2>
             <button
-              className="text-[12px] text-text-3 hover:text-accent cursor-pointer"
+              className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
               onClick={() => navigate({ name: 'tasks' })}
             >
               全部任务 →
@@ -138,15 +140,15 @@ export default function Dashboard() {
         </section>
 
         {/* 右列：节点倒计时 + 灵感 */}
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <section className="rounded-xl border border-border bg-surface p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-[14px] font-semibold">
-                <Flag size={15} className="text-accent" />
-                未来 30 天节点
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+          <section className="rounded-xl border border-border bg-surface p-3.5 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+                <Flag size={15} className="shrink-0 text-accent" />
+                <span className="truncate">未来 30 天节点</span>
               </h2>
               <button
-                className="text-[12px] text-text-3 hover:text-accent cursor-pointer"
+                className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
                 onClick={() => navigate({ name: 'milestones' })}
               >
                 全部 →
@@ -165,14 +167,14 @@ export default function Dashboard() {
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-surface p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-[14px] font-semibold">
-                <Lightbulb size={15} className="text-warn" />
-                待整理灵感
+          <section className="rounded-xl border border-border bg-surface p-3.5 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+                <Lightbulb size={15} className="shrink-0 text-warn" />
+                <span className="truncate">待整理灵感</span>
               </h2>
               <button
-                className="text-[12px] text-text-3 hover:text-accent cursor-pointer"
+                className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
                 onClick={() => navigate({ name: 'ideas' })}
               >
                 灵感页 →
@@ -219,6 +221,7 @@ export default function Dashboard() {
 
 function MilestoneCountdownItem({ milestone, days }: { milestone: Milestone; days: number }) {
   const updateMilestone = useStore((s) => s.updateMilestone)
+  const typeLabel = useMilestoneTypeLabel()
   const urgent = days <= 7 // ≤7 天红色，≤30 天黄色
   const color = urgent ? 'red' : 'yellow'
   return (
@@ -231,7 +234,7 @@ function MilestoneCountdownItem({ milestone, days }: { milestone: Milestone; day
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px]">{milestone.title}</div>
         <div className="text-[11px] text-text-3">
-          {milestone.date} · {MILESTONE_TYPE_LABELS[milestone.type]}
+          {milestone.date} · {typeLabel(milestone.type)}
         </div>
       </div>
       <Badge color={color} className="shrink-0">

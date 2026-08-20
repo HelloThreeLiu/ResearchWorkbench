@@ -21,7 +21,8 @@ import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 import ProjectEditModal from '@/components/ProjectEditModal'
-import { MILESTONE_TYPE_LABELS, PROJECT_STATUS_LABELS } from '@shared/types'
+import { PROJECT_STATUS_LABELS } from '@shared/types'
+import { useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { cn } from '@/lib/utils'
 import { countdownText, daysUntil, formatDate, friendlyDate, todayStr } from '@/lib/date'
 
@@ -91,20 +92,20 @@ export default function ProjectDetail({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-7 py-5">
+    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-7">
       {/* 头部 */}
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
         <button
           onClick={goBack}
-          className="mt-0.5 rounded-lg p-1.5 text-text-3 hover:bg-surface-2 hover:text-text cursor-pointer"
+          className="mt-0.5 shrink-0 rounded-lg p-1.5 text-text-3 hover:bg-surface-2 hover:text-text cursor-pointer"
           title="返回"
         >
           <ArrowLeft size={17} />
         </button>
         <span className="mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full" style={{ backgroundColor: project.color }} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-lg font-semibold">{project.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="min-w-0 truncate text-lg font-semibold">{project.name}</h1>
             <Badge color={project.status === 'active' ? 'blue' : 'gray'}>
               {PROJECT_STATUS_LABELS[project.status]}
             </Badge>
@@ -113,22 +114,24 @@ export default function ProjectDetail({
             <div className="mt-0.5 text-[12.5px] text-text-2">{project.description}</div>
           )}
         </div>
-        <Button size="sm" onClick={() => setEditOpen(true)}>
-          <Pencil size={12.5} /> 编辑
-        </Button>
-        <Button size="sm" variant="ghost" className="text-danger hover:text-danger" onClick={() => setDeleteConfirm(true)}>
-          <Trash2 size={12.5} />
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil size={12.5} /> 编辑
+          </Button>
+          <Button size="sm" variant="ghost" className="text-danger hover:text-danger" onClick={() => setDeleteConfirm(true)}>
+            <Trash2 size={12.5} />
+          </Button>
+        </div>
       </div>
 
-      {/* Tab 切换 */}
-      <div className="mt-4 flex gap-1 border-b border-border">
+      {/* Tab 切换（窄窗口可横向滚动） */}
+      <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={cn(
-              '-mb-px flex items-center gap-1.5 border-b-2 px-3.5 py-2 text-[13px] transition-colors cursor-pointer',
+              '-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3.5 py-2 text-[13px] transition-colors cursor-pointer',
               tab === key
                 ? 'border-accent font-medium text-accent'
                 : 'border-transparent text-text-2 hover:text-text'
@@ -444,6 +447,7 @@ function MilestonesTab({
   milestones: ReturnType<typeof useStore.getState>['milestones']
 }) {
   const updateMilestone = useStore((s) => s.updateMilestone)
+  const typeLabel = useMilestoneTypeLabel()
   const [createOpen, setCreateOpen] = useState(false)
 
   const pending = milestones.filter((m) => m.status === 'pending')
@@ -475,7 +479,7 @@ function MilestonesTab({
                     {m.title}
                   </div>
                   <div className="text-[11px] text-text-3">
-                    {friendlyDate(m.date)} · {MILESTONE_TYPE_LABELS[m.type]}
+                    {friendlyDate(m.date)} · {typeLabel(m.type)}
                     {m.note ? ` · ${m.note}` : ''}
                   </div>
                 </div>

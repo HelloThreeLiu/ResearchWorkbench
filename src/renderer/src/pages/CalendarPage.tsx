@@ -1,37 +1,16 @@
 // 日历：月视图（默认）/周视图；任务截止日按项目颜色标记，节点用类型图标区分
 // 同一天多条内容折叠为「+N 更多」；点击某天查看明细并可添加任务/节点
 import { useMemo, useState } from 'react'
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Flag,
-  GraduationCap,
-  MapPin,
-  Plus,
-  Presentation,
-  SearchCheck,
-  Send
-} from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import type { Milestone, Task } from '@shared/types'
-import { MILESTONE_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { milestoneTypeIcon, useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { Badge, Button, CheckBox, Modal } from '@/components/ui'
 import TaskEditModal from '@/components/TaskEditModal'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 import { cn } from '@/lib/utils'
 import { daysUntil, dayjs } from '@/lib/date'
-
-const MILESTONE_ICONS: Record<Milestone['type'], typeof Flag> = {
-  proposal: FileText,
-  submission: Send,
-  conference: Presentation,
-  midterm: SearchCheck,
-  defense: GraduationCap,
-  other: MapPin
-}
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -113,12 +92,12 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
     )
 
   return (
-    <div className="mx-auto max-w-6xl px-7 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-6">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">日历</h1>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               onClick={() => shift(-1)}
               className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer"
@@ -140,9 +119,9 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
               <ChevronRight size={16} />
             </button>
           </div>
-          <span className="text-[14px] font-medium">{title}</span>
+          <span className="min-w-0 truncate text-[14px] font-medium">{title}</span>
         </div>
-        <div className="flex rounded-lg border border-border p-0.5">
+        <div className="flex shrink-0 rounded-lg border border-border p-0.5">
           {(['month', 'week'] as const).map((v) => (
             <button
               key={v}
@@ -178,7 +157,7 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
             return (
               <div
                 key={key}
-                className={cn('min-h-[86px] cursor-pointer bg-surface p-1.5 transition-colors hover:bg-surface-2/50', cellClass(date))}
+                className={cn('min-h-[72px] cursor-pointer bg-surface p-1.5 transition-colors hover:bg-surface-2/50 sm:min-h-[86px] xl:min-h-[104px]', cellClass(date))}
                 onClick={() => setDetailDate(key)}
               >
                 <div
@@ -218,7 +197,7 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
             return (
               <div
                 key={key}
-                className={cn('min-h-[320px] cursor-pointer bg-surface p-2 transition-colors hover:bg-surface-2/50', cellClass(date))}
+                className={cn('min-h-[240px] cursor-pointer bg-surface p-2 transition-colors hover:bg-surface-2/50 xl:min-h-[380px]', cellClass(date))}
                 onClick={() => setDetailDate(key)}
               >
                 <div
@@ -315,7 +294,8 @@ function CellItem({
       </button>
     )
   }
-  const Icon = MILESTONE_ICONS[item.milestone.type]
+  const Icon = milestoneTypeIcon(item.milestone.type)
+  const typeLabel = useMilestoneTypeLabel()
   return (
     <button
       onClick={(e) => {
@@ -327,7 +307,7 @@ function CellItem({
         item.milestone.status === 'done' && 'opacity-50 line-through',
         expanded && 'py-1 text-[11.5px]'
       )}
-      title={`${MILESTONE_TYPE_LABELS[item.milestone.type]} · ${item.milestone.title}`}
+      title={`${typeLabel(item.milestone.type)} · ${item.milestone.title}`}
     >
       <Icon size={10} className="shrink-0" />
       <span className="truncate">{item.milestone.title}</span>
@@ -353,6 +333,7 @@ function DayDetailModal({
 }) {
   const updateTask = useStore((s) => s.updateTask)
   const updateMilestone = useStore((s) => s.updateMilestone)
+  const typeLabel = useMilestoneTypeLabel()
   if (!date) return null
   return (
     <Modal open={date !== null} onClose={onClose} title={dayjs(date).format('M月D日 dddd')} width="max-w-md">
@@ -385,7 +366,7 @@ function DayDetailModal({
               </div>
             )
           }
-          const Icon = MILESTONE_ICONS[item.milestone.type]
+          const Icon = milestoneTypeIcon(item.milestone.type)
           return (
             <div key={itemKey(item)} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-surface-2/60">
               <CheckBox
@@ -401,7 +382,7 @@ function DayDetailModal({
               >
                 {item.milestone.title}
               </span>
-              <Badge color="blue">{MILESTONE_TYPE_LABELS[item.milestone.type]}</Badge>
+              <Badge color="blue">{typeLabel(item.milestone.type)}</Badge>
             </div>
           )
         })}

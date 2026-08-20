@@ -249,15 +249,15 @@ export default function ToolboxPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-7 py-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
           <h1 className="text-lg font-semibold">工具箱</h1>
           <p className="mt-0.5 text-[12px] text-text-3">
             文献数据库、计算平台、VPN、数据集目录……常用入口集中放这里（点击即打开）
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <IconButton title="刷新有效性检测" onClick={() => checkValidity()} className="h-8 w-8 border border-border">
             <RefreshCw size={14} />
           </IconButton>

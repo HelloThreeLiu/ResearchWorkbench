@@ -97,7 +97,7 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
           title="点击修改截止日期"
           onClick={() => setEditingDue(true)}
           className={cn(
-            'flex items-center gap-1 rounded px-1.5 py-1 text-[11.5px] cursor-pointer hover:bg-surface-2',
+            'flex max-w-44 shrink-0 items-center gap-1 rounded px-1.5 py-1 text-[11.5px] cursor-pointer hover:bg-surface-2',
             overdue
               ? 'font-medium text-danger'
               : dueToday
@@ -105,12 +105,15 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
                 : 'text-text-3'
           )}
         >
-          <Calendar size={11.5} />
-          {task.due_date
-            ? compact
-              ? countdownText(daysUntil(task.due_date))
-              : `${friendlyDate(task.due_date)}（${countdownText(daysUntil(task.due_date))}）`
-            : '无截止'}
+          <Calendar size={11.5} className="shrink-0" />
+          {task.due_date ? (
+            <>
+              <span className="hidden truncate lg:inline">{friendlyDate(task.due_date)} </span>
+              {countdownText(daysUntil(task.due_date))}
+            </>
+          ) : (
+            '无截止'
+          )}
         </button>
       )}
 

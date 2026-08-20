@@ -38,7 +38,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-7 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-7 sm:py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">项目</h1>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>

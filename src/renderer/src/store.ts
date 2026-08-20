@@ -8,12 +8,16 @@ import {
   type CollectionName,
   type Idea,
   type Milestone,
+  type MilestoneTypeDef,
   type ProgressLog,
   type Project,
+  type TagDef,
   type Task,
   type ToolBookmark,
   type ToolFileData,
   type ToolGroup,
+  type VocabFileData,
+  BUILTIN_MILESTONE_TYPES,
   nowISO,
   uid
 } from '@shared/types'
@@ -32,6 +36,7 @@ interface AppState {
   ideas: Idea[]
   logs: ProgressLog[]
   tools: ToolFileData
+  vocab: VocabFileData
 
   bootstrap: () => Promise<void>
   chooseDataDir: () => Promise<boolean>
@@ -67,6 +72,14 @@ interface AppState {
   renameToolGroup: (id: string, name: string) => void
   deleteToolGroup: (id: string) => void
   reorderToolGroups: (orderedIds: string[]) => void
+
+  // ---------- 词汇库（标签 / 节点类型） ----------
+  addTag: (name: string) => TagDef
+  renameTag: (id: string, name: string) => void
+  deleteTag: (id: string) => void
+  addMilestoneType: (name: string) => MilestoneTypeDef
+  renameMilestoneType: (id: string, name: string) => void
+  deleteMilestoneType: (id: string) => void
 }
 
 /** 防抖落盘队列（集合级） */
@@ -143,6 +156,7 @@ export const useStore = create<AppState>((set, get) => ({
   ideas: [],
   logs: [],
   tools: { groups: [], items: [] },
+  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES },
 
   bootstrap: async () => {
     const result = await window.api.bootstrap()
@@ -426,6 +440,76 @@ export const useStore = create<AppState>((set, get) => ({
       }
     })
     schedulePersist(get, 'tools')
+  },
+
+  // ---------- 词汇库（标签 / 节点类型） ----------
+  addTag: (name) => {
+    const vocab = get().vocab
+    const trimmed = name.trim()
+    if (vocab.tags.some((t) => t.name === trimmed)) return vocab.tags.find((t) => t.name === trimmed)!
+    const tag: TagDef = { id: uid(), name: trimmed }
+    set({ vocab: { ...vocab, tags: [...vocab.tags, tag] } })
+    schedulePersist(get, 'vocab')
+    return tag
+  },
+  renameTag: (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const vocab = get().vocab
+    const old = vocab.tags.find((t) => t.id === id)
+    if (!old || old.name === trimmed) return
+    set({ vocab: { ...vocab, tags: vocab.tags.map((t) => (t.id === id ? { ...t, name: trimmed } : t)) } })
+    schedulePersist(get, 'vocab')
+    // 级联：同步更新任务与灵感中引用的该标签
+    const replace = (tags: string[]): string[] => tags.map((n) => (n === old.name ? trimmed : n))
+    mutateArray(get, set, 'tasks', (arr) =>
+      arr.map((t) => (t.tags.includes(old.name) ? { ...t, tags: replace(t.tags), updated_at: nowISO() } : t))
+    )
+    mutateArray(get, set, 'ideas', (arr) =>
+      arr.map((i) => (i.tags.includes(old.name) ? { ...i, tags: replace(i.tags), updated_at: nowISO() } : i))
+    )
+  },
+  deleteTag: (id) => {
+    const vocab = get().vocab
+    set({ vocab: { ...vocab, tags: vocab.tags.filter((t) => t.id !== id) } })
+    schedulePersist(get, 'vocab')
+    // 不级联清理数据中的既有标签（自由文本标签仍然有效），仅从词库移除
+  },
+  addMilestoneType: (name) => {
+    const vocab = get().vocab
+    const trimmed = name.trim()
+    const existing = vocab.milestoneTypes.find((t) => t.name === trimmed)
+    if (existing) return existing
+    const def: MilestoneTypeDef = { id: uid(), name: trimmed, builtin: false }
+    set({ vocab: { ...vocab, milestoneTypes: [...vocab.milestoneTypes, def] } })
+    schedulePersist(get, 'vocab')
+    return def
+  },
+  renameMilestoneType: (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const vocab = get().vocab
+    const old = vocab.milestoneTypes.find((t) => t.id === id)
+    if (!old || old.name === trimmed) return
+    set({
+      vocab: {
+        ...vocab,
+        milestoneTypes: vocab.milestoneTypes.map((t) => (t.id === id ? { ...t, name: trimmed } : t))
+      }
+    })
+    schedulePersist(get, 'vocab')
+    // id 不变，展示名随词汇库解析，无需级联
+  },
+  deleteMilestoneType: (id) => {
+    const def = get().vocab.milestoneTypes.find((t) => t.id === id)
+    if (!def || def.builtin) return
+    const vocab = get().vocab
+    set({ vocab: { ...vocab, milestoneTypes: vocab.milestoneTypes.filter((t) => t.id !== id) } })
+    schedulePersist(get, 'vocab')
+    // 引用该类型的节点回退为「其他」
+    mutateArray(get, set, 'milestones', (arr) =>
+      arr.map((m) => (m.type === id ? { ...m, type: 'other', updated_at: nowISO() } : m))
+    )
   }
 }))
 
@@ -436,5 +520,6 @@ export const EMPTY_COLLECTIONS: AllCollections = {
   milestones: [],
   ideas: [],
   logs: [],
-  tools: { groups: [], items: [] }
+  tools: { groups: [], items: [] },
+  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES }
 }

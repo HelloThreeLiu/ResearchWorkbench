@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { Task } from '@shared/types'
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
+import { useAllTags } from '@/hooks/useVocab'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import TagInput from '@/components/TagInput'
 
 interface TaskEditModalProps {
   open: boolean
@@ -18,13 +20,14 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
   const projects = useStore((s) => s.projects)
   const addTask = useStore((s) => s.addTask)
   const updateTask = useStore((s) => s.updateTask)
+  const tagSuggestions = useAllTags()
 
   const [title, setTitle] = useState('')
   const [projectId, setProjectId] = useState('')
   const [status, setStatus] = useState<Task['status']>('todo')
   const [priority, setPriority] = useState<Task['priority']>('medium')
   const [dueDate, setDueDate] = useState('')
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [note, setNote] = useState('')
 
   // defaults 仅在打开时生效，避免父组件重渲染（如外部数据轮询）重置正在编辑的表单
@@ -38,7 +41,7 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
     setStatus(task?.status ?? 'todo')
     setPriority(task?.priority ?? 'medium')
     setDueDate(task?.due_date ?? d?.due_date ?? '')
-    setTags((task?.tags ?? []).join(' '))
+    setTags(task?.tags ?? [])
     setNote(task?.note ?? '')
   }, [open, task])
 
@@ -51,10 +54,7 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
       status,
       priority,
       due_date: dueDate || null,
-      tags: tags
-        .split(/[,，\s]+/)
-        .map((t) => t.replace(/^#/, '').trim())
-        .filter(Boolean),
+      tags,
       note
     }
     if (task) {
@@ -115,8 +115,8 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </Field>
         </div>
-        <Field label="标签（空格分隔）">
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="实验 写作" />
+        <Field label="标签（从标签库选择或直接输入新标签）">
+          <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} id="task-tag-input" />
         </Field>
         <Field label="备注">
           <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />

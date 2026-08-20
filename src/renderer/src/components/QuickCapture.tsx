@@ -2,22 +2,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Lightbulb } from 'lucide-react'
 import { useStore } from '@/store'
+import { useAllTags } from '@/hooks/useVocab'
+import TagInput from '@/components/TagInput'
 import { cn } from '@/lib/utils'
 import { todayStr } from '@/lib/date'
 
 export default function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [content, setContent] = useState('')
   const [projectId, setProjectId] = useState<string>('')
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [flash, setFlash] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const projects = useStore((s) => s.projects)
   const addIdea = useStore((s) => s.addIdea)
+  const tagSuggestions = useAllTags()
 
   useEffect(() => {
     if (open) {
       setContent('')
-      setTags('')
+      setTags([])
       // 延迟聚焦保证窗口前置后立即可输入
       setTimeout(() => textareaRef.current?.focus(), 30)
     }
@@ -30,13 +33,11 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
     if (!trimmed) return
     addIdea({
       content: trimmed,
-      tags: tags
-        .split(/[,，\s]+/)
-        .map((t) => t.replace(/^#/, '').trim())
-        .filter(Boolean),
+      tags,
       project_id: projectId || null
     })
     setContent('')
+    setTags([])
     setFlash(true)
     setTimeout(() => setFlash(false), 1200)
     setTimeout(() => textareaRef.current?.focus(), 10)
@@ -98,17 +99,20 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
                 </option>
               ))}
           </select>
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="标签（空格分隔，可留空）"
-            className="h-7.5 flex-1 rounded-lg border border-border bg-surface px-2 text-[12px] text-text placeholder:text-text-3 focus:border-accent focus:outline-none"
-          />
+          <div className="w-56">
+            <TagInput
+              value={tags}
+              onChange={setTags}
+              suggestions={tagSuggestions}
+              placeholder="标签（回车确认）"
+              id="quick-capture-tags"
+            />
+          </div>
           <button
             onClick={save}
             disabled={!content.trim()}
             className={cn(
-              'h-7.5 rounded-lg px-3 text-[12.5px] font-medium transition-colors cursor-pointer',
+              'h-7.5 shrink-0 rounded-lg px-3 text-[12.5px] font-medium transition-colors cursor-pointer',
               content.trim()
                 ? 'bg-accent text-white hover:opacity-90'
                 : 'cursor-not-allowed bg-surface-2 text-text-3'

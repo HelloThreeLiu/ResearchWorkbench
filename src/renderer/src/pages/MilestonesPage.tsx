@@ -1,10 +1,10 @@
 // 节点总览：全部未完成节点按日期排序 + 倒计时；可按类型/项目筛选；已完成进入历史
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronRight, Flag, Plus } from 'lucide-react'
-import type { Milestone, MilestoneType } from '@shared/types'
-import { MILESTONE_TYPE_LABELS } from '@shared/types'
+import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useMilestoneTypes, useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { Badge, Button, CheckBox, EmptyState, Select } from '@/components/ui'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 
@@ -14,10 +14,12 @@ export default function MilestonesPage() {
   const milestones = useStore((s) => s.milestones)
   const projects = useStore((s) => s.projects)
   const navigate = useNav((s) => s.navigate)
+  const milestoneTypes = useMilestoneTypes()
+  const typeLabel = useMilestoneTypeLabel()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Milestone | null>(null)
-  const [filterType, setFilterType] = useState<'all' | MilestoneType>('all')
+  const [filterType, setFilterType] = useState<string>('all')
   const [filterProject, setFilterProject] = useState('all')
   const [historyOpen, setHistoryOpen] = useState(false)
 
@@ -42,7 +44,7 @@ export default function MilestonesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-7 py-6">
+    <div className="mx-auto max-w-4xl px-4 py-5 sm:px-7 sm:py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">时间节点</h1>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>
@@ -55,11 +57,11 @@ export default function MilestonesPage() {
 
       {/* 筛选 */}
       <div className="mt-4 flex gap-2">
-        <Select value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)} className="w-36">
+        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-36">
           <option value="all">全部类型</option>
-          {Object.entries(MILESTONE_TYPE_LABELS).map(([v, label]) => (
-            <option key={v} value={v}>
-              {label}
+          {milestoneTypes.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
             </option>
           ))}
         </Select>
@@ -102,7 +104,7 @@ export default function MilestonesPage() {
                   </button>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
                     <span>{friendlyDate(m.date)}</span>
-                    <span>· {MILESTONE_TYPE_LABELS[m.type]}</span>
+                    <span>· {typeLabel(m.type)}</span>
                     {project ? (
                       <button
                         className="flex items-center gap-1 hover:text-accent cursor-pointer"
@@ -162,7 +164,7 @@ export default function MilestonesPage() {
                     {m.title}
                   </span>
                   <span className="shrink-0 text-[11.5px] text-text-3">
-                    {friendlyDate(m.date)} · {MILESTONE_TYPE_LABELS[m.type]}
+                    {friendlyDate(m.date)} · {typeLabel(m.type)}
                   </span>
                 </div>
               ))}

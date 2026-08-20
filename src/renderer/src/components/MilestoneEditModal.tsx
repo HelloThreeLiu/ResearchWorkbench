@@ -1,8 +1,8 @@
 // 时间节点新建/编辑弹窗（今日概览、节点页、日历、项目详情共用）
 import { useEffect, useRef, useState } from 'react'
 import type { Milestone } from '@shared/types'
-import { MILESTONE_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
+import { useMilestoneTypes } from '@/hooks/useVocab'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { todayStr } from '@/lib/date'
@@ -31,6 +31,9 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
   const projects = useStore((s) => s.projects)
   const addMilestone = useStore((s) => s.addMilestone)
   const updateMilestone = useStore((s) => s.updateMilestone)
+  const addMilestoneType = useStore((s) => s.addMilestoneType)
+  const milestoneTypes = useMilestoneTypes()
+  const [newTypeName, setNewTypeName] = useState('')
 
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(todayStr())
@@ -51,6 +54,7 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
     setProjectId(milestone?.project_id ?? d?.project_id ?? '')
     setRemindText(formatRemind(milestone?.remind_days ?? PRESET_REMIND))
     setNote(milestone?.note ?? '')
+    setNewTypeName('')
   }, [open, milestone])
 
   const togglePreset = (day: number): void => {
@@ -68,7 +72,8 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
     const payload = {
       title: trimmed,
       date,
-      type,
+      // 未完成新建类型流程时回退为「其他」
+      type: type === '__new__' ? 'other' : type,
       project_id: projectId || null,
       remind_days: remind.length > 0 ? remind : PRESET_REMIND,
       note
@@ -104,13 +109,41 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="类型">
-            <Select value={type} onChange={(e) => setType(e.target.value as Milestone['type'])}>
-              {Object.entries(MILESTONE_TYPE_LABELS).map(([v, label]) => (
-                <option key={v} value={v}>
-                  {label}
+            <Select value={type} onChange={(e) => setType(e.target.value)}>
+              {milestoneTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
+              <option value="__new__">＋ 新建类型…</option>
             </Select>
+            {type === '__new__' && (
+              <div className="mt-1.5 flex gap-2">
+                <Input
+                  autoFocus
+                  value={newTypeName}
+                  onChange={(e) => setNewTypeName(e.target.value)}
+                  placeholder="新类型名称，如：Rebuttal / 基金申报"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newTypeName.trim()) {
+                      const def = addMilestoneType(newTypeName)
+                      setType(def.id)
+                    }
+                  }}
+                />
+                <Button
+                  className="shrink-0"
+                  variant="primary"
+                  disabled={!newTypeName.trim()}
+                  onClick={() => {
+                    const def = addMilestoneType(newTypeName)
+                    setType(def.id)
+                  }}
+                >
+                  添加
+                </Button>
+              </div>
+            )}
           </Field>
         </div>
         <Field label="所属项目（全局节点可不选）">

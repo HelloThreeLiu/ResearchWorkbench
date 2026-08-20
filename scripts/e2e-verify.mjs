@@ -89,6 +89,29 @@ async function main() {
   const afterMs = await evalExpr('document.body.innerText')
   check('节点进入倒计时区', afterMs.includes('端到端验证节点'), '')
 
+  // 4. 词汇库：新建节点时就地创建自定义类型
+  check('打开新建节点弹窗(2)', await clickByText('新建节点'))
+  const pickedNewType = await evalExpr(`(() => {
+    const sel = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__new__'))
+    if (!sel) return false
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
+    setter.call(sel, '__new__')
+    sel.dispatchEvent(new Event('change', { bubbles: true }))
+    return true
+  })()`)
+  check('类型下拉选择「新建类型」', pickedNewType)
+  check('输入新类型名称', await setInput('input[placeholder^="新类型名称"]', 'Rebuttal截止'))
+  check('点击添加类型', (await clickByText('添 加')) || (await clickByText('添加')))
+  check('填写节点标题(2)', await setInput('input[placeholder="如：AAAI 投稿截止 / 学位论文开题"]', '自定义类型节点'))
+  check('点击创建(节点2)', await clickByText('创 建') || (await clickByText('创建')))
+  await new Promise((r) => setTimeout(r, 1800))
+  const afterCustom = await evalExpr('document.body.innerText')
+  check(
+    '自定义类型节点 + 类型名出现',
+    afterCustom.includes('自定义类型节点') && afterCustom.includes('Rebuttal截止'),
+    ''
+  )
+
   ws.close()
 
   console.log('===== UI 驱动结果 =====')

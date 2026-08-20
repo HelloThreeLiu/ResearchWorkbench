@@ -2,6 +2,7 @@
 import { ipcMain, shell, dialog } from 'electron'
 import fs from 'node:fs'
 import {
+  DEFAULT_VOCAB,
   type AllCollections,
   type AppSettings,
   type CollectionName,
@@ -25,9 +26,17 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     return {
       needsOnboarding: !settings.dataDir,
       dataDir: settings.dataDir,
-      collections: settings.dataDir ? loadAll() : {
-        projects: [], tasks: [], milestones: [], ideas: [], logs: [], tools: { groups: [], items: [] }
-      },
+      collections: settings.dataDir
+        ? loadAll()
+        : {
+            projects: [],
+            tasks: [],
+            milestones: [],
+            ideas: [],
+            logs: [],
+            tools: { groups: [], items: [] },
+            vocab: DEFAULT_VOCAB
+          },
       settings,
       meta: { lastWriteAt: getLastWriteAt() }
     }

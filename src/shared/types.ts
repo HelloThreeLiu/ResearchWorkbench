@@ -3,7 +3,11 @@
 export type ProjectStatus = 'active' | 'completed' | 'archived'
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 export type Priority = 'high' | 'medium' | 'low'
-export type MilestoneType = 'proposal' | 'submission' | 'conference' | 'midterm' | 'defense' | 'other'
+/**
+ * 节点类型：内置类型（proposal/submission/conference/midterm/defense/other）为固定 id，
+ * 用户自定义类型以 uid 为 id；type 字段统一按 string 处理，展示名经词汇库解析。
+ */
+export type MilestoneType = string
 export type MilestoneStatus = 'pending' | 'done'
 export type IdeaStatus = 'new' | 'organized' | 'converted'
 export type ToolType = 'url' | 'file' | 'folder' | 'app'
@@ -91,6 +95,23 @@ export interface ToolFileData {
   items: ToolBookmark[]
 }
 
+/** 词汇库：用户可管理的标签集合与节点类型集合（内置类型 builtin=true 不可删除） */
+export interface TagDef {
+  id: string
+  name: string
+}
+
+export interface MilestoneTypeDef {
+  id: string // 内置类型用固定 id（proposal 等），自定义类型用 uid
+  name: string
+  builtin: boolean
+}
+
+export interface VocabFileData {
+  tags: TagDef[]
+  milestoneTypes: MilestoneTypeDef[]
+}
+
 export interface AppSettings {
   dataDir: string | null
   theme: ThemeMode
@@ -100,7 +121,14 @@ export interface AppSettings {
 }
 
 // 数据集合名 → 文件名（projects.json / tasks.json / ...）
-export type CollectionName = 'projects' | 'tasks' | 'milestones' | 'ideas' | 'logs' | 'tools'
+export type CollectionName =
+  | 'projects'
+  | 'tasks'
+  | 'milestones'
+  | 'ideas'
+  | 'logs'
+  | 'tools'
+  | 'vocab'
 
 export interface AllCollections {
   projects: Project[]
@@ -109,6 +137,7 @@ export interface AllCollections {
   ideas: Idea[]
   logs: ProgressLog[]
   tools: ToolFileData
+  vocab: VocabFileData
 }
 
 export interface BootstrapResult {
@@ -125,19 +154,32 @@ export const COLLECTION_FILES: Record<CollectionName, string> = {
   milestones: 'milestones.json',
   ideas: 'ideas.json',
   logs: 'progress_logs.json',
-  tools: 'tools.json'
+  tools: 'tools.json',
+  vocab: 'vocab.json'
 }
 
 export const DEFAULT_REMIND_DAYS = [7, 3, 1]
 
-export const MILESTONE_TYPE_LABELS: Record<MilestoneType, string> = {
-  proposal: '开题',
-  submission: '投稿截止',
-  conference: '会议',
-  midterm: '中期检查',
-  defense: '答辩',
-  other: '其他'
+/** 内置节点类型（固定 id，可改名不可删除） */
+export const BUILTIN_MILESTONE_TYPES: MilestoneTypeDef[] = [
+  { id: 'proposal', name: '开题', builtin: true },
+  { id: 'submission', name: '投稿截止', builtin: true },
+  { id: 'conference', name: '会议', builtin: true },
+  { id: 'midterm', name: '中期检查', builtin: true },
+  { id: 'defense', name: '答辩', builtin: true },
+  { id: 'other', name: '其他', builtin: true }
+]
+
+/** 词汇库缺省内容（旧数据目录无 vocab.json 时兜底） */
+export const DEFAULT_VOCAB: VocabFileData = {
+  tags: [],
+  milestoneTypes: BUILTIN_MILESTONE_TYPES
 }
+
+/** 内置类型展示名兜底（未经词汇库解析时使用） */
+export const MILESTONE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  BUILTIN_MILESTONE_TYPES.map((t) => [t.id, t.name])
+)
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
   high: '高',

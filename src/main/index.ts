@@ -23,8 +23,8 @@ function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
-    minWidth: 960,
-    minHeight: 640,
+    minWidth: 880,
+    minHeight: 600,
     show: false,
     autoHideMenuBar: true,
     icon: nativeImage.createFromPath(resolveIconPath()),
