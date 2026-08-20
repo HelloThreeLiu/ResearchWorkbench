@@ -1,10 +1,10 @@
-// 成果台账：论文/专利/获奖/项目/其他成果的时间线视图；按类型筛选；一键复制纯文本
+// 成果台账：论文/专利/获奖/项目/其他（可自定义）成果的时间线视图；按类型筛选；一键复制纯文本
 import { useMemo, useState } from 'react'
-import { Award, Copy, FileText, FolderKanban, Medal, Pencil, Plus, Trash2, Trophy } from 'lucide-react'
-import type { Achievement, AchievementType } from '@shared/types'
-import { ACHIEVEMENT_TYPE_LABELS } from '@shared/types'
+import { Copy, Pencil, Plus, Trash2, Trophy } from 'lucide-react'
+import type { Achievement } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { achievementTypeIcon, useAchievementTypes, useAchievementTypeLabel } from '@/hooks/useVocab'
 import {
   Badge,
   Button,
@@ -17,24 +17,19 @@ import {
   Select,
   Textarea
 } from '@/components/ui'
+import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
 import { achievementsToPlainText } from '@/lib/report'
 import { dayjs } from '@/lib/date'
-
-const TYPE_ICONS: Record<AchievementType, typeof Trophy> = {
-  paper: FileText,
-  patent: Medal,
-  award: Award,
-  project: FolderKanban,
-  other: Trophy
-}
 
 export default function AchievementsPage() {
   const achievements = useStore((s) => s.achievements)
   const projects = useStore((s) => s.projects)
   const navigate = useNav((s) => s.navigate)
+  const achievementTypes = useAchievementTypes()
+  const typeLabel = useAchievementTypeLabel()
 
-  const [filterType, setFilterType] = useState<'all' | AchievementType>('all')
+  const [filterType, setFilterType] = useState<string>('all')
   const [editTarget, setEditTarget] = useState<Achievement | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Achievement | null>(null)
@@ -63,7 +58,7 @@ export default function AchievementsPage() {
   }, [filtered])
 
   const doCopy = async (): Promise<void> => {
-    await copyText(achievementsToPlainText(achievements, projects))
+    await copyText(achievementsToPlainText(achievements, projects, useStore.getState().vocab.achievementTypes))
     setCopyMsg(true)
     setTimeout(() => setCopyMsg(false), 2500)
   }
@@ -92,13 +87,13 @@ export default function AchievementsPage() {
       <div className="mt-4 flex items-center gap-2">
         <Select
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value as typeof filterType)}
-          className="w-36"
+          onChange={(e) => setFilterType(e.target.value)}
+          className="w-40"
         >
           <option value="all">全部类型（{achievements.length}）</option>
-          {Object.entries(ACHIEVEMENT_TYPE_LABELS).map(([v, label]) => (
-            <option key={v} value={v}>
-              {label}
+          {achievementTypes.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
             </option>
           ))}
         </Select>
@@ -126,7 +121,7 @@ export default function AchievementsPage() {
               <h2 className="mb-2 text-[15px] font-semibold">{year} 年</h2>
               <div className="flex flex-col gap-2">
                 {list.map((a) => {
-                  const Icon = TYPE_ICONS[a.type]
+                  const Icon = achievementTypeIcon(a.type)
                   const project = a.project_id ? projectMap.get(a.project_id) : undefined
                   return (
                     <div
@@ -145,7 +140,7 @@ export default function AchievementsPage() {
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-3">
                           <span>{dayjs(a.date).format('M月D日')}</span>
-                          <span>· {ACHIEVEMENT_TYPE_LABELS[a.type]}</span>
+                          <span>· {typeLabel(a.type)}</span>
                           {project && (
                             <button
                               className="flex items-center gap-1 hover:text-accent cursor-pointer"
@@ -224,16 +219,18 @@ function AchievementEditModal({
   onClose: () => void
 }) {
   const projects = useStore((s) => s.projects)
+  const achievementTypes = useAchievementTypes()
   const addAchievement = useStore((s) => s.addAchievement)
   const updateAchievement = useStore((s) => s.updateAchievement)
 
-  const [type, setType] = useState<AchievementType>('paper')
+  const [type, setType] = useState<string>('paper')
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
   const [level, setLevel] = useState('')
   const [projectId, setProjectId] = useState('')
   const [detail, setDetail] = useState('')
   const [evidencePath, setEvidencePath] = useState('')
+  const [vocabManageOpen, setVocabManageOpen] = useState(false)
 
   // 每次打开时按目标初始化
   const [lastOpen, setLastOpen] = useState(false)
@@ -275,12 +272,23 @@ function AchievementEditModal({
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-2 gap-3">
           <Field label="类型">
-            <Select value={type} onChange={(e) => setType(e.target.value as AchievementType)}>
-              {Object.entries(ACHIEVEMENT_TYPE_LABELS).map(([v, label]) => (
-                <option key={v} value={v}>
-                  {label}
+            <Select
+              value={type}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === '__manage__') {
+                  setVocabManageOpen(true)
+                  return
+                }
+                setType(v)
+              }}
+            >
+              {achievementTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
+              <option value="__manage__">⚙ 管理类型…</option>
             </Select>
           </Field>
           <Field label="日期">
@@ -333,6 +341,11 @@ function AchievementEditModal({
           </Button>
         </div>
       </div>
+      <VocabManagerModal
+        open={vocabManageOpen}
+        initialTab="achievementTypes"
+        onClose={() => setVocabManageOpen(false)}
+      />
     </Modal>
   )
 }

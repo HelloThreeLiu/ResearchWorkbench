@@ -1,6 +1,15 @@
-// 今日概览：今天做什么、最近有什么大事（默认启动页）
+// 今日概览：今天做什么、最近有什么大事（默认启动页）；顶部统计卡片 + 近 7 天完成趋势
 import { useMemo, useState } from 'react'
-import { CalendarPlus, Flag, Lightbulb, ListPlus, Plus } from 'lucide-react'
+import {
+  AlertTriangle,
+  CalendarClock,
+  CalendarPlus,
+  Flag,
+  Lightbulb,
+  ListPlus,
+  Plus,
+  FileText
+} from 'lucide-react'
 import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
@@ -17,6 +26,7 @@ export default function Dashboard() {
   const milestones = useStore((s) => s.milestones)
   const ideas = useStore((s) => s.ideas)
   const projects = useStore((s) => s.projects)
+  const logs = useStore((s) => s.logs)
   const updateIdea = useStore((s) => s.updateIdea)
   const addTask = useStore((s) => s.addTask)
   const lastWriteAt = useStore((s) => s.lastWriteAt)
@@ -54,6 +64,42 @@ export default function Dashboard() {
     () => ideas.filter((i) => i.status === 'new').slice(0, 3),
     [ideas]
   )
+
+  // 顶部统计
+  const stats = useMemo(() => {
+    const open = tasks.filter((t) => t.status !== 'done')
+    const overdue = open.filter((t) => t.due_date !== null && daysUntil(t.due_date) < 0)
+    const dueToday = open.filter((t) => t.due_date !== null && daysUntil(t.due_date) === 0)
+    const weekStart = dayjs().startOf('week')
+    const weekLogs = logs.filter(
+      (l) => l.date >= weekStart.format('YYYY-MM-DD') && l.date <= dayjs().format('YYYY-MM-DD')
+    )
+    return {
+      openCount: open.length,
+      inProgress: open.filter((t) => t.status === 'in_progress').length,
+      dueToday: dueToday.length,
+      overdue: overdue.length,
+      milestoneCount: upcomingMilestones.length,
+      ideaCount: ideas.filter((i) => i.status === 'new').length,
+      weekLogs: weekLogs.length
+    }
+  }, [tasks, logs, ideas, upcomingMilestones])
+
+  // 近 7 天每日完成任务数
+  const weeklyTrend = useMemo(() => {
+    const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
+    return Array.from({ length: 7 }, (_, idx) => {
+      const i = 6 - idx
+      const d = dayjs().subtract(i, 'day')
+      const date = d.format('YYYY-MM-DD')
+      return {
+        date,
+        label: weekdayLabels[d.day()],
+        count: tasks.filter((t) => t.completed_at?.slice(0, 10) === date).length,
+        isToday: i === 0
+      }
+    })
+  }, [tasks])
 
   const convertIdea = (ideaId: string, content: string): void => {
     const firstLine = content.split('\n')[0].slice(0, 80)
@@ -97,6 +143,17 @@ export default function Dashboard() {
             <CalendarPlus size={14} /> 新建节点
           </Button>
         </div>
+      </div>
+
+      {/* 统计卡片行 */}
+      <div className="mt-4 grid grid-cols-3 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
+        <StatCard label="待办任务" value={stats.openCount} hint={`${stats.inProgress} 进行中`} icon={<ListPlus size={14} />} onClick={() => navigate({ name: 'tasks' })} />
+        <StatCard label="今日到期" value={stats.dueToday} icon={<CalendarClock size={14} />} tone={stats.dueToday > 0 ? 'warn' : 'default'} onClick={() => navigate({ name: 'tasks' })} />
+        <StatCard label="逾期" value={stats.overdue} icon={<AlertTriangle size={14} />} tone={stats.overdue > 0 ? 'danger' : 'default'} onClick={() => navigate({ name: 'tasks' })} />
+        <StatCard label="30天节点" value={stats.milestoneCount} icon={<Flag size={14} />} onClick={() => navigate({ name: 'milestones' })} />
+        <StatCard label="待整理灵感" value={stats.ideaCount} icon={<Lightbulb size={14} />} onClick={() => navigate({ name: 'ideas' })} />
+        <StatCard label="本周日志" value={stats.weekLogs} icon={<FileText size={14} />} onClick={() => navigate({ name: 'projects' })} />
+        <StatCard label="进行中项目" value={projects.filter((p) => p.status === 'active').length} icon={<Flag size={14} />} onClick={() => navigate({ name: 'projects' })} />
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5 2xl:grid-cols-6">
@@ -210,12 +267,79 @@ export default function Dashboard() {
               </div>
             )}
           </section>
+
+          {/* 近 7 天任务完成趋势 */}
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <h2 className="text-[14px] font-semibold">近 7 天完成趋势</h2>
+            <div className="mt-3 flex h-20 items-end justify-between gap-1.5">
+              {weeklyTrend.map((d) => {
+                const max = Math.max(...weeklyTrend.map((x) => x.count), 1)
+                const height = d.count === 0 ? 3 : Math.max(8, Math.round((d.count / max) * 100))
+                return (
+                  <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${d.date}：完成 ${d.count} 项`}>
+                    <span className={cn('text-[10px]', d.count > 0 ? 'text-text-2' : 'text-text-3')}>
+                      {d.count > 0 ? d.count : ''}
+                    </span>
+                    <div
+                      className={cn(
+                        'w-full max-w-7 rounded-t-md transition-all',
+                        d.isToday ? 'bg-accent' : d.count > 0 ? 'bg-accent/45' : 'bg-border'
+                      )}
+                      style={{ height: `${height}%` }}
+                    />
+                    <span className={cn('text-[10px]', d.isToday ? 'font-semibold text-accent' : 'text-text-3')}>
+                      {d.isToday ? '今天' : `周${d.label}`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         </div>
       </div>
 
       <TaskEditModal open={taskModalOpen} onClose={() => setTaskModalOpen(false)} />
       <MilestoneEditModal open={milestoneModalOpen} onClose={() => setMilestoneModalOpen(false)} />
     </div>
+  )
+}
+
+/** 统计卡片：数值 + 标签 + 角标提示，点击跳转对应页面 */
+function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone = 'default',
+  onClick
+}: {
+  label: string
+  value: number
+  hint?: string
+  icon: React.ReactNode
+  tone?: 'default' | 'warn' | 'danger'
+  onClick?: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-accent/50 cursor-pointer"
+    >
+      <span className="flex items-center gap-1 truncate text-[11px] text-text-3">
+        {icon}
+        {label}
+      </span>
+      <span
+        className={cn(
+          'text-xl leading-none font-semibold',
+          tone === 'danger' && value > 0 && 'text-danger',
+          tone === 'warn' && value > 0 && 'text-warn'
+        )}
+      >
+        {value}
+      </span>
+      {hint && <span className="truncate text-[10px] text-text-3">{hint}</span>}
+    </button>
   )
 }
 

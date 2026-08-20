@@ -73,9 +73,9 @@ export default function IdeasPage() {
         </span>
       </div>
 
-      {/* 搜索与筛选 */}
-      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2.5">
-        <div className="relative min-w-52 flex-1">
+      {/* 搜索与筛选（单行，窄窗口可横向滑动） */}
+      <div className="mt-4 flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2">
+        <div className="relative min-w-40 flex-[1.6]">
           <Search size={13.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-3" />
           <Input
             value={search}
@@ -84,7 +84,7 @@ export default function IdeasPage() {
             className="pl-7.5"
           />
         </div>
-        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)} className="w-30">
+        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)} className="min-w-24 flex-1">
           <option value="all">全部状态</option>
           {Object.entries(IDEA_STATUS_LABELS).map(([v, label]) => (
             <option key={v} value={v}>
@@ -92,7 +92,7 @@ export default function IdeasPage() {
             </option>
           ))}
         </Select>
-        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="w-40">
+        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="min-w-28 flex-[1.2]">
           <option value="all">全部项目</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -101,7 +101,7 @@ export default function IdeasPage() {
           ))}
           <option value="__none__">仅未关联</option>
         </Select>
-        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-30">
+        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="min-w-24 flex-1">
           <option value="all">全部标签</option>
           {allTags.map((t) => (
             <option key={t} value={t}>

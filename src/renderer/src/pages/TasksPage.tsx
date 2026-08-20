@@ -51,7 +51,7 @@ export default function TasksPage() {
     })
   }, [tasks, filterProject, filterStatus, filterTag, filterDueFrom, filterDueTo])
 
-  // 分组：项目（进行中排序）在前，杂项最后；组内 截止升序 + 优先级降序
+  // 分组：进行中项目在前；已完成/归档项目与无项目任务归入「其他」
   const groups = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status === 'active')
     const result: Array<{ key: string; name: string; color: string | null; tasks: Task[] }> = []
@@ -59,8 +59,12 @@ export default function TasksPage() {
       const list = filtered.filter((t) => t.project_id === p.id)
       if (list.length > 0) result.push({ key: p.id, name: p.name, color: p.color, tasks: list })
     }
-    const misc = filtered.filter((t) => !t.project_id || !projects.find((p) => p.id === t.project_id))
-    if (misc.length > 0) result.push({ key: '__misc__', name: '杂项（无项目）', color: null, tasks: misc })
+    const misc = filtered.filter((t) => {
+      if (!t.project_id) return true
+      const project = projects.find((p) => p.id === t.project_id)
+      return !project || project.status !== 'active'
+    })
+    if (misc.length > 0) result.push({ key: '__misc__', name: '其他（杂项与归档项目）', color: null, tasks: misc })
     for (const g of result) {
       g.tasks.sort((a, b) => {
         if (a.due_date !== b.due_date) {
@@ -111,12 +115,12 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* 筛选栏 */}
-      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2.5">
+      {/* 筛选栏（单行，窄窗口可横向滑动） */}
+      <div className="mt-4 flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2">
         <Select
           value={filterProject}
           onChange={(e) => setFilterProject(e.target.value)}
-          className="w-40"
+          className="min-w-30 flex-[1.3]"
         >
           <option value="all">全部项目</option>
           {projects.map((p) => (
@@ -129,7 +133,7 @@ export default function TasksPage() {
         <Select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-          className="w-32"
+          className="min-w-24 flex-1"
         >
           <option value="undone">未完成</option>
           <option value="all">全部状态</option>
@@ -139,7 +143,7 @@ export default function TasksPage() {
             </option>
           ))}
         </Select>
-        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-32">
+        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="min-w-24 flex-1">
           <option value="all">全部标签</option>
           {allTags.map((t) => (
             <option key={t} value={t}>
@@ -147,20 +151,19 @@ export default function TasksPage() {
             </option>
           ))}
         </Select>
-        <div className="flex items-center gap-1.5 text-[12px] text-text-3">
-          截止
+        <div className="flex shrink-0 items-center gap-1" title="截止日期区间">
           <Input
             type="date"
             value={filterDueFrom}
             onChange={(e) => setFilterDueFrom(e.target.value)}
-            className="w-35"
+            className="w-29"
           />
-          ～
+          <span className="text-text-3">–</span>
           <Input
             type="date"
             value={filterDueTo}
             onChange={(e) => setFilterDueTo(e.target.value)}
-            className="w-35"
+            className="w-29"
           />
         </div>
         {(filterProject !== 'all' ||
@@ -169,7 +172,7 @@ export default function TasksPage() {
           filterDueFrom ||
           filterDueTo) && (
           <button
-            className="text-[12px] text-accent hover:underline cursor-pointer"
+            className="shrink-0 whitespace-nowrap px-1 text-[12px] text-accent hover:underline cursor-pointer"
             onClick={() => {
               setFilterProject('all')
               setFilterStatus('undone')
@@ -183,42 +186,45 @@ export default function TasksPage() {
         )}
       </div>
 
-      {groups.length === 0 ? (
-        <EmptyState icon={<ListTodo size={30} />} title="没有符合条件的任务" hint="调整筛选条件，或新建一个任务。" />
-      ) : view === 'list' ? (
-        <div className="mt-4 flex flex-col gap-5">
-          {groups.map((g) => (
-            <section key={g.key}>
-              <div className="mb-1 flex items-center gap-2 px-1">
-                {g.color ? (
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
-                ) : (
-                  <span className="h-2.5 w-2.5 rounded-full border border-dashed border-text-3" />
-                )}
-                <button
-                  className="text-[13px] font-medium text-text-2 hover:text-accent cursor-pointer"
-                  onClick={() =>
-                    g.key !== '__misc__' &&
-                    navigate({ name: 'project-detail', projectId: g.key, tab: 'tasks' })
-                  }
-                >
-                  {g.name}
-                </button>
-                <span className="text-[11px] text-text-3">{g.tasks.length}</span>
-              </div>
-              <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface p-1.5">
-                {g.tasks.map((t) => (
-                  <TaskRow
-                    key={t.id}
-                    task={t}
-                    onDelete={() => useStore.getState().deleteTask(t.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+      {view === 'list' ? (
+        groups.length === 0 ? (
+          <EmptyState icon={<ListTodo size={30} />} title="没有符合条件的任务" hint="调整筛选条件，或新建一个任务。" />
+        ) : (
+          <div className="mt-4 flex flex-col gap-5">
+            {groups.map((g) => (
+              <section key={g.key}>
+                <div className="mb-1 flex items-center gap-2 px-1">
+                  {g.color ? (
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
+                  ) : (
+                    <span className="h-2.5 w-2.5 rounded-full border border-dashed border-text-3" />
+                  )}
+                  <button
+                    className="text-[13px] font-medium text-text-2 hover:text-accent cursor-pointer"
+                    onClick={() =>
+                      g.key !== '__misc__' &&
+                      navigate({ name: 'project-detail', projectId: g.key, tab: 'tasks' })
+                    }
+                  >
+                    {g.name}
+                  </button>
+                  <span className="text-[11px] text-text-3">{g.tasks.length}</span>
+                </div>
+                <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface p-1.5">
+                  {g.tasks.map((t) => (
+                    <TaskRow
+                      key={t.id}
+                      task={t}
+                      onDelete={() => useStore.getState().deleteTask(t.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )
       ) : (
+        // 看板：即使筛选结果为空也渲染三列（便于拖入与总览状态分布）
         <KanbanBoard
           tasks={filtered}
           projects={projects}

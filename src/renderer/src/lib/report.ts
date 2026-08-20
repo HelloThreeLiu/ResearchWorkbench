@@ -10,7 +10,8 @@ import type {
   Project,
   Report,
   ReportKind,
-  Task
+  Task,
+  VocabTypeDef
 } from '@shared/types'
 import { ACHIEVEMENT_TYPE_LABELS } from '@shared/types'
 import { dayjs } from './date'
@@ -23,6 +24,12 @@ export interface ReportSource {
   milestones: Milestone[]
   achievements: Achievement[]
   papers: Paper[]
+  achievementTypes: VocabTypeDef[] // 成果类型展示名解析（词汇库）
+}
+
+/** 成果类型展示名：词汇库优先，内置兜底，最后回退原始 id */
+function achievementLabel(type: string, types: VocabTypeDef[]): string {
+  return types.find((t) => t.id === type)?.name ?? ACHIEVEMENT_TYPE_LABELS[type] ?? type
 }
 
 export interface Period {
@@ -172,7 +179,7 @@ function buildSummaryExtras(source: ReportSource, p: Period): { stats: string; a
   ].join('\n')
   const achievementLines = periodAchievements
     .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .map((a) => `- ${fmtMD(a.date)}【${ACHIEVEMENT_TYPE_LABELS[a.type]}${a.level ? `·${a.level}` : ''}】${a.title}`)
+    .map((a) => `- ${fmtMD(a.date)}【${achievementLabel(a.type, source.achievementTypes)}${a.level ? `·${a.level}` : ''}】${a.title}`)
   return {
     stats,
     achievements: achievementLines.length > 0 ? achievementLines.join('\n') : '（本期无新增成果）'
@@ -251,7 +258,8 @@ export function exportFileName(report: Report): string {
 /** 成果台账复制为纯文本（用于填简历/年终总结） */
 export function achievementsToPlainText(
   achievements: Achievement[],
-  projects: Project[]
+  projects: Project[],
+  achievementTypes: VocabTypeDef[] = []
 ): string {
   return achievements
     .slice()
@@ -260,7 +268,7 @@ export function achievementsToPlainText(
       const projectName = a.project_id ? projects.find((p) => p.id === a.project_id)?.name : undefined
       const parts = [
         a.date,
-        `【${ACHIEVEMENT_TYPE_LABELS[a.type]}${a.level ? `·${a.level}` : ''}】`,
+        `【${achievementLabel(a.type, achievementTypes)}${a.level ? `·${a.level}` : ''}】`,
         a.title,
         projectName ? `（${projectName}）` : '',
         a.is_draft ? ' [草稿]' : ''

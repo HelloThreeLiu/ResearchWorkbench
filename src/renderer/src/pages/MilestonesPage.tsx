@@ -55,9 +55,9 @@ export default function MilestonesPage() {
         开题、投稿截止、会议、中期检查、答辩等重要日期；进入提醒窗口的节点会出现在今日概览。
       </p>
 
-      {/* 筛选 */}
-      <div className="mt-4 flex gap-2">
-        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-36">
+      {/* 筛选（单行） */}
+      <div className="mt-4 flex items-center gap-2 overflow-x-auto">
+        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="min-w-28 flex-1">
           <option value="all">全部类型</option>
           {milestoneTypes.map((t) => (
             <option key={t.id} value={t.id}>
@@ -65,7 +65,7 @@ export default function MilestonesPage() {
             </option>
           ))}
         </Select>
-        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="w-44">
+        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="min-w-30 flex-[1.2]">
           <option value="all">全部项目</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>

@@ -109,8 +109,12 @@ export function loadAll(): AllCollections {
         result.tools = { groups: t.groups ?? [], items: t.items ?? [] }
       } else if (name === 'vocab') {
         const v = raw as VocabFileData
-        // 旧目录无 vocab.json 时兜底为默认词汇库
-        result.vocab = { tags: v.tags ?? [], milestoneTypes: v.milestoneTypes ?? DEFAULT_VOCAB.milestoneTypes }
+        // 旧目录无 vocab.json / 旧版本缺 achievementTypes 时兜底为默认词汇库
+        result.vocab = {
+          tags: v.tags ?? [],
+          milestoneTypes: v.milestoneTypes ?? DEFAULT_VOCAB.milestoneTypes,
+          achievementTypes: v.achievementTypes ?? DEFAULT_VOCAB.achievementTypes
+        }
       } else {
         // 其余集合均为数组
         const arr = raw as unknown[]

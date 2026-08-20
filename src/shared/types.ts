@@ -142,7 +142,8 @@ export interface Paper {
   updated_at: string
 }
 
-export type AchievementType = 'paper' | 'patent' | 'award' | 'project' | 'other'
+/** 成果类型：内置类型（paper/patent/award/project/other）为固定 id，自定义类型以 uid 为 id，展示名经词汇库解析 */
+export type AchievementType = string
 
 export interface Achievement {
   id: string
@@ -171,21 +172,26 @@ export interface Report {
   updated_at: string
 }
 
-/** 词汇库：用户可管理的标签集合与节点类型集合（内置类型 builtin=true 不可删除） */
+/** 词汇库：用户可管理的标签集合与枚举类型集合（内置类型 builtin=true 不可删除） */
 export interface TagDef {
   id: string
   name: string
 }
 
-export interface MilestoneTypeDef {
+/** 通用类型定义（节点类型 / 成果类型共用结构） */
+export interface VocabTypeDef {
   id: string // 内置类型用固定 id（proposal 等），自定义类型用 uid
   name: string
   builtin: boolean
 }
 
+/** @deprecated 兼容别名，等价于 VocabTypeDef */
+export type MilestoneTypeDef = VocabTypeDef
+
 export interface VocabFileData {
   tags: TagDef[]
-  milestoneTypes: MilestoneTypeDef[]
+  milestoneTypes: VocabTypeDef[]
+  achievementTypes: VocabTypeDef[]
 }
 
 export interface AppSettings {
@@ -263,7 +269,7 @@ export const COLLECTION_FILES: Record<CollectionName, string> = {
 export const DEFAULT_REMIND_DAYS = [7, 3, 1]
 
 /** 内置节点类型（固定 id，可改名不可删除） */
-export const BUILTIN_MILESTONE_TYPES: MilestoneTypeDef[] = [
+export const BUILTIN_MILESTONE_TYPES: VocabTypeDef[] = [
   { id: 'proposal', name: '开题', builtin: true },
   { id: 'submission', name: '投稿截止', builtin: true },
   { id: 'conference', name: '会议', builtin: true },
@@ -272,10 +278,20 @@ export const BUILTIN_MILESTONE_TYPES: MilestoneTypeDef[] = [
   { id: 'other', name: '其他', builtin: true }
 ]
 
+/** 内置成果类型（固定 id，可改名不可删除） */
+export const BUILTIN_ACHIEVEMENT_TYPES: VocabTypeDef[] = [
+  { id: 'paper', name: '论文', builtin: true },
+  { id: 'patent', name: '专利', builtin: true },
+  { id: 'award', name: '获奖', builtin: true },
+  { id: 'project', name: '项目', builtin: true },
+  { id: 'other', name: '其他', builtin: true }
+]
+
 /** 词汇库缺省内容（旧数据目录无 vocab.json 时兜底） */
 export const DEFAULT_VOCAB: VocabFileData = {
   tags: [],
-  milestoneTypes: BUILTIN_MILESTONE_TYPES
+  milestoneTypes: BUILTIN_MILESTONE_TYPES,
+  achievementTypes: BUILTIN_ACHIEVEMENT_TYPES
 }
 
 /** 内置类型展示名兜底（未经词汇库解析时使用） */
@@ -351,13 +367,10 @@ export const PAPER_DATE_LABELS: Record<keyof Paper['dates'], string> = {
   camera_ready: 'Camera-ready'
 }
 
-export const ACHIEVEMENT_TYPE_LABELS: Record<AchievementType, string> = {
-  paper: '论文',
-  patent: '专利',
-  award: '获奖',
-  project: '项目',
-  other: '其他'
-}
+/** 内置成果类型展示名兜底（未经词汇库解析时使用） */
+export const ACHIEVEMENT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  BUILTIN_ACHIEVEMENT_TYPES.map((t) => [t.id, t.name])
+)
 
 // 项目可选颜色（用于卡片标识、日历任务标记）
 export const PROJECT_COLORS = [

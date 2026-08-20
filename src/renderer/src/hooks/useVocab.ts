@@ -2,15 +2,19 @@
 import { useMemo } from 'react'
 import {
   FileText,
+  FolderKanban,
   GraduationCap,
   MapPin,
+  Medal,
   Presentation,
   SearchCheck,
   Send,
   Sparkles,
+  Trophy,
+  Award,
   type LucideIcon
 } from 'lucide-react'
-import { MILESTONE_TYPE_LABELS } from '@shared/types'
+import { ACHIEVEMENT_TYPE_LABELS, MILESTONE_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 
 /** 内置类型专属图标；自定义类型统一用 Sparkles */
@@ -23,8 +27,20 @@ const BUILTIN_ICONS: Record<string, LucideIcon> = {
   other: MapPin
 }
 
+const BUILTIN_ACHIEVEMENT_ICONS: Record<string, LucideIcon> = {
+  paper: FileText,
+  patent: Medal,
+  award: Award,
+  project: FolderKanban,
+  other: Trophy
+}
+
 export function milestoneTypeIcon(type: string): LucideIcon {
   return BUILTIN_ICONS[type] ?? Sparkles
+}
+
+export function achievementTypeIcon(type: string): LucideIcon {
+  return BUILTIN_ACHIEVEMENT_ICONS[type] ?? Sparkles
 }
 
 export function useMilestoneTypes(): Array<{ id: string; name: string; builtin: boolean }> {
@@ -32,10 +48,21 @@ export function useMilestoneTypes(): Array<{ id: string; name: string; builtin: 
   return vocab.milestoneTypes
 }
 
+export function useAchievementTypes(): Array<{ id: string; name: string; builtin: boolean }> {
+  const vocab = useStore((s) => s.vocab)
+  return vocab.achievementTypes
+}
+
 export function useMilestoneTypeLabel(): (type: string) => string {
   const types = useMilestoneTypes()
   return (type: string): string =>
     types.find((t) => t.id === type)?.name ?? MILESTONE_TYPE_LABELS[type] ?? type
+}
+
+export function useAchievementTypeLabel(): (type: string) => string {
+  const types = useAchievementTypes()
+  return (type: string): string =>
+    types.find((t) => t.id === type)?.name ?? ACHIEVEMENT_TYPE_LABELS[type] ?? type
 }
 
 /** 标签全集：词库标签在前，数据中未入库的标签补充在后 */

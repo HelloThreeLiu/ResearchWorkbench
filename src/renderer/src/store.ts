@@ -21,6 +21,7 @@ import {
   type ToolGroup,
   type VocabFileData,
   type Achievement,
+  BUILTIN_ACHIEVEMENT_TYPES,
   BUILTIN_MILESTONE_TYPES,
   DEFAULT_REPORT_TEMPLATE,
   PAPER_DATE_LABELS,
@@ -90,6 +91,9 @@ interface AppState {
   addMilestoneType: (name: string) => MilestoneTypeDef
   renameMilestoneType: (id: string, name: string) => void
   deleteMilestoneType: (id: string) => void
+  addAchievementType: (name: string) => MilestoneTypeDef
+  renameAchievementType: (id: string, name: string) => void
+  deleteAchievementType: (id: string) => void
 
   // ---------- 论文（V2） ----------
   addPaper: (input: Partial<Paper> & { title: string }) => Paper
@@ -183,7 +187,7 @@ export const useStore = create<AppState>((set, get) => ({
   ideas: [],
   logs: [],
   tools: { groups: [], items: [] },
-  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES },
+  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES, achievementTypes: BUILTIN_ACHIEVEMENT_TYPES },
   papers: [],
   achievements: [],
   reports: [],
@@ -562,6 +566,42 @@ export const useStore = create<AppState>((set, get) => ({
       arr.map((m) => (m.type === id ? { ...m, type: 'other', updated_at: nowISO() } : m))
     )
   },
+  addAchievementType: (name) => {
+    const vocab = get().vocab
+    const trimmed = name.trim()
+    const existing = vocab.achievementTypes.find((t) => t.name === trimmed)
+    if (existing) return existing
+    const def: MilestoneTypeDef = { id: uid(), name: trimmed, builtin: false }
+    set({ vocab: { ...vocab, achievementTypes: [...vocab.achievementTypes, def] } })
+    schedulePersist(get, 'vocab')
+    return def
+  },
+  renameAchievementType: (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const vocab = get().vocab
+    const old = vocab.achievementTypes.find((t) => t.id === id)
+    if (!old || old.name === trimmed) return
+    set({
+      vocab: {
+        ...vocab,
+        achievementTypes: vocab.achievementTypes.map((t) => (t.id === id ? { ...t, name: trimmed } : t))
+      }
+    })
+    schedulePersist(get, 'vocab')
+    // id 不变，展示名随词汇库解析，无需级联
+  },
+  deleteAchievementType: (id) => {
+    const def = get().vocab.achievementTypes.find((t) => t.id === id)
+    if (!def || def.builtin) return
+    const vocab = get().vocab
+    set({ vocab: { ...vocab, achievementTypes: vocab.achievementTypes.filter((t) => t.id !== id) } })
+    schedulePersist(get, 'vocab')
+    // 引用该类型的成果回退为「其他」
+    mutateArray(get, set, 'achievements', (arr) =>
+      arr.map((a) => (a.type === id ? { ...a, type: 'other', updated_at: nowISO() } : a))
+    )
+  },
 
   // ---------- 论文（V2） ----------
   addPaper: (input) => {
@@ -818,7 +858,7 @@ export const EMPTY_COLLECTIONS: AllCollections = {
   ideas: [],
   logs: [],
   tools: { groups: [], items: [] },
-  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES },
+  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES, achievementTypes: BUILTIN_ACHIEVEMENT_TYPES },
   papers: [],
   achievements: [],
   reports: []
