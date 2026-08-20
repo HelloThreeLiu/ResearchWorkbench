@@ -1,5 +1,5 @@
 // 时间节点新建/编辑弹窗（今日概览、节点页、日历、项目详情共用）
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Milestone } from '@shared/types'
 import { MILESTONE_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
@@ -39,15 +39,19 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
   const [remindText, setRemindText] = useState(formatRemind(PRESET_REMIND))
   const [note, setNote] = useState('')
 
+  // defaults 仅在打开时生效，避免父组件重渲染重置表单
+  const defaultsRef = useRef(defaults)
+  defaultsRef.current = defaults
   useEffect(() => {
     if (!open) return
+    const d = defaultsRef.current
     setTitle(milestone?.title ?? '')
-    setDate(milestone?.date ?? defaults?.date ?? todayStr())
-    setType(milestone?.type ?? defaults?.type ?? 'other')
-    setProjectId(milestone?.project_id ?? defaults?.project_id ?? '')
+    setDate(milestone?.date ?? d?.date ?? todayStr())
+    setType(milestone?.type ?? d?.type ?? 'other')
+    setProjectId(milestone?.project_id ?? d?.project_id ?? '')
     setRemindText(formatRemind(milestone?.remind_days ?? PRESET_REMIND))
     setNote(milestone?.note ?? '')
-  }, [open, milestone, defaults])
+  }, [open, milestone])
 
   const togglePreset = (day: number): void => {
     const current = parseRemind(remindText)

@@ -1,5 +1,5 @@
 // 任务新建/编辑弹窗（今日概览、任务页、日历、项目详情共用）
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Task } from '@shared/types'
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
@@ -27,16 +27,20 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
   const [tags, setTags] = useState('')
   const [note, setNote] = useState('')
 
+  // defaults 仅在打开时生效，避免父组件重渲染（如外部数据轮询）重置正在编辑的表单
+  const defaultsRef = useRef(defaults)
+  defaultsRef.current = defaults
   useEffect(() => {
     if (!open) return
+    const d = defaultsRef.current
     setTitle(task?.title ?? '')
-    setProjectId(task?.project_id ?? defaults?.project_id ?? '')
+    setProjectId(task?.project_id ?? d?.project_id ?? '')
     setStatus(task?.status ?? 'todo')
     setPriority(task?.priority ?? 'medium')
-    setDueDate(task?.due_date ?? defaults?.due_date ?? '')
+    setDueDate(task?.due_date ?? d?.due_date ?? '')
     setTags((task?.tags ?? []).join(' '))
     setNote(task?.note ?? '')
-  }, [open, task, defaults])
+  }, [open, task])
 
   const submit = (): void => {
     const trimmed = title.trim()

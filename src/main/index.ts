@@ -10,6 +10,9 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
+// 显式统一应用名：保证 userData 目录（设置存储位置）在 dev / preview / 打包各启动方式下一致
+app.setName('gezhi-workbench')
+
 function resolveIconPath(): string {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'icon.png')

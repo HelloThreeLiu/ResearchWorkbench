@@ -49,7 +49,11 @@ export function updateSettings(patch: Partial<AppSettings>): AppSettings {
 export function loadSettings(): void {
   try {
     if (fs.existsSync(settingsPath())) {
-      settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) }
+      const parsed = JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) as Partial<AppSettings>
+      settings = { ...settings, ...parsed }
+      if (typeof settings.dataDir === 'string' && settings.dataDir.trim() === '') {
+        settings.dataDir = null
+      }
     }
   } catch (err) {
     console.error('[store] 读取设置失败，使用默认设置', err)
