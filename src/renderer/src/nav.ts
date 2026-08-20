@@ -10,6 +10,9 @@ export type Page =
   | { name: 'milestones' }
   | { name: 'ideas' }
   | { name: 'tools' }
+  | { name: 'papers' }
+  | { name: 'achievements' }
+  | { name: 'reports' }
   | { name: 'settings' }
 
 export type ProjectTab = 'overview' | 'tasks' | 'logs' | 'milestones'

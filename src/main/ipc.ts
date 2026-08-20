@@ -18,6 +18,7 @@ import {
   saveCollection,
   updateSettings
 } from './store'
+import { exportToFile, markdownToDocx } from './exporter'
 import { setQuickCaptureShortcut } from './shortcuts'
 
 export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow | null): void {
@@ -35,7 +36,10 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
             ideas: [],
             logs: [],
             tools: { groups: [], items: [] },
-            vocab: DEFAULT_VOCAB
+            vocab: DEFAULT_VOCAB,
+            papers: [],
+            achievements: [],
+            reports: []
           },
       settings,
       meta: { lastWriteAt: getLastWriteAt() }
@@ -135,6 +139,36 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
   })
+
+  // 汇报导出：md 直写 / docx 由 Markdown 转换；返回保存路径（取消返回 null）
+  ipcMain.handle(
+    'export:report',
+    async (
+      _e,
+      args: { defaultFileName: string; markdown: string; format: 'md' | 'docx'; title: string }
+    ): Promise<{ ok: boolean; path?: string; error?: string }> => {
+      try {
+        const { defaultFileName, markdown, format, title } = args
+        const showDialog = async (): Promise<string | null> => {
+          const result = await dialog.showSaveDialog({
+            title: format === 'md' ? '导出 Markdown' : '导出 Word 文档',
+            defaultPath: defaultFileName,
+            filters:
+              format === 'md'
+                ? [{ name: 'Markdown', extensions: ['md'] }]
+                : [{ name: 'Word 文档', extensions: ['docx'] }]
+          })
+          return result.canceled || !result.filePath ? null : result.filePath
+        }
+        const data =
+          format === 'md' ? markdown : await markdownToDocx(markdown, title)
+        const saved = await exportToFile(data, format, showDialog)
+        return saved ? { ok: true, path: saved } : { ok: false, error: 'canceled' }
+      } catch (err) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
 
   // 抓取网页标题与 favicon（离线或失败时渲染层降级为域名/默认图标）
   ipcMain.handle('url:fetch-meta', async (_e, url: string): Promise<{ title: string | null; favicon: string | null }> => {

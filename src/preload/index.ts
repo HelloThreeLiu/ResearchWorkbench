@@ -24,6 +24,13 @@ const api = {
     ipcRenderer.invoke('settings:update', patch),
   pickPath: (kind: 'file' | 'directory'): Promise<string | null> =>
     ipcRenderer.invoke('dialog:pick-path', kind),
+  exportReport: (args: {
+    defaultFileName: string
+    markdown: string
+    format: 'md' | 'docx'
+    title: string
+  }): Promise<{ ok: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('export:report', args),
   fetchUrlMeta: (url: string): Promise<{ title: string | null; favicon: string | null }> =>
     ipcRenderer.invoke('url:fetch-meta', url),
   quitApp: (): Promise<void> => ipcRenderer.invoke('app:quit'),

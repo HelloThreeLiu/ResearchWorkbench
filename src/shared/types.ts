@@ -48,6 +48,9 @@ export interface Milestone {
   remind_days: number[] // 提前提醒天数，默认 [7,3,1]
   note: string
   status: MilestoneStatus
+  // 论文日期自动生成的节点回链（手工节点为 null）
+  source_paper_id: string | null
+  source_kind: 'draft' | 'submission' | 'result' | 'camera_ready' | null
   created_at: string
   updated_at: string
 }
@@ -95,6 +98,79 @@ export interface ToolFileData {
   items: ToolBookmark[]
 }
 
+// ---------- V2 实体 ----------
+
+export type PaperType = 'journal' | 'conference'
+/** 状态流转：构思 → 写作中 → 已投稿 → 审稿中 → 大修/小修 → 录用/拒稿（可回退；拒稿后改投重置） */
+export type PaperStatus =
+  | 'idea'
+  | 'writing'
+  | 'submitted'
+  | 'reviewing'
+  | 'major_revision'
+  | 'minor_revision'
+  | 'accepted'
+  | 'rejected'
+
+/** 论文章节（章节级任务，与任务系统双向联动） */
+export interface PaperSection {
+  id: string
+  title: string
+  task_id: string | null // 关联的任务 id（同步出现在任务列表）
+  done: boolean
+}
+
+export interface Paper {
+  id: string
+  title: string
+  venue: string // 目标期刊/会议
+  type: PaperType
+  status: PaperStatus
+  round: number // 当前轮次（投稿后每轮 +1）
+  dates: {
+    draft: string | null // 初稿
+    submission: string | null // 投稿
+    result: string | null // 结果通知
+    camera_ready: string | null
+  }
+  repo_url: string
+  project_id: string | null
+  collaborators: string
+  note: string
+  sections: PaperSection[]
+  created_at: string
+  updated_at: string
+}
+
+export type AchievementType = 'paper' | 'patent' | 'award' | 'project' | 'other'
+
+export interface Achievement {
+  id: string
+  type: AchievementType
+  title: string
+  date: string // YYYY-MM-DD
+  level: string // 如 CCF-A / SCI 一区 / 校级
+  project_id: string | null
+  detail: string
+  evidence_path: string // 证明材料路径
+  is_draft: boolean // 录用论文自动生成的草稿项
+  created_at: string
+  updated_at: string
+}
+
+export type ReportKind = 'weekly' | 'monthly' | 'summary'
+
+export interface Report {
+  id: string
+  kind: ReportKind
+  title: string
+  period_start: string // YYYY-MM-DD（含）
+  period_end: string // YYYY-MM-DD（含）
+  content: string // Markdown
+  generated_at: string
+  updated_at: string
+}
+
 /** 词汇库：用户可管理的标签集合与节点类型集合（内置类型 builtin=true 不可删除） */
 export interface TagDef {
   id: string
@@ -118,7 +194,24 @@ export interface AppSettings {
   hotkey: string // 全局速记快捷键，默认 Alt+N
   closeToTray: boolean
   lastBackupDate: string | null // YYYY-MM-DD，用于「每日首次运行备份」
+  reportTemplate: string // 周报/月报 Markdown 模板（占位符方式）
 }
+
+/** 默认报告模板：占位符 {{TITLE}} {{PERIOD}} {{WORK}} {{PLAN}} {{THOUGHTS}} */
+export const DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
+
+## 一、本期工作
+
+{{WORK}}
+
+## 二、下期计划
+
+{{PLAN}}
+
+## 三、问题与思考
+
+{{THOUGHTS}}
+`
 
 // 数据集合名 → 文件名（projects.json / tasks.json / ...）
 export type CollectionName =
@@ -129,6 +222,9 @@ export type CollectionName =
   | 'logs'
   | 'tools'
   | 'vocab'
+  | 'papers'
+  | 'achievements'
+  | 'reports'
 
 export interface AllCollections {
   projects: Project[]
@@ -138,6 +234,9 @@ export interface AllCollections {
   logs: ProgressLog[]
   tools: ToolFileData
   vocab: VocabFileData
+  papers: Paper[]
+  achievements: Achievement[]
+  reports: Report[]
 }
 
 export interface BootstrapResult {
@@ -155,7 +254,10 @@ export const COLLECTION_FILES: Record<CollectionName, string> = {
   ideas: 'ideas.json',
   logs: 'progress_logs.json',
   tools: 'tools.json',
-  vocab: 'vocab.json'
+  vocab: 'vocab.json',
+  papers: 'papers.json',
+  achievements: 'achievements.json',
+  reports: 'reports.json'
 }
 
 export const DEFAULT_REMIND_DAYS = [7, 3, 1]
@@ -210,6 +312,51 @@ export const TOOL_TYPE_LABELS: Record<ToolType, string> = {
   file: '文件',
   folder: '文件夹',
   app: '程序'
+}
+
+// ---------- V2 标签与顺序 ----------
+
+export const PAPER_TYPE_LABELS: Record<PaperType, string> = {
+  journal: '期刊',
+  conference: '会议'
+}
+
+export const PAPER_STATUS_LABELS: Record<PaperStatus, string> = {
+  idea: '构思',
+  writing: '写作中',
+  submitted: '已投稿',
+  reviewing: '审稿中',
+  major_revision: '大修',
+  minor_revision: '小修',
+  accepted: '录用',
+  rejected: '拒稿'
+}
+
+/** 看板/分组展示顺序（按流转阶段） */
+export const PAPER_STATUS_ORDER: PaperStatus[] = [
+  'idea',
+  'writing',
+  'submitted',
+  'reviewing',
+  'major_revision',
+  'minor_revision',
+  'accepted',
+  'rejected'
+]
+
+export const PAPER_DATE_LABELS: Record<keyof Paper['dates'], string> = {
+  draft: '初稿',
+  submission: '投稿',
+  result: '结果通知',
+  camera_ready: 'Camera-ready'
+}
+
+export const ACHIEVEMENT_TYPE_LABELS: Record<AchievementType, string> = {
+  paper: '论文',
+  patent: '专利',
+  award: '获奖',
+  project: '项目',
+  other: '其他'
 }
 
 // 项目可选颜色（用于卡片标识、日历任务标记）

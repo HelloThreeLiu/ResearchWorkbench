@@ -3,17 +3,19 @@ import { useStore } from '@/store'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays,
+  ClipboardList,
+  FileText,
   Flag,
   FolderKanban,
   ListTodo,
   Lightbulb,
   Settings,
-  Sun,
+  Trophy,
   Wrench,
   Zap
 } from 'lucide-react'
 
-const NAV_ITEMS: Array<{ page: Page; label: string; icon: typeof Sun }> = [
+const NAV_ITEMS: Array<{ page: Page; label: string; icon: typeof Zap }> = [
   { page: { name: 'dashboard' }, label: '今日概览', icon: Zap },
   { page: { name: 'projects' }, label: '项目', icon: FolderKanban },
   { page: { name: 'tasks' }, label: '任务', icon: ListTodo },
@@ -21,6 +23,12 @@ const NAV_ITEMS: Array<{ page: Page; label: string; icon: typeof Sun }> = [
   { page: { name: 'milestones' }, label: '时间节点', icon: Flag },
   { page: { name: 'ideas' }, label: '灵感', icon: Lightbulb },
   { page: { name: 'tools' }, label: '工具箱', icon: Wrench }
+]
+
+const V2_NAV_ITEMS: Array<{ page: Page; label: string; icon: typeof Zap }> = [
+  { page: { name: 'papers' }, label: '论文投稿', icon: FileText },
+  { page: { name: 'achievements' }, label: '成果台账', icon: Trophy },
+  { page: { name: 'reports' }, label: '汇报中心', icon: ClipboardList }
 ]
 
 export default function Sidebar() {
@@ -40,8 +48,28 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-2.5">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2.5">
         {NAV_ITEMS.map((item) => {
+          const active = page.name === item.page.name
+          const Icon = item.icon
+          return (
+            <button
+              key={item.page.name}
+              onClick={() => navigate(item.page)}
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors cursor-pointer',
+                active
+                  ? 'bg-accent-soft font-medium text-accent'
+                  : 'text-text-2 hover:bg-surface-2 hover:text-text'
+              )}
+            >
+              <Icon size={15.5} strokeWidth={active ? 2.2 : 1.8} />
+              {item.label}
+            </button>
+          )
+        })}
+        <div className="my-1.5 border-t border-border" />
+        {V2_NAV_ITEMS.map((item) => {
           const active = page.name === item.page.name
           const Icon = item.icon
           return (

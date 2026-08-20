@@ -12,6 +12,9 @@ import CalendarPage from '@/pages/CalendarPage'
 import MilestonesPage from '@/pages/MilestonesPage'
 import IdeasPage from '@/pages/IdeasPage'
 import ToolboxPage from '@/pages/ToolboxPage'
+import PapersPage from '@/pages/PapersPage'
+import AchievementsPage from '@/pages/AchievementsPage'
+import ReportsPage from '@/pages/ReportsPage'
 import SettingsPage from '@/pages/SettingsPage'
 
 /** 主题：跟随系统或手动指定 */
@@ -95,6 +98,9 @@ export default function App() {
         {page.name === 'milestones' && <MilestonesPage />}
         {page.name === 'ideas' && <IdeasPage />}
         {page.name === 'tools' && <ToolboxPage />}
+        {page.name === 'papers' && <PapersPage />}
+        {page.name === 'achievements' && <AchievementsPage />}
+        {page.name === 'reports' && <ReportsPage />}
         {page.name === 'settings' && <SettingsPage />}
       </main>
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} />

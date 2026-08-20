@@ -8,6 +8,7 @@ import path from 'node:path'
 import {
   COLLECTION_FILES,
   DEFAULT_REMIND_DAYS,
+  DEFAULT_REPORT_TEMPLATE,
   DEFAULT_VOCAB,
   type AllCollections,
   type AppSettings,
@@ -32,7 +33,8 @@ let settings: AppSettings = {
   theme: 'system',
   hotkey: 'Alt+N',
   closeToTray: true,
-  lastBackupDate: null
+  lastBackupDate: null,
+  reportTemplate: DEFAULT_REPORT_TEMPLATE
 }
 let storeMeta: StoreMeta = {}
 /** 数据文件最近一次【本应用】写入成功后的 mtimeMs，用于区分外部修改 */
@@ -81,7 +83,10 @@ function emptyCollections(): AllCollections {
     ideas: [],
     logs: [],
     tools: { groups: [], items: [] },
-    vocab: DEFAULT_VOCAB
+    vocab: DEFAULT_VOCAB,
+    papers: [],
+    achievements: [],
+    reports: []
   }
 }
 

@@ -1,11 +1,64 @@
-// 设置：数据目录 / 主题 / 全局快捷键 / 关闭行为 / 备份 / 词汇库入口
+// 设置：数据目录 / 主题 / 全局快捷键 / 关闭行为 / 备份 / 词汇库入口 / 报告模板
 import { useState } from 'react'
-import { Database, FolderOpen, Keyboard, Moon, Palette, Save, SlidersHorizontal } from 'lucide-react'
-import type { ThemeMode } from '@shared/types'
+import {
+  Database,
+  FileText,
+  FolderOpen,
+  Keyboard,
+  Moon,
+  Palette,
+  RotateCcw,
+  Save,
+  SlidersHorizontal
+} from 'lucide-react'
+import { DEFAULT_REPORT_TEMPLATE, type ThemeMode } from '@shared/types'
 import { useStore } from '@/store'
-import { Badge, Button, Select } from '@/components/ui'
+import { Badge, Button, Select, Textarea } from '@/components/ui'
 import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
+
+/** 报告模板编辑器：本地编辑 + 保存到设置（支持恢复默认） */
+function ReportTemplateEditor() {
+  const reportTemplate = useStore((s) => s.settings.reportTemplate)
+  const updateSettings = useStore((s) => s.updateSettings)
+  const [text, setText] = useState(reportTemplate)
+  const [savedFlash, setSavedFlash] = useState(false)
+  const dirty = text !== reportTemplate
+
+  return (
+    <div className="mt-2.5 flex flex-col gap-2">
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={10}
+        className="font-mono text-[12px]"
+        spellCheck={false}
+      />
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="primary"
+          disabled={!dirty}
+          onClick={async () => {
+            await updateSettings({ reportTemplate: text })
+            setSavedFlash(true)
+            setTimeout(() => setSavedFlash(false), 2000)
+          }}
+        >
+          <Save size={12.5} /> 保存模板
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => setText(DEFAULT_REPORT_TEMPLATE)}
+          title="恢复默认模板（未保存前仅重置编辑区）"
+        >
+          <RotateCcw size={12.5} /> 恢复默认
+        </Button>
+        {savedFlash && <span className="text-[11.5px] text-success">已保存，下次生成报告生效</span>}
+      </div>
+    </div>
+  )
+}
 
 /** 把键盘事件转为 Electron accelerator 文案（支持字母/数字/F1-F12 + 修饰键） */
 function eventToAccelerator(e: React.KeyboardEvent): string | null {
@@ -226,10 +279,22 @@ export default function SettingsPage() {
         </div>
       </SectionCard>
 
+      <SectionCard icon={<FileText size={15} className="text-accent" />} title="周报/月报模板">
+        <p className="text-[11.5px] leading-relaxed text-text-3">
+          生成报告时按此 Markdown 模板渲染。可用占位符：
+          <code className="mx-1 rounded bg-surface-2 px-1">{'{{TITLE}}'}</code>
+          <code className="mx-1 rounded bg-surface-2 px-1">{'{{PERIOD}}'}</code>
+          <code className="mx-1 rounded bg-surface-2 px-1">{'{{WORK}}'}</code>
+          <code className="mx-1 rounded bg-surface-2 px-1">{'{{PLAN}}'}</code>
+          <code className="mx-1 rounded bg-surface-2 px-1">{'{{THOUGHTS}}'}</code>
+        </p>
+        <ReportTemplateEditor />
+      </SectionCard>
+
       <SectionCard icon={<span className="text-[13px]">ℹ️</span>} title="关于">
         <div className="flex flex-col gap-1 text-[12.5px] text-text-2">
           <span>
-            格致 · 科研工作台 <Badge className="ml-1">V1.0.0</Badge>
+            格致 · 科研工作台 <Badge className="ml-1">V2.0.0</Badge>
           </span>
           <span className="text-[11.5px] text-text-3">
             「格物致知」—— 一台电脑上的一个应用，装下你全部的科研管理工作。
