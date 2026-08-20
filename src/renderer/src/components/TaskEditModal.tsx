@@ -6,6 +6,7 @@ import { useStore } from '@/store'
 import { useAllTags } from '@/hooks/useVocab'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import TagInput from '@/components/TagInput'
+import VocabManagerModal from '@/components/VocabManagerModal'
 
 interface TaskEditModalProps {
   open: boolean
@@ -29,6 +30,7 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
   const [dueDate, setDueDate] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [note, setNote] = useState('')
+  const [vocabManageOpen, setVocabManageOpen] = useState(false)
 
   // defaults 仅在打开时生效，避免父组件重渲染（如外部数据轮询）重置正在编辑的表单
   const defaultsRef = useRef(defaults)
@@ -116,7 +118,13 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
           </Field>
         </div>
         <Field label="标签（从标签库选择或直接输入新标签）">
-          <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} id="task-tag-input" />
+          <TagInput
+            value={tags}
+            onChange={setTags}
+            suggestions={tagSuggestions}
+            id="task-tag-input"
+            onManage={() => setVocabManageOpen(true)}
+          />
         </Field>
         <Field label="备注">
           <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
@@ -128,6 +136,11 @@ export default function TaskEditModal({ open, onClose, task, defaults }: TaskEdi
           </Button>
         </div>
       </div>
+      <VocabManagerModal
+        open={vocabManageOpen}
+        initialTab="tags"
+        onClose={() => setVocabManageOpen(false)}
+      />
     </Modal>
   )
 }

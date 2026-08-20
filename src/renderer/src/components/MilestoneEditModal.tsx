@@ -4,6 +4,7 @@ import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useMilestoneTypes } from '@/hooks/useVocab'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
 import { todayStr } from '@/lib/date'
 
@@ -34,6 +35,7 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
   const addMilestoneType = useStore((s) => s.addMilestoneType)
   const milestoneTypes = useMilestoneTypes()
   const [newTypeName, setNewTypeName] = useState('')
+  const [vocabManageOpen, setVocabManageOpen] = useState(false)
 
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(todayStr())
@@ -109,13 +111,25 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="类型">
-            <Select value={type} onChange={(e) => setType(e.target.value)}>
+            <Select
+              value={type === '__new__' ? '__new__' : type}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === '__manage__') {
+                  // 打开词汇库管理，不改变当前选择
+                  setVocabManageOpen(true)
+                  return
+                }
+                setType(v)
+              }}
+            >
               {milestoneTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
               <option value="__new__">＋ 新建类型…</option>
+              <option value="__manage__">⚙ 管理类型…</option>
             </Select>
             {type === '__new__' && (
               <div className="mt-1.5 flex gap-2">
@@ -190,6 +204,11 @@ export default function MilestoneEditModal({ open, onClose, milestone, defaults 
           </Button>
         </div>
       </div>
+      <VocabManagerModal
+        open={vocabManageOpen}
+        initialTab="types"
+        onClose={() => setVocabManageOpen(false)}
+      />
     </Modal>
   )
 }

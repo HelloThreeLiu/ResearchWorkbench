@@ -1,6 +1,6 @@
 // 标签输入：chips + 输入联想（来自标签库与既有数据）；Enter/逗号提交，IME 组词中不拦截
 import { useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { Settings2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TagInputProps {
@@ -10,6 +10,8 @@ interface TagInputProps {
   placeholder?: string
   className?: string
   id?: string
+  /** 提供时显示「管理标签库」入口 */
+  onManage?: () => void
 }
 
 const DATALIST_ID = 'gezhi-tag-suggestions'
@@ -20,7 +22,8 @@ export default function TagInput({
   suggestions = [],
   placeholder = '回车添加标签，可选可输',
   className,
-  id
+  id,
+  onManage
 }: TagInputProps) {
   const [text, setText] = useState('')
   const composingRef = useRef(false)
@@ -100,6 +103,19 @@ export default function TagInput({
         placeholder={value.length === 0 ? placeholder : ''}
         className="h-6 min-w-24 flex-1 bg-transparent text-[13px] text-text placeholder:text-text-3 focus:outline-none"
       />
+      {onManage && (
+        <button
+          type="button"
+          title="管理标签库"
+          onClick={(e) => {
+            e.stopPropagation()
+            onManage()
+          }}
+          className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-md text-text-3 hover:bg-surface-2 hover:text-text cursor-pointer"
+        >
+          <Settings2 size={12} />
+        </button>
+      )}
     </div>
   )
 }

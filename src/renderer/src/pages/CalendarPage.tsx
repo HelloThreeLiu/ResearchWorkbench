@@ -92,7 +92,7 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
     )
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-6">
+    <div className="px-4 py-5 sm:px-6">
       {/* 工具栏 */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">

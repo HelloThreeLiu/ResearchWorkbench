@@ -5,7 +5,8 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
-  useEffect
+  useEffect,
+  useRef
 } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -116,6 +117,9 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 // ---------- Modal ----------
+/** 模态栈：Esc 只关闭最上层的弹窗（支持嵌套，如节点弹窗内打开词汇库管理） */
+const modalStack: symbol[] = []
+
 interface ModalProps {
   open: boolean
   onClose: () => void
@@ -127,19 +131,27 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, width = 'max-w-lg', dismissable = true }: ModalProps) {
+  const instanceIdRef = useRef<symbol>(Symbol('modal'))
+
   useEffect(() => {
     if (!open) return
+    const id = instanceIdRef.current
+    modalStack.push(id)
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && dismissable) onClose()
+      if (e.key === 'Escape' && dismissable && modalStack[modalStack.length - 1] === id) onClose()
     }
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    return () => {
+      const idx = modalStack.indexOf(id)
+      if (idx >= 0) modalStack.splice(idx, 1)
+      window.removeEventListener('keydown', handler)
+    }
   }, [open, onClose, dismissable])
 
   if (!open) return null
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 sm:p-6"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && dismissable) onClose()
       }}

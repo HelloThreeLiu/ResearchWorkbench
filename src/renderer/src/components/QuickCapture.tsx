@@ -4,6 +4,7 @@ import { Check, Lightbulb } from 'lucide-react'
 import { useStore } from '@/store'
 import { useAllTags } from '@/hooks/useVocab'
 import TagInput from '@/components/TagInput'
+import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
 import { todayStr } from '@/lib/date'
 
@@ -12,6 +13,7 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
   const [projectId, setProjectId] = useState<string>('')
   const [tags, setTags] = useState<string[]>([])
   const [flash, setFlash] = useState(false)
+  const [vocabManageOpen, setVocabManageOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const projects = useStore((s) => s.projects)
   const addIdea = useStore((s) => s.addIdea)
@@ -106,6 +108,7 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
               suggestions={tagSuggestions}
               placeholder="标签（回车确认）"
               id="quick-capture-tags"
+              onManage={() => setVocabManageOpen(true)}
             />
           </div>
           <button
@@ -122,6 +125,11 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
           </button>
         </div>
       </div>
+      <VocabManagerModal
+        open={vocabManageOpen}
+        initialTab="tags"
+        onClose={() => setVocabManageOpen(false)}
+      />
     </div>
   )
 }

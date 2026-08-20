@@ -72,7 +72,8 @@ async function main() {
   const results = []
   for (const [width, height] of [
     [900, 680],
-    [1600, 900]
+    [1280, 800],
+    [1920, 1040]
   ]) {
     const { windowId } = await send('Target.getWindowForTarget', { targetId: page.id })
     await send('Browser.setWindowBounds', { windowId, bounds: { width, height } })
@@ -87,10 +88,20 @@ async function main() {
         const main = document.querySelector('main') ?? document.documentElement
         const bodyOver = document.documentElement.scrollWidth - document.documentElement.clientWidth
         const mainOver = main.scrollWidth - main.clientWidth
-        return { bodyOver, mainOver }
+        const container = main.querySelector(':scope > div')
+        const fill = container && main.clientWidth > 0
+          ? Math.round((container.getBoundingClientRect().width / main.clientWidth) * 100)
+          : 0
+        return { bodyOver, mainOver, fill }
       })()`)
       const ok = overflow.bodyOver <= 1 && overflow.mainOver <= 1
-      results.push([ok ? 'PASS' : 'FAIL', `${width}px 宽 × ${label}`, JSON.stringify(overflow)])
+      // 设置页保留可读宽度，其余页面要求内容铺满可用宽度（≥92%）
+      const fillOk = label === '设置' || overflow.fill >= 92
+      results.push([
+        ok && fillOk ? 'PASS' : 'FAIL',
+        `${width}px 宽 × ${label}`,
+        JSON.stringify(overflow)
+      ])
     }
   }
 

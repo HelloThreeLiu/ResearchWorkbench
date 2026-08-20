@@ -150,7 +150,7 @@ export default function ToolboxPage() {
   }
 
   const renderItems = (items: ToolBookmark[]): React.ReactNode => (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {items.map((item) => {
         const invalid = item.type !== 'url' && validity[item.id] === false
         return (
@@ -249,7 +249,7 @@ export default function ToolboxPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-7 sm:py-6">
+    <div className="px-4 py-5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h1 className="text-lg font-semibold">工具箱</h1>

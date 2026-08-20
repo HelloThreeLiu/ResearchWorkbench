@@ -65,7 +65,7 @@ export default function Dashboard() {
   const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-7 sm:py-6">
+    <div className="px-4 py-5 sm:px-6">
       {/* 头部问候 + 快速操作 */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
@@ -99,9 +99,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5">
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5 2xl:grid-cols-6">
         {/* 左列：任务 */}
-        <section className="min-w-0 rounded-xl border border-border bg-surface p-3.5 sm:p-4 lg:col-span-3">
+        <section className="min-w-0 rounded-xl border border-border bg-surface p-3.5 sm:p-4 lg:col-span-3 2xl:col-span-4">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
               <ListPlus size={15} className="shrink-0 text-accent" />

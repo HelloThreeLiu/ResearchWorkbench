@@ -38,7 +38,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-7 sm:py-6">
+    <div className="px-4 py-5 sm:px-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">项目</h1>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>
@@ -46,7 +46,7 @@ export default function ProjectsPage() {
         </Button>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {active.map((p) => {
           const stats = statsOf(p.id)
           const nearest = nearestMilestone(p.id)
