@@ -1,0 +1,25 @@
+appId: com.gezhi.workbench
+productName: 格致科研工作台
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+icon: build/icon.png
+win:
+  target:
+    - nsis
+    - zip
+  artifactName: ${productName}-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: 格致科研工作台
+electronLanguages:
+  - zh-CN
+  - en-US
