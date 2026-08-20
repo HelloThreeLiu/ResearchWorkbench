@@ -22,6 +22,8 @@ npm run dist       # 打包 Windows 安装包（release/，NSIS + 便携 zip）
 
 图标生成：`node scripts/gen-icon.mjs`（纯 Node 生成 `build/icon.png`，修改设计后重跑）。
 
+端到端验证：`node scripts/e2e-verify.mjs`（需先以 `npx electron out/main/index.js --remote-debugging-port=9222` 启动并完成数据目录配置；通过 CDP 驱动真实 UI 点击，验证渲染与 JSON 落盘）。
+
 ## 使用要点
 
 - **首次启动**选择数据目录（建议坚果云同步目录，如 `…\Nutstore\1\格致科研工作台`），目录为空时自动初始化并预置工具箱示例收藏；
