@@ -1,7 +1,7 @@
 {
   "name": "gezhi-workbench",
   "productName": "格致科研工作台",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "格致 · 科研工作台（Gezhi Research Workbench）—— 单机科研管理桌面应用",
   "main": "./out/main/index.js",
   "author": "gezhi",
