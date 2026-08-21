@@ -12,6 +12,8 @@ export type MilestoneStatus = 'pending' | 'done'
 export type IdeaStatus = 'new' | 'organized' | 'converted'
 export type ToolType = 'url' | 'file' | 'folder' | 'app'
 export type ThemeMode = 'system' | 'light' | 'dark'
+/** 界面风格主题（与明暗 ThemeMode 正交）：linear 精密高效 / claude 学术编辑 / notion 暖中性 */
+export type StyleTheme = 'linear' | 'claude' | 'notion'
 
 export interface Project {
   id: string
@@ -197,6 +199,7 @@ export interface VocabFileData {
 export interface AppSettings {
   dataDir: string | null
   theme: ThemeMode
+  styleTheme: StyleTheme // 界面风格主题，默认 linear
   hotkey: string // 全局速记快捷键，默认 Alt+N
   closeToTray: boolean
   lastBackupDate: string | null // YYYY-MM-DD，用于「每日首次运行备份」

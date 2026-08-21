@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>原型 A · 学术编辑风（源风格 claude）— 格致 · 科研工作台</title>
+<style>
+  /* ============ 源风格：awesome-design-md/claude ============
+     陶土暖纸 + 衬线标题 + Ring 描边（0 0 0 1px 代替边框）+ 单强调色纪律 */
+  :root {
+    --paper: #f5f4ed;      /* 羊皮纸画布 */
+    --ivory: #faf9f5;      /* 象牙卡片 */
+    --ivory-2: #f0efe8;
+    --ink: #141413;        /* 近黑 */
+    --ink-2: #4d4c48;      /* 暖炭灰 */
+    --stone: #87867f;      /* 石灰 */
+    --stone-2: #a8a79f;
+    --ring: #d1cfc5;       /* Ring 描边 */
+    --ring-soft: #e4e2d9;
+    --clay: #c96442;       /* 陶土 · 唯一强调 */
+    --clay-deep: #a85236;
+    --clay-soft: #f4e5dd;
+    --rust: #b3452f;  --rust-soft: #f3e0da;   /* danger（暖调红） */
+    --amber: #a0731c; --amber-soft: #f5ecd9;  /* warn */
+    --olive: #5c7a4a;                            /* success */
+    --serif: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+    --sans: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    --mono: Consolas, "Courier New", monospace;
+    --shadow-ring: 0 0 0 1px var(--ring);
+    --shadow-card: 0 0 0 1px var(--ring), 0 1px 2px rgba(20, 20, 19, 0.04), 0 6px 18px rgba(20, 19, 16, 0.04);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; cursor: pointer; }
+  .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .icon.sm { width: 13px; height: 13px; }
+  .icon.xs { width: 11px; height: 11px; stroke-width: 2; }
+
+  /* ================= 首屏：欢迎 / 选择目录 ================= */
+  .onb { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 56px 24px 72px; position: relative; }
+  .onb > * { animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .onb > *:nth-child(2) { animation-delay: 0.05s; } .onb > *:nth-child(3) { animation-delay: 0.1s; }
+  .onb > *:nth-child(4) { animation-delay: 0.15s; } .onb > *:nth-child(5) { animation-delay: 0.2s; }
+  .onb > *:nth-child(6) { animation-delay: 0.25s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: 0.22em; color: var(--clay); text-transform: uppercase; }
+  .logo { width: 64px; height: 64px; margin-top: 20px; border-radius: 16px; background: var(--ivory);
+          box-shadow: var(--shadow-ring), 0 1px 3px rgba(20, 20, 19, 0.05);
+          display: grid; place-items: center; font: 600 31px/1 var(--serif); color: var(--clay); }
+  h1 { margin-top: 22px; font: 600 27px/1.4 var(--serif); letter-spacing: 0.01em; text-align: center; }
+  .sub { margin-top: 10px; max-width: 470px; font-size: 13.5px; line-height: 1.85; color: var(--ink-2); text-align: center; }
+
+  /* 特性：编辑式 1px 细线表格 */
+  .grid { margin-top: 30px; width: 660px; max-width: 100%; display: grid; grid-template-columns: 1fr 1fr;
+          gap: 1px; background: var(--ring); border: 1px solid var(--ring); border-radius: 12px; overflow: hidden; }
+  .cell { background: var(--paper); padding: 15px 18px 16px; display: flex; gap: 13px; align-items: baseline; }
+  .idx { font: 600 12.5px var(--serif); color: var(--clay); }
+  .cell b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .cell p { margin-top: 3px; font-size: 12px; line-height: 1.7; color: var(--stone); }
+
+  /* 第一步卡片 */
+  .card { margin-top: 22px; width: 660px; max-width: 100%; background: var(--ivory); border-radius: 14px;
+          box-shadow: var(--shadow-card); padding: 22px 24px 24px; }
+  .card-kicker { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 600;
+                 letter-spacing: 0.16em; color: var(--clay); }
+  .card-kicker::after { content: ""; flex: 1; height: 1px; background: var(--ring-soft); }
+  .card > p { margin-top: 10px; font-size: 13px; line-height: 1.85; color: var(--ink-2); }
+  .card strong { color: var(--ink); font-weight: 600; }
+
+  .path { margin-top: 15px; display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+          border: 1px dashed var(--ring); border-radius: 10px; background: var(--paper);
+          color: var(--stone); font-size: 12.5px; transition: all 0.18s ease; }
+  .path .icon { color: var(--clay); }
+  .path:hover { border-color: var(--clay); }
+  .path.filled { border-style: solid; color: var(--ink); background: var(--ivory); }
+  .path.filled .icon { color: var(--olive); }
+  .path-cta { margin-left: auto; font-size: 11.5px; color: var(--clay); }
+  .path.filled .path-cta { display: none; }
+  code.p { font-family: var(--mono); font-size: 12px; }
+
+  .actions { margin-top: 17px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .btn-primary { height: 38px; padding: 0 22px; border: none; border-radius: 999px; background: var(--ink);
+                 color: var(--ivory); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;
+                 transition: background 0.15s ease, transform 0.1s ease; }
+  .btn-primary:hover { background: #2b2a27; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.3); }
+  .hint { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--stone); }
+  .ok { display: none; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--clay-deep); }
+  .ok .icon { color: var(--olive); }
+  .picked .hint { display: none; }
+  .picked .ok { display: inline-flex; }
+
+  .foot { position: absolute; bottom: 26px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--stone-2); letter-spacing: 0.04em; }
+  .toast { position: fixed; left: 50%; bottom: 34px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+           background: var(--ink); color: var(--ivory); font-size: 12px; padding: 9px 18px; border-radius: 999px;
+           box-shadow: 0 8px 24px rgba(20, 19, 16, 0.25); transition: all 0.25s ease; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ================= 分隔与主界面示意 ================= */
+  .divider { display: flex; align-items: center; gap: 16px; padding: 34px 40px 26px; color: var(--stone);
+             font-size: 11px; font-weight: 600; letter-spacing: 0.18em; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--ring); }
+
+  .app { height: 860px; display: flex; background: var(--paper); border-top: 1px solid var(--ring); overflow: hidden; }
+
+  .side { width: 218px; flex-shrink: 0; background: var(--ivory); border-right: 1px solid var(--ring);
+          display: flex; flex-direction: column; padding: 16px 12px 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 14px; }
+  .brand-logo { width: 32px; height: 32px; border-radius: 9px; background: var(--paper); box-shadow: var(--shadow-ring);
+                display: grid; place-items: center; font: 600 16px var(--serif); color: var(--clay); }
+  .brand b { display: block; font-size: 13.5px; font-weight: 600; }
+  .brand span { display: block; font-size: 10.5px; color: var(--stone); margin-top: 1px; }
+  .nav { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .nav-label { margin: 12px 8px 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: var(--stone-2); }
+  .nav button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: none;
+                background: transparent; border-radius: 8px; font-size: 13px; color: var(--ink-2); text-align: left;
+                transition: background 0.12s ease, color 0.12s ease; }
+  .nav button:hover { background: var(--ivory-2); color: var(--ink); }
+  .nav button.active { background: var(--clay-soft); color: var(--clay-deep); font-weight: 600; }
+  .nav button .icon { width: 15.5px; height: 15.5px; }
+  .nav-sep { height: 1px; background: var(--ring-soft); margin: 8px 6px; }
+  .side-foot { border-top: 1px solid var(--ring-soft); padding-top: 10px; }
+  .side-foot .hotkey { margin-top: 10px; background: var(--paper); border-radius: 8px; padding: 8px 10px;
+                       font-size: 10.5px; line-height: 1.6; color: var(--stone); }
+  kbd { font-family: var(--mono); font-size: 10px; background: var(--ivory); box-shadow: var(--shadow-ring);
+        border-radius: 4px; padding: 1px 5px; color: var(--ink-2); }
+
+  .main { flex: 1; min-width: 0; padding: 26px 30px; overflow: hidden; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1.page { font: 600 21px/1.4 var(--serif); }
+  .meta { margin-top: 5px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--stone); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--olive); }
+  .head-actions { display: flex; gap: 10px; }
+  .btn-sm { height: 34px; padding: 0 16px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s ease; }
+  .btn-sm.dark { background: var(--ink); color: var(--ivory); border: none; }
+  .btn-sm.dark:hover { background: #2b2a27; }
+  .btn-sm.ghost { background: transparent; color: var(--ink-2); border: none; box-shadow: var(--shadow-ring); }
+  .btn-sm.ghost:hover { color: var(--ink); background: var(--ivory); }
+
+  .stats { margin-top: 18px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .stat { background: var(--ivory); border-radius: 11px; box-shadow: var(--shadow-ring); padding: 11px 13px; transition: box-shadow 0.15s ease; }
+  .stat:hover { box-shadow: 0 0 0 1px var(--ring), 0 4px 12px rgba(20, 19, 16, 0.06); }
+  .stat .lb { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--stone); white-space: nowrap; }
+  .stat .lb .icon { width: 12px; height: 12px; }
+  .stat .val { margin-top: 6px; font: 600 21px/1 var(--serif); font-variant-numeric: tabular-nums; }
+  .stat.warn .val { color: var(--amber); } .stat.danger .val { color: var(--rust); }
+  .stat .hint2 { margin-top: 5px; font-size: 10px; color: var(--stone-2); white-space: nowrap; }
+
+  .cols { margin-top: 16px; display: grid; grid-template-columns: 1.9fr 1.1fr; gap: 14px; }
+  .panel { background: var(--ivory); border-radius: 13px; box-shadow: var(--shadow-ring); padding: 16px 18px; }
+  .panel-head { display: flex; align-items: center; gap: 8px; }
+  .panel-head h2 { font: 600 14.5px var(--serif); display: flex; align-items: center; gap: 8px; }
+  .panel-head h2 .icon { color: var(--clay); width: 15px; height: 15px; }
+  .count { font: 600 11px var(--serif); color: var(--clay); background: var(--clay-soft); border-radius: 999px; padding: 2px 8px; }
+  .link { margin-left: auto; font-size: 12px; color: var(--clay); background: none; border: none; }
+  .link:hover { text-decoration: underline; }
+
+  .task { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 9px; transition: background 0.12s ease; }
+  .task:hover { background: var(--paper); }
+  .task.overdue { background: var(--rust-soft); }
+  .cb { width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid var(--ring); background: var(--ivory); flex-shrink: 0; }
+  .cb:hover { border-color: var(--clay); }
+  .task .t { min-width: 0; flex: 1; }
+  .task .t b { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task .t span { display: block; margin-top: 2px; font-size: 11px; color: var(--stone); }
+  .badge { flex-shrink: 0; font-size: 10.5px; font-weight: 600; border-radius: 999px; padding: 3px 9px; }
+  .badge.today { color: var(--clay-deep); background: var(--clay-soft); }
+  .badge.late { color: var(--rust); background: var(--rust-soft); }
+  .badge.warn { color: var(--amber); background: var(--amber-soft); }
+  .badge.mute { color: var(--ink-2); background: var(--ivory-2); }
+
+  .ms { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 9px; }
+  .ms:hover { background: var(--paper); }
+  .ms .cb { border-radius: 4px; }
+
+  .idea { border: 1px solid var(--ring-soft); border-radius: 10px; padding: 9px 12px; margin-top: 8px; background: var(--paper); }
+  .idea p { font-size: 12.5px; line-height: 1.7; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .idea .row { margin-top: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .idea time { font-size: 10.5px; color: var(--stone-2); }
+  .to-task { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; color: var(--clay);
+             font-size: 11px; border-radius: 6px; padding: 2px 6px; }
+  .to-task:hover { background: var(--clay-soft); }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .trend { margin-top: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; height: 78px; }
+  .tbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+  .tbar i { font-size: 10px; font-style: normal; color: var(--stone); }
+  .tbar .bar { width: 100%; max-width: 26px; border-radius: 4px 4px 2px 2px; }
+  .tbar em { font-size: 10px; font-style: normal; color: var(--stone-2); }
+  .tbar.today em { color: var(--clay-deep); font-weight: 700; }
+
+  .proto-badge { position: fixed; right: 16px; bottom: 16px; z-index: 99; background: rgba(20, 20, 19, 0.78); color: #faf9f5;
+                 font-size: 11px; padding: 7px 13px; border-radius: 999px; backdrop-filter: blur(4px); pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- lucide 图标 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+</svg>
+
+<!-- ============ 首屏：重设计的「首次启动 · 选择数据目录」 ============ -->
+<section class="onb" id="onb">
+  <div class="kicker">Gezhi · Research Workbench</div>
+  <div class="logo">格</div>
+  <h1>欢迎使用格致 · 科研工作台</h1>
+  <p class="sub">项目、任务、时间节点、灵感、进展日志——一台电脑上的一个应用，装下你全部的科研管理工作。</p>
+
+  <div class="grid">
+    <div class="cell"><span class="idx">01</span><div><b>项目与任务</b><p>拖拽看板流转状态，进展日志按日沉淀</p></div></div>
+    <div class="cell"><span class="idx">02</span><div><b>关键时间节点</b><p>开题、投稿截止、答辩，全程倒计时</p></div></div>
+    <div class="cell"><span class="idx">03</span><div><b>灵感速记</b><p>全局快捷键随手记，一键转为任务</p></div></div>
+    <div class="cell"><span class="idx">04</span><div><b>产出与汇报</b><p>投稿跟踪、成果台账、周报月报生成</p></div></div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="card-kicker">第一步 · 选择数据存储目录</div>
+    <p>数据以<strong>明文 JSON</strong> 保存在你选择的目录，完全属于你。建议选择<strong>坚果云等网盘同步目录</strong>，数据将自动同步到你的其他电脑；也可以先选任意本地目录，之后在设置中随时更改。</p>
+    <div class="path" id="pathBox" title="点击模拟选择目录">
+      <svg class="icon"><use href="#i-folder-open"/></svg>
+      <span id="pathText">尚未选择目录</span>
+      <span class="path-cta">点击选择 →</span>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="mainBtn">
+        <svg class="icon sm"><use href="#i-folder-open"/></svg>
+        <span id="mainBtnText">选择数据目录</span>
+      </button>
+      <span class="hint"><svg class="icon xs"><use href="#i-refresh"/></svg>目录为空时，会自动初始化全部数据文件</span>
+      <span class="ok"><svg class="icon xs"><use href="#i-check"/></svg>目录可用，数据将保存在这里</span>
+    </div>
+  </div>
+
+  <div class="foot">单机桌面应用 · 数据本地明文 JSON 存储 · 无账号 · 无云端</div>
+</section>
+
+<div class="divider">主界面同风格示意（下方）</div>
+
+<!-- ============ 主界面示意 ============ -->
+<section class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-logo">格</div>
+      <div><b>格致</b><span>科研工作台</span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="active"><svg class="icon"><use href="#i-zap"/></svg>今日概览</button>
+      <button><svg class="icon"><use href="#i-folder"/></svg>项目</button>
+      <button><svg class="icon"><use href="#i-list"/></svg>任务</button>
+      <button><svg class="icon"><use href="#i-cal"/></svg>日历</button>
+      <button><svg class="icon"><use href="#i-flag"/></svg>时间节点</button>
+      <button><svg class="icon"><use href="#i-bulb"/></svg>灵感</button>
+      <button><svg class="icon"><use href="#i-wrench"/></svg>工具箱</button>
+      <div class="nav-sep"></div>
+      <div class="nav-label">产出</div>
+      <button><svg class="icon"><use href="#i-file"/></svg>论文投稿</button>
+      <button><svg class="icon"><use href="#i-trophy"/></svg>成果台账</button>
+      <button><svg class="icon"><use href="#i-clip"/></svg>汇报中心</button>
+    </nav>
+    <div class="side-foot">
+      <button style="display:flex;align-items:center;gap:10px;border:none;background:none;font-size:13px;color:var(--ink-2);padding:6px 8px;border-radius:8px;">
+        <svg class="icon" style="width:15.5px;height:15.5px"><use href="#i-gear"/></svg>设置
+      </button>
+      <div class="hotkey">按 <kbd>Alt+N</kbd> 随手记灵感</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 class="page">上午好，今天是 8 月 21 日 星期五</h1>
+        <div class="meta"><span class="dot"></span>数据最近写入：今天 09:42（网盘将自动同步）· 查看数据目录</div>
+      </div>
+      <div class="head-actions">
+        <button class="btn-sm dark"><svg class="icon sm"><use href="#i-plus"/></svg>新建任务</button>
+        <button class="btn-sm ghost"><svg class="icon sm"><use href="#i-calplus"/></svg>新建节点</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-list"/></svg>待办任务</div><div class="val">12</div><div class="hint2">5 进行中</div></div>
+      <div class="stat warn"><div class="lb"><svg class="icon"><use href="#i-clock"/></svg>今日到期</div><div class="val">3</div></div>
+      <div class="stat danger"><div class="lb"><svg class="icon"><use href="#i-warn"/></svg>逾期</div><div class="val">1</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-flag"/></svg>30天节点</div><div class="val">2</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-bulb"/></svg>待整理灵感</div><div class="val">8</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-file"/></svg>本周日志</div><div class="val">4</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-folder"/></svg>进行中项目</div><div class="val">3</div></div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-head">
+          <h2><svg class="icon"><use href="#i-list"/></svg>今日到期与逾期任务</h2>
+          <span class="count">4</span>
+          <button class="link">全部任务 →</button>
+        </div>
+        <div style="margin-top:8px">
+          <div class="task"><span class="cb"></span><div class="t"><b>修改论文二稿 §3 实验部分</b><span>论文A · 多模态融合</span></div><span class="badge today">今天</span></div>
+          <div class="task"><span class="cb"></span><div class="t"><b>整理对比实验数据图表</b><span>论文A · 多模态融合</span></div><span class="badge today">今天</span></div>
+          <div class="task"><span class="cb"></span><div class="t"><b>准备导师周会汇报要点</b><span>学业 · 导师沟通</span></div><span class="badge today">今天</span></div>
+          <div class="task overdue"><span class="cb"></span><div class="t"><b>阅读 related work 文献 ×3</b><span>论文A · 多模态融合</span></div><span class="badge late">逾期 2 天</span></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2><svg class="icon"><use href="#i-flag"/></svg>未来 30 天节点</h2><button class="link">全部 →</button></div>
+          <div style="margin-top:6px">
+            <div class="ms"><span class="cb"></span><div class="t"><b style="font-size:13px;font-weight:500">开题报告</b><span style="font-size:11px;color:var(--stone)">2026-09-24 · 开题</span></div><span class="badge warn">剩 34 天</span></div>
+            <div class="ms"><span class="cb"></span><div class="t"><b style="font-size:13px;font-weight:500">论文A 投稿截止</b><span style="font-size:11px;color:var(--stone)">2026-10-10 · 投稿截止</span></div><span class="badge mute">剩 50 天</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2><svg class="icon" style="color:var(--amber)"><use href="#i-bulb"/></svg>待整理灵感</h2><button class="link">灵感页 →</button></div>
+          <div class="idea">
+            <p>审稿意见 2 的 baseline 对比，可以补一组消融实验，顺便把采样策略的差异也列出来……</p>
+            <div class="row"><time>今天 10:24</time><button class="to-task"><svg class="icon xs"><use href="#i-plus"/></svg>转为任务</button></div>
+          </div>
+          <div class="idea">
+            <p>周报里的进度图，可以直接复用开题 PPT 里的甘特图，改个配色就行。</p>
+            <div class="row"><time>昨天 21:03</time><button class="to-task"><svg class="icon xs"><use href="#i-plus"/></svg>转为任务</button></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>近 7 天完成趋势</h2></div>
+          <div class="trend">
+            <div class="tbar"><i>1</i><div class="bar" style="height:22%;background:rgba(201,100,66,.38)"></div><em>周六</em></div>
+            <div class="tbar"><i></i><div class="bar" style="height:4%;background:var(--ring)"></div><em>周日</em></div>
+            <div class="tbar"><i>2</i><div class="bar" style="height:44%;background:rgba(201,100,66,.38)"></div><em>周一</em></div>
+            <div class="tbar"><i>3</i><div class="bar" style="height:66%;background:rgba(201,100,66,.38)"></div><em>周二</em></div>
+            <div class="tbar"><i>1</i><div class="bar" style="height:22%;background:rgba(201,100,66,.38)"></div><em>周三</em></div>
+            <div class="tbar"><i>4</i><div class="bar" style="height:88%;background:rgba(201,100,66,.38)"></div><em>周四</em></div>
+            <div class="tbar today"><i>2</i><div class="bar" style="height:44%;background:var(--clay)"></div><em>今天</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<div class="proto-badge">原型 A · 学术编辑风（源风格 claude）— 路径框 / 按钮可点击模拟</div>
+<div class="toast" id="toast">原型仅作风格预览 — 真实流程会打开系统文件夹选择对话框</div>
+
+<script>
+  // 模拟：点击路径框或主按钮 → 选中目录；再次点击 → 提示
+  var picked = false;
+  var pathBox = document.getElementById('pathBox');
+  var pathText = document.getElementById('pathText');
+  var mainBtn = document.getElementById('mainBtn');
+  var mainBtnText = document.getElementById('mainBtnText');
+  var card = document.getElementById('card');
+  var toast = document.getElementById('toast');
+
+  function pick() {
+    picked = true;
+    pathBox.classList.add('filled');
+    pathText.innerHTML = '<code class="p">F:\\Nutstore\\1\\格致科研工作台</code>';
+    card.classList.add('picked');
+    mainBtnText.textContent = '开始使用';
+  }
+  pathBox.addEventListener('click', pick);
+  mainBtn.addEventListener('click', function () {
+    if (!picked) { pick(); return; }
+    toast.classList.add('show');
+    setTimeout(function () { toast.classList.remove('show'); }, 2400);
+  });
+
+  // 主界面示意：导航可切换高亮
+  document.querySelectorAll('#nav button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#nav button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

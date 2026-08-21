@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>格致 · UI 风格方案对比（3 原型）</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #fff; --border: #e2e5e9;
+    --text: #1c2128; --text-2: #5c6570; --text-3: #9aa3ad; --accent: #4f46e5;
+    --sans: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; padding: 44px 40px 80px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; }
+  .lead { margin-top: 10px; font-size: 13.5px; line-height: 1.9; color: var(--text-2); max-width: 860px; }
+  .lead b { color: var(--text); }
+  .note { margin-top: 14px; display: inline-flex; gap: 8px; align-items: flex-start; background: #eef0fe; border: 1px solid #dcdffd;
+          border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.75; color: #3f3d8f; max-width: 860px; }
+
+  .cards { margin-top: 34px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .frame { position: relative; width: 100%; height: 300px; overflow: hidden; background: #fff; border-bottom: 1px solid var(--border); }
+  .frame iframe { width: 1280px; height: 830px; border: 0; transform: scale(0.29); transform-origin: 0 0; pointer-events: none; }
+  .frame .open { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+                 background: rgba(255, 255, 255, 0); color: transparent; font-size: 13px; font-weight: 600; text-decoration: none; transition: background 0.15s; }
+  .frame .open:hover { background: rgba(255, 255, 255, 0.55); color: var(--accent); }
+  .body { padding: 16px 18px 18px; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+         color: var(--accent); background: #eef0fe; border-radius: 999px; padding: 3px 10px; }
+  h2 { margin-top: 10px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  h2 .rec { font-size: 10.5px; font-weight: 600; color: #fff; background: var(--accent); border-radius: 999px; padding: 2.5px 8px; letter-spacing: 0.04em; }
+  .desc { margin-top: 7px; font-size: 12.5px; line-height: 1.8; color: var(--text-2); }
+  .tokens { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .tok { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2); background: var(--bg);
+         border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
+  .pros { margin-top: 10px; font-size: 12px; line-height: 1.8; color: var(--text-2); }
+  .pros b { color: var(--text); font-weight: 600; }
+  .actions { margin-top: 12px; display: flex; gap: 10px; }
+  .btn { height: 34px; padding: 0 16px; border-radius: 8px; font-size: 12.5px; font-weight: 600; text-decoration: none;
+         display: inline-flex; align-items: center; gap: 6px; }
+  .btn.primary { background: var(--text); color: #fff; }
+  .btn.primary:hover { background: #333a45; }
+
+  .how { margin-top: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; }
+  .how h3 { font-size: 14.5px; font-weight: 700; }
+  .how ol { margin: 10px 0 0 18px; font-size: 13px; line-height: 2; color: var(--text-2); }
+  .how code { font-family: Consolas, monospace; font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; }
+  .migrate { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); font-size: 12.5px; line-height: 1.85; color: var(--text-2); }
+  .migrate b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>格致 · 科研工作台 — UI 风格改造方案（3 原型）</h1>
+  <p class="lead">
+    从 <b>UI-Design-Platform（StyleForge）</b> 收录的 54 套开源设计系统（awesome-design-md）中，按本产品定位——
+    <b>单机科研效率工具 · 学术场景 · 长时间盯屏使用 · 中文排版</b>——初选出 3 套气质契合的风格，重做了
+    <b>首次启动「选择数据目录」页</b>，并在每个原型下半部分附了主界面同风格示意。
+  </p>
+  <div class="note">
+    预览提示：点击缩略图或在新窗口打开后，路径框 / 主按钮可<b>点击模拟选择目录</b>；主界面示意中的<b>侧边栏导航可切换高亮</b>。原型仅作风格讨论用，不改动现有代码。
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="frame">
+        <iframe src="onboarding-claude.html" scrolling="no" title="原型 A"></iframe>
+        <a class="open" href="onboarding-claude.html" target="_blank">在新窗口打开 ↗</a>
+      </div>
+      <div class="body">
+        <span class="tag">方案 A · 源风格 claude</span>
+        <h2>学术编辑风</h2>
+        <p class="desc">陶土暖纸画布 + 衬线标题 + Ring 描边。像一本护封考究的学术笔记，「格物致知」的气质最浓：暖色耐看、编辑感强，数字用衬线体呈现报告气质。</p>
+        <div class="tokens">
+          <span class="tok"><i class="sw" style="background:#f5f4ed"></i>纸 #f5f4ed</span>
+          <span class="tok"><i class="sw" style="background:#faf9f5"></i>卡 #faf9f5</span>
+          <span class="tok"><i class="sw" style="background:#c96442"></i>陶土 #c96442</span>
+          <span class="tok"><i class="sw" style="background:#141413"></i>墨 #141413</span>
+          <span class="tok">Georgia + 宋体标题</span>
+        </div>
+        <p class="pros"><b>最契合学术身份</b>，阅读型页面（进展日志 / 周报）会非常出彩；代价是深色模式需要定制一套「暖深色」，工作量略大。</p>
+        <div class="actions"><a class="btn primary" href="onboarding-claude.html" target="_blank">打开原型 A ↗</a></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="frame">
+        <iframe src="onboarding-notion.html" scrolling="no" title="原型 B"></iframe>
+        <a class="open" href="onboarding-notion.html" target="_blank">在新窗口打开 ↗</a>
+      </div>
+      <div class="body">
+        <span class="tag">方案 B · 源风格 notion</span>
+        <h2>暖中性极简</h2>
+        <p class="desc">内容优先、几乎无装饰：大字号排版 + 暖灰面板 + 耳语级边框。研究人员最熟悉的工具气质，信息密度高也不累眼，蓝色仅做功能性点缀。</p>
+        <div class="tokens">
+          <span class="tok"><i class="sw" style="background:#ffffff"></i>白 #ffffff</span>
+          <span class="tok"><i class="sw" style="background:#f7f6f3"></i>暖灰 #f7f6f3</span>
+          <span class="tok"><i class="sw" style="background:#2383e2"></i>蓝 #2383e2</span>
+          <span class="tok"><i class="sw" style="background:#37352f"></i>墨 #37352f</span>
+          <span class="tok">圆角 6–10px</span>
+        </div>
+        <p class="pros"><b>耐看、零学习成本</b>，灰底卡片体系对表格 / 看板类界面非常友好；个性最弱，与「用 Notion 管科研」的心智重合。</p>
+        <div class="actions"><a class="btn primary" href="onboarding-notion.html" target="_blank">打开原型 B ↗</a></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="frame">
+        <iframe src="onboarding-linear.html" scrolling="no" title="原型 C"></iframe>
+        <a class="open" href="onboarding-linear.html" target="_blank">在新窗口打开 ↗</a>
+      </div>
+      <div class="body">
+        <span class="tag">方案 C · 源风格 linear.app</span>
+        <h2>精密高效 SaaS <span class="rec">推荐</span></h2>
+        <p class="desc">任务管理工具的标杆语言：靛紫唯一品牌色 + 细边框白卡 + 多层轻阴影 + 品牌辉光。激活态用「白色药丸」表达，精密、克制、效率感强。</p>
+        <div class="tokens">
+          <span class="tok"><i class="sw" style="background:#f7f8f8"></i>画布 #f7f8f8</span>
+          <span class="tok"><i class="sw" style="background:#ffffff"></i>卡 #ffffff</span>
+          <span class="tok"><i class="sw" style="background:#5e6ad2"></i>靛紫 #5e6ad2</span>
+          <span class="tok"><i class="sw" style="background:#e6e8ef"></i>边 #e6e8ef</span>
+          <span class="tok">Inter + 紧字距</span>
+        </div>
+        <p class="pros">与现有 indigo 主色（<code style="font-size:11px">#4f46e5</code>）同族，<b>整体迁移成本最低</b>；Linear 的暗色体系成熟，现有深色模式可平滑对齐；看板 / 任务 / 日历等效率组件表现最佳。</p>
+        <div class="actions"><a class="btn primary" href="onboarding-linear.html" target="_blank">打开原型 C ↗</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="how">
+    <h3>如何预览</h3>
+    <ol>
+      <li>双击打开本目录下的三个 <code>onboarding-*.html</code>（或点击上方卡片缩略图），每个页面上半屏即重设计的首次启动页。</li>
+      <li>点击路径框或主按钮 → 模拟选中 <code>F:\Nutstore\1\格致科研工作台</code>，按钮变为「开始使用」。</li>
+      <li>向下滚动查看主界面同风格示意（侧边栏导航可点击切换）。</li>
+    </ol>
+    <p class="migrate">
+      <b>落地成本说明：</b>本项目样式已语义化为 CSS 变量（<code>src/renderer/src/styles.css</code> 的 <code>:root / .dark / @theme inline</code>），
+      全部组件通过 <code>bg-surface</code>、<code>text-text-2</code>、<code>border-border</code> 等语义类取色。
+      因此确定方向后，第一步只需替换变量值 + 字体栈即可让全应用换肤，第二步再精修 Onboarding 页结构、圆角与阴影细节（<code>ui.tsx</code> 组件级微调）。
+    </p>
+  </div>
+</div>
+</body>
+</html>

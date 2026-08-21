@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>原型 C · 精密高效 SaaS（源风格 linear.app）— 格致 · 科研工作台</title>
+<style>
+  /* ============ 源风格：awesome-design-md/linear.app ============
+     靛紫 #5e6ad2 唯一品牌色 · #f7f8f8 画布 · 多层轻阴影 + 细边框 · Inter 紧字距 */
+  :root {
+    --bg: #f7f8f8;
+    --surface: #ffffff;
+    --surface-2: #f2f3f5;
+    --text: #191a23;
+    --text-2: #565860;
+    --text-3: #8a8f98;
+    --border: #e6e8ef;
+    --border-strong: #d5d9e0;
+    --brand: #5e6ad2;
+    --brand-hover: #6e79dd;
+    --brand-soft: rgba(94, 106, 210, 0.1);
+    --red: #e3564f;  --red-soft: rgba(227, 86, 79, 0.1);
+    --amber: #c98a2b; --amber-soft: rgba(201, 138, 43, 0.12);
+    --green: #4cb782;
+    --shadow-card: rgba(0, 0, 0, 0.08) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 4px;
+    --shadow-elevated: rgba(0, 0, 0, 0.08) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 4px, rgba(0, 0, 0, 0.06) 0 8px 24px;
+    --shadow-btn: inset rgba(255, 255, 255, 0.12) 0 0.5px 0 0;
+    --sans: Inter, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; cursor: pointer; }
+  .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .icon.sm { width: 14px; height: 14px; }
+  .icon.xs { width: 12px; height: 12px; stroke-width: 2; }
+
+  /* ================= 首屏：Linear 式居中卡片 + 品牌辉光 ================= */
+  .onb { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+         padding: 56px 24px 64px; position: relative;
+         background:
+           radial-gradient(560px 280px at 50% -60px, rgba(94, 106, 210, 0.13), transparent 70%),
+           radial-gradient(760px 420px at 78% 6%, rgba(113, 112, 255, 0.08), transparent 70%),
+           var(--bg); }
+  .onb > * { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .onb > *:nth-child(2) { animation-delay: 0.06s; } .onb > *:nth-child(3) { animation-delay: 0.12s; }
+  .onb > *:nth-child(4) { animation-delay: 0.18s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .card { width: 432px; max-width: 100%; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-elevated);
+          padding: 30px 32px 26px; }
+  .logo { width: 44px; height: 44px; margin: 0 auto; border-radius: 13px;
+          background: linear-gradient(135deg, #5e6ad2 0%, #7b7cf0 100%);
+          display: grid; place-items: center; color: #fff; font-size: 21px; font-weight: 600;
+          box-shadow: 0 0 0 1px rgba(94, 106, 210, 0.2), 0 6px 16px rgba(94, 106, 210, 0.28); }
+  h1 { margin-top: 16px; font-size: 17px; font-weight: 600; letter-spacing: -0.012em; text-align: center; }
+  .sub { margin-top: 6px; font-size: 13.5px; line-height: 1.65; color: var(--text-2); text-align: center; }
+  .card-hr { height: 1px; background: var(--border); margin: 22px -32px; }
+
+  .lbl { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .lbl .icon { width: 14px; height: 14px; color: var(--text-3); }
+  .help { margin-top: 4px; font-size: 12.5px; line-height: 1.7; color: var(--text-3); }
+  .help b { color: var(--text-2); font-weight: 500; }
+
+  .path { margin-top: 12px; display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 12px 0 13px;
+          background: var(--surface); border: 1px solid var(--border-strong); border-radius: 9px;
+          font-size: 13px; color: var(--text-3); cursor: pointer; transition: all 0.15s ease; }
+  .path:hover { border-color: var(--brand); color: var(--text-2); }
+  .path:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .path.filled { color: var(--text); border-color: rgba(76, 183, 130, 0.55); cursor: default; }
+  .path.filled .icon { color: var(--green); }
+  .path .chev { margin-left: auto; color: var(--text-3); }
+  .path.filled .chev { display: none; }
+  code.p { font-family: var(--mono); font-size: 12px; }
+
+  .btn-primary { margin-top: 16px; width: 100%; height: 40px; border: none; border-radius: 9px; background: var(--brand);
+                 color: #fff; font-size: 13.5px; font-weight: 500; letter-spacing: 0.01em;
+                 display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+                 box-shadow: var(--shadow-btn); transition: background 0.15s ease, transform 0.1s ease; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-primary:active { transform: scale(0.99); }
+  .btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-soft); }
+  .ok { margin-top: 10px; display: none; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--green); }
+  .picked .ok { display: flex; }
+
+  .card-foot { margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 6px;
+               font-size: 11.5px; color: var(--text-3); }
+  .card-foot .icon { width: 12px; height: 12px; }
+
+  .feats { margin-top: 26px; display: flex; align-items: center; gap: 26px; }
+  .feat { display: flex; align-items: center; gap: 9px; }
+  .feat .ic { width: 30px; height: 30px; border-radius: 9px; background: var(--brand-soft); color: var(--brand);
+              display: grid; place-items: center; }
+  .feat b { font-size: 12.5px; font-weight: 500; color: var(--text-2); }
+
+  .toast { position: fixed; left: 50%; bottom: 34px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+           background: #1c1d26; color: #f7f8f8; font-size: 12.5px; padding: 10px 20px; border-radius: 9px;
+           box-shadow: 0 8px 28px rgba(15, 16, 26, 0.35); transition: all 0.25s ease; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ================= 分隔与主界面示意 ================= */
+  .divider { display: flex; align-items: center; gap: 16px; padding: 34px 40px 26px; color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0.18em; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+  .app { height: 860px; display: flex; background: var(--bg); overflow: hidden; }
+  .side { width: 224px; flex-shrink: 0; display: flex; flex-direction: column; padding: 14px 12px 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; }
+  .brand-logo { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #5e6ad2, #7b7cf0);
+                display: grid; place-items: center; color: #fff; font-size: 14.5px; font-weight: 600; }
+  .brand b { font-size: 13.5px; font-weight: 600; letter-spacing: -0.006em; }
+  .brand span { font-size: 10.5px; color: var(--text-3); margin-left: 6px; font-weight: 400; }
+  .nav { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .nav button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 10px; border: 1px solid transparent;
+                background: none; border-radius: 7px; font-size: 13px; font-weight: 450; color: var(--text-2); text-align: left;
+                transition: all 0.12s ease; }
+  .nav button:hover { color: var(--text); background: rgba(0, 0, 0, 0.032); }
+  .nav button.active { background: var(--surface); border-color: var(--border); color: var(--text); font-weight: 550;
+                       box-shadow: rgba(0, 0, 0, 0.03) 0 1px 2px; }
+  .nav button.active .icon { color: var(--brand); }
+  .nav button .icon { width: 15.5px; height: 15.5px; }
+  .nav-label { margin: 12px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
+  .side-foot { padding-top: 8px; }
+  .side-foot .row { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 7px; font-size: 13px; color: var(--text-2); }
+  .hotkey { margin-top: 8px; font-size: 11px; color: var(--text-3); padding: 0 10px; }
+  kbd { font-family: var(--mono); font-size: 10px; background: var(--surface); border: 1px solid var(--border-strong);
+        border-radius: 4px; padding: 1px 5px; color: var(--text-2); box-shadow: 0 1px 0 var(--border); }
+
+  .main { flex: 1; min-width: 0; padding: 26px 30px; overflow: hidden; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1.page { font-size: 19px; font-weight: 600; letter-spacing: -0.016em; }
+  .meta { margin-top: 5px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .btn-sm { height: 33px; padding: 0 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; display: inline-flex;
+            align-items: center; gap: 7px; transition: all 0.13s ease; }
+  .btn-sm.brand { background: var(--brand); color: #fff; border: none; box-shadow: var(--shadow-btn); }
+  .btn-sm.brand:hover { background: var(--brand-hover); }
+  .btn-sm.plain { background: var(--surface); color: var(--text-2); border: 1px solid var(--border-strong); }
+  .btn-sm.plain:hover { background: var(--surface-2); color: var(--text); }
+
+  .stats { margin-top: 18px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 11px 12px;
+          box-shadow: rgba(0, 0, 0, 0.02) 0 1px 2px; transition: all 0.14s ease; }
+  .stat:hover { border-color: rgba(94, 106, 210, 0.45); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .stat .lb { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); white-space: nowrap; }
+  .stat .lb .icon { width: 12px; height: 12px; }
+  .stat .val { margin-top: 7px; font-size: 21px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .stat.warn .val { color: var(--amber); } .stat.danger .val { color: var(--red); }
+  .stat .hint2 { margin-top: 5px; font-size: 10px; color: var(--text-3); white-space: nowrap; }
+
+  .cols { margin-top: 16px; display: grid; grid-template-columns: 1.9fr 1.1fr; gap: 14px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px 16px;
+           box-shadow: rgba(0, 0, 0, 0.02) 0 1px 2px; }
+  .panel-head { display: flex; align-items: center; gap: 8px; }
+  .panel-head h2 { font-size: 13.5px; font-weight: 600; letter-spacing: -0.008em; display: flex; align-items: center; gap: 7px; }
+  .panel-head h2 .icon { width: 14px; height: 14px; color: var(--brand); }
+  .count { font-size: 10.5px; font-weight: 500; color: var(--brand); background: var(--brand-soft); border-radius: 5px; padding: 2px 7px; }
+  .link { margin-left: auto; border: none; background: none; font-size: 12px; color: var(--text-3); }
+  .link:hover { color: var(--brand); }
+
+  .task { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px; transition: background 0.1s; }
+  .task:hover { background: var(--surface-2); }
+  .task.overdue { background: var(--red-soft); }
+  .cb { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-strong); background: var(--surface); flex-shrink: 0; }
+  .cb:hover { border-color: var(--brand); }
+  .task .t { min-width: 0; flex: 1; }
+  .task .t b { display: block; font-size: 13px; font-weight: 450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task .t span { display: block; margin-top: 2px; font-size: 11px; color: var(--text-3); }
+  .badge { flex-shrink: 0; font-size: 10.5px; font-weight: 500; border-radius: 5px; padding: 3px 8px; }
+  .badge.today { color: var(--brand); background: var(--brand-soft); }
+  .badge.late { color: var(--red); background: var(--red-soft); }
+  .badge.warn { color: var(--amber); background: var(--amber-soft); }
+  .badge.mute { color: var(--text-2); background: var(--surface-2); }
+
+  .ms { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; }
+  .ms:hover { background: var(--surface-2); }
+  .ms .cb { border-radius: 4px; }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .idea { border: 1px solid var(--border); border-radius: 9px; padding: 9px 12px; margin-top: 8px; background: var(--surface); transition: border-color 0.12s; }
+  .idea:hover { border-color: rgba(94, 106, 210, 0.45); }
+  .idea p { font-size: 12.5px; line-height: 1.7; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .idea .row { margin-top: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .idea time { font-size: 10.5px; color: var(--text-3); }
+  .to-task { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; color: var(--brand);
+             font-size: 11px; border-radius: 5px; padding: 2px 7px; }
+  .to-task:hover { background: var(--brand-soft); }
+
+  .trend { margin-top: 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; height: 78px; }
+  .tbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+  .tbar i { font-size: 10px; font-style: normal; color: var(--text-3); }
+  .tbar .bar { width: 100%; max-width: 26px; border-radius: 3px 3px 2px 2px; }
+  .tbar em { font-size: 10px; font-style: normal; color: var(--text-3); }
+  .tbar.today em { color: var(--brand); font-weight: 700; }
+
+  .proto-badge { position: fixed; right: 16px; bottom: 16px; z-index: 99; background: rgba(25, 26, 35, 0.85); color: #f7f8f8;
+                 font-size: 11px; padding: 7px 13px; border-radius: 999px; backdrop-filter: blur(4px); pointer-events: none; }
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+</svg>
+
+<!-- ============ 首屏：重设计的「首次启动 · 选择数据目录」 ============ -->
+<section class="onb">
+  <div class="card" id="card">
+    <div class="logo">格</div>
+    <h1>欢迎使用格致</h1>
+    <p class="sub">项目、任务、时间节点、灵感与汇报——<br>一台电脑上的一个应用，装下你全部的科研管理工作。</p>
+
+    <div class="card-hr"></div>
+
+    <div class="lbl"><svg class="icon"><use href="#i-folder"/></svg>数据存储目录</div>
+    <p class="help">数据以<b>明文 JSON</b> 保存在本机，完全由你掌控。建议选择<b>坚果云等网盘同步目录</b>，多台电脑自动同步；之后可在设置中更改。</p>
+
+    <div class="path" id="pathBox" tabindex="0">
+      <svg class="icon sm"><use href="#i-folder-open"/></svg>
+      <span id="pathText">点击选择文件夹</span>
+      <svg class="icon sm chev"><use href="#i-chev"/></svg>
+    </div>
+
+    <button class="btn-primary" id="mainBtn">
+      <svg class="icon sm" id="btnIcon"><use href="#i-folder-open"/></svg>
+      <span id="mainBtnText">选择数据目录</span>
+    </button>
+    <div class="ok"><svg class="icon xs"><use href="#i-check"/></svg>目录可用 · 为空时将自动初始化全部数据文件</div>
+
+    <div class="card-foot">
+      <svg class="icon"><use href="#i-shield"/></svg>
+      本地明文存储 · 无账号 · 无云端
+    </div>
+  </div>
+
+  <div class="feats">
+    <div class="feat"><div class="ic"><svg class="icon sm"><use href="#i-folder"/></svg></div><b>项目与任务</b></div>
+    <div class="feat"><div class="ic"><svg class="icon sm"><use href="#i-flag"/></svg></div><b>时间节点</b></div>
+    <div class="feat"><div class="ic"><svg class="icon sm"><use href="#i-bulb"/></svg></div><b>灵感速记</b></div>
+    <div class="feat"><div class="ic"><svg class="icon sm"><use href="#i-clip"/></svg></div><b>产出与汇报</b></div>
+  </div>
+</section>
+
+<div class="divider">主界面同风格示意（下方）</div>
+
+<!-- ============ 主界面示意 ============ -->
+<section class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-logo">格</div>
+      <div><b>格致</b><span>科研工作台</span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="active"><svg class="icon"><use href="#i-zap"/></svg>今日概览</button>
+      <button><svg class="icon"><use href="#i-folder"/></svg>项目</button>
+      <button><svg class="icon"><use href="#i-list"/></svg>任务</button>
+      <button><svg class="icon"><use href="#i-cal"/></svg>日历</button>
+      <button><svg class="icon"><use href="#i-flag"/></svg>时间节点</button>
+      <button><svg class="icon"><use href="#i-bulb"/></svg>灵感</button>
+      <button><svg class="icon"><use href="#i-wrench"/></svg>工具箱</button>
+      <div class="nav-label">产出</div>
+      <button><svg class="icon"><use href="#i-file"/></svg>论文投稿</button>
+      <button><svg class="icon"><use href="#i-trophy"/></svg>成果台账</button>
+      <button><svg class="icon"><use href="#i-clip"/></svg>汇报中心</button>
+    </nav>
+    <div class="side-foot">
+      <div class="row"><svg class="icon" style="width:15.5px;height:15.5px"><use href="#i-gear"/></svg>设置</div>
+      <div class="hotkey">按 <kbd>Alt+N</kbd> 随手记灵感</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 class="page">上午好，今天是 8 月 21 日 星期五</h1>
+        <div class="meta"><span class="dot"></span>数据最近写入：今天 09:42（网盘将自动同步）· 查看数据目录</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sm brand"><svg class="icon sm"><use href="#i-plus"/></svg>新建任务</button>
+        <button class="btn-sm plain"><svg class="icon sm"><use href="#i-calplus"/></svg>新建节点</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-list"/></svg>待办任务</div><div class="val">12</div><div class="hint2">5 进行中</div></div>
+      <div class="stat warn"><div class="lb"><svg class="icon"><use href="#i-clock"/></svg>今日到期</div><div class="val">3</div></div>
+      <div class="stat danger"><div class="lb"><svg class="icon"><use href="#i-warn"/></svg>逾期</div><div class="val">1</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-flag"/></svg>30天节点</div><div class="val">2</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-bulb"/></svg>待整理灵感</div><div class="val">8</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-file"/></svg>本周日志</div><div class="val">4</div></div>
+      <div class="stat"><div class="lb"><svg class="icon"><use href="#i-folder"/></svg>进行中项目</div><div class="val">3</div></div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <div class="panel-head">
+          <h2><svg class="icon"><use href="#i-list"/></svg>今日到期与逾期任务</h2>
+          <span class="count">4</span>
+          <button class="link">全部任务 →</button>
+        </div>
+        <div style="margin-top:6px">
+          <div class="task"><span class="cb"></span><div class="t"><b>修改论文二稿 §3 实验部分</b><span>论文A · 多模态融合</span></div><span class="badge today">今天</span></div>
+          <div class="task"><span class="cb"></span><div class="t"><b>整理对比实验数据图表</b><span>论文A · 多模态融合</span></div><span class="badge today">今天</span></div>
+          <div class="task"><span class="cb"></span><div class="t"><b>准备导师周会汇报要点</b><span>学业 · 导师沟通</span></div><span class="badge today">今天</span></div>
+          <div class="task overdue"><span class="cb"></span><div class="t"><b>阅读 related work 文献 ×3</b><span>论文A · 多模态融合</span></div><span class="badge late">逾期 2 天</span></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2><svg class="icon"><use href="#i-flag"/></svg>未来 30 天节点</h2><button class="link">全部 →</button></div>
+          <div style="margin-top:4px">
+            <div class="ms"><span class="cb"></span><div class="t"><b style="font-size:13px;font-weight:450">开题报告</b><span style="display:block;font-size:11px;color:var(--text-3)">2026-09-24 · 开题</span></div><span class="badge warn">剩 34 天</span></div>
+            <div class="ms"><span class="cb"></span><div class="t"><b style="font-size:13px;font-weight:450">论文A 投稿截止</b><span style="display:block;font-size:11px;color:var(--text-3)">2026-10-10 · 投稿截止</span></div><span class="badge mute">剩 50 天</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2><svg class="icon" style="color:var(--amber)"><use href="#i-bulb"/></svg>待整理灵感</h2><button class="link">灵感页 →</button></div>
+          <div class="idea">
+            <p>审稿意见 2 的 baseline 对比，可以补一组消融实验，顺便把采样策略的差异也列出来……</p>
+            <div class="row"><time>今天 10:24</time><button class="to-task"><svg class="icon xs"><use href="#i-plus"/></svg>转为任务</button></div>
+          </div>
+          <div class="idea">
+            <p>周报里的进度图，可以直接复用开题 PPT 里的甘特图，改个配色就行。</p>
+            <div class="row"><time>昨天 21:03</time><button class="to-task"><svg class="icon xs"><use href="#i-plus"/></svg>转为任务</button></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>近 7 天完成趋势</h2></div>
+          <div class="trend">
+            <div class="tbar"><i>1</i><div class="bar" style="height:22%;background:rgba(94,106,210,.35)"></div><em>周六</em></div>
+            <div class="tbar"><i></i><div class="bar" style="height:4%;background:var(--border-strong)"></div><em>周日</em></div>
+            <div class="tbar"><i>2</i><div class="bar" style="height:44%;background:rgba(94,106,210,.35)"></div><em>周一</em></div>
+            <div class="tbar"><i>3</i><div class="bar" style="height:66%;background:rgba(94,106,210,.35)"></div><em>周二</em></div>
+            <div class="tbar"><i>1</i><div class="bar" style="height:22%;background:rgba(94,106,210,.35)"></div><em>周三</em></div>
+            <div class="tbar"><i>4</i><div class="bar" style="height:88%;background:rgba(94,106,210,.35)"></div><em>周四</em></div>
+            <div class="tbar today"><i>2</i><div class="bar" style="height:44%;background:var(--brand)"></div><em>今天</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<div class="proto-badge">原型 C · 精密高效（源风格 linear.app）— 路径框 / 按钮可点击模拟</div>
+<div class="toast" id="toast">原型仅作风格预览 — 真实流程会打开系统文件夹选择对话框</div>
+
+<script>
+  var picked = false;
+  var pathBox = document.getElementById('pathBox');
+  var pathText = document.getElementById('pathText');
+  var mainBtn = document.getElementById('mainBtn');
+  var mainBtnText = document.getElementById('mainBtnText');
+  var btnIcon = document.getElementById('btnIcon');
+  var card = document.getElementById('card');
+  var toast = document.getElementById('toast');
+
+  function pick() {
+    picked = true;
+    pathBox.classList.add('filled');
+    pathText.innerHTML = '<code class="p">F:\\Nutstore\\1\\格致科研工作台</code>';
+    card.classList.add('picked');
+    mainBtnText.textContent = '开始使用';
+    btnIcon.innerHTML = '<use href="#i-check"/>';
+  }
+  pathBox.addEventListener('click', function () { if (!picked) pick(); });
+  pathBox.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && !picked) { e.preventDefault(); pick(); } });
+  mainBtn.addEventListener('click', function () {
+    if (!picked) { pick(); return; }
+    toast.classList.add('show');
+    setTimeout(function () { toast.classList.remove('show'); }, 2400);
+  });
+
+  document.querySelectorAll('#nav button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#nav button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

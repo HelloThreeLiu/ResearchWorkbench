@@ -2,38 +2,134 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ============================================================
+   界面主题（源自 UI-Design-Platform / awesome-design-md）
+   - data-style 挂在 <html> 上，与 .dark（明暗）正交组合，共 3 × 2 = 6 套 token
+   - 变量名保持不变，组件经 @theme inline 的语义类自动换肤
+   - linear：精密高效 SaaS（默认）；claude：学术编辑风；notion：暖中性极简
+   加载顺序（后面的同特异性覆盖前面的）：
+   :root(linear 浅) → html[data-style](风格浅色) → html.dark(linear 深)
+   → html.dark[data-style](风格深色)
+   ============================================================ */
+
 :root {
-  --color-bg: #f6f7f9;
+  /* linear · 浅色 */
+  --color-bg: #f7f8f8;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f3f5;
-  --color-border: #e2e5e9;
-  --color-text: #1c2128;
-  --color-text-2: #5c6570;
-  --color-text-3: #9aa3ad;
-  --color-accent: #4f46e5;
-  --color-accent-soft: #eef0fe;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fee2e2;
-  --color-warn: #d97706;
-  --color-warn-soft: #fef3c7;
-  --color-success: #16a34a;
+  --color-surface-2: #f2f3f5;
+  --color-border: #e6e8ef;
+  --color-text: #191a23;
+  --color-text-2: #565860;
+  --color-text-3: #8a8f98;
+  --color-accent: #5e6ad2;
+  --color-accent-soft: #eaecfa;
+  --color-danger: #e3564f;
+  --color-danger-soft: #fdeceb;
+  --color-warn: #c98a2b;
+  --color-warn-soft: #f8eeda;
+  --color-success: #33a06c;
+  /* 标题显示字体（各主题可覆盖；正文统一系统无衬线） */
+  --font-display:
+    "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
 }
 
-.dark {
-  --color-bg: #14161a;
-  --color-surface: #1d2025;
-  --color-surface-2: #24282e;
-  --color-border: #30353d;
-  --color-text: #e8eaed;
-  --color-text-2: #a4adb8;
-  --color-text-3: #6b7480;
-  --color-accent: #818cf8;
-  --color-accent-soft: #26263a;
-  --color-danger: #f87171;
-  --color-danger-soft: #3b1d1d;
-  --color-warn: #fbbf24;
-  --color-warn-soft: #383018;
-  --color-success: #4ade80;
+/* ---------- claude · 学术编辑风（浅） ---------- */
+html[data-style='claude'] {
+  --color-bg: #f5f4ed; /* 羊皮纸画布 */
+  --color-surface: #faf9f5; /* 象牙卡片 */
+  --color-surface-2: #f0eee8;
+  --color-border: #d1cfc5; /* Ring 描边灰 */
+  --color-text: #141413;
+  --color-text-2: #4d4c48; /* 暖炭灰 */
+  --color-text-3: #87867f; /* 石灰 */
+  --color-accent: #c96442; /* 陶土 */
+  --color-accent-soft: #f4e5dd;
+  --color-danger: #b3452f;
+  --color-danger-soft: #f3e0da;
+  --color-warn: #a0731c;
+  --color-warn-soft: #f5ecd9;
+  --color-success: #5c7a4a;
+  --font-display: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+  /* 圆角更饱满（卡片 14–16px） */
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1rem;
+}
+
+/* ---------- notion · 暖中性极简（浅） ---------- */
+html[data-style='notion'] {
+  --color-bg: #ffffff;
+  --color-surface: #f7f6f3; /* 暖灰面板（卡片比画布深一档） */
+  --color-surface-2: #efeeea;
+  --color-border: #e4e3e0;
+  --color-text: #37352f;
+  --color-text-2: #6f6c66;
+  --color-text-3: #9b988f;
+  --color-accent: #2383e2;
+  --color-accent-soft: #dcebf7;
+  --color-danger: #eb5757;
+  --color-danger-soft: #fdeaea;
+  --color-warn: #d9730d;
+  --color-warn-soft: #fbeadb;
+  --color-success: #0f7b6c;
+  /* 圆角更收敛（卡片 10–12px，控件 6px） */
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+}
+
+/* ---------- linear · 深色 ---------- */
+html.dark {
+  --color-bg: #101113;
+  --color-surface: #191b1f;
+  --color-surface-2: #22242a;
+  --color-border: #2d3037;
+  --color-text: #e8eaee;
+  --color-text-2: #a3a7b0;
+  --color-text-3: #6d717a;
+  --color-accent: #8388f2;
+  --color-accent-soft: #242639;
+  --color-danger: #ef7b74;
+  --color-danger-soft: #3d2422;
+  --color-warn: #e0b25e;
+  --color-warn-soft: #3a3018;
+  --color-success: #55bd8b;
+}
+
+/* ---------- claude · 深色（暖墨） ---------- */
+html.dark[data-style='claude'] {
+  --color-bg: #1c1a17;
+  --color-surface: #252320;
+  --color-surface-2: #2f2b27;
+  --color-border: #3e3931;
+  --color-text: #ece9e1;
+  --color-text-2: #b5aea1;
+  --color-text-3: #837c6f;
+  --color-accent: #d97757; /* 珊瑚陶土（暗底提亮） */
+  --color-accent-soft: #3a2a21;
+  --color-danger: #e07a5f;
+  --color-danger-soft: #3d2721;
+  --color-warn: #d3a453;
+  --color-warn-soft: #3a3018;
+  --color-success: #8fae72;
+}
+
+/* ---------- notion · 深色 ---------- */
+html.dark[data-style='notion'] {
+  --color-bg: #191918;
+  --color-surface: #222221;
+  --color-surface-2: #2e2e2c;
+  --color-border: #383836;
+  --color-text: #e9e9e7;
+  --color-text-2: #9d9b97;
+  --color-text-3: #71706c;
+  --color-accent: #4293e5;
+  --color-accent-soft: #1f3749;
+  --color-danger: #ff7369;
+  --color-danger-soft: #46231f;
+  --color-warn: #e0a45c;
+  --color-warn-soft: #44351a;
+  --color-success: #4dab9a;
 }
 
 @theme inline {
@@ -68,6 +164,13 @@ body {
     system-ui,
     sans-serif;
   font-size: 14px;
+}
+
+/* 标题显示字体：claude 主题为衬线（学术编辑感），其余主题与正文一致 */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 /* 滚动条 */

@@ -11,11 +11,38 @@ import {
   Save,
   SlidersHorizontal
 } from 'lucide-react'
-import { DEFAULT_REPORT_TEMPLATE, type ThemeMode } from '@shared/types'
+import { DEFAULT_REPORT_TEMPLATE, type StyleTheme, type ThemeMode } from '@shared/types'
 import { useStore } from '@/store'
 import { Badge, Button, Select, Textarea } from '@/components/ui'
 import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
+
+/** 界面风格主题选项（色板取自 styles.css 中各主题的核心 token） */
+const STYLE_THEMES: Array<{
+  id: StyleTheme
+  name: string
+  desc: string
+  swatches: string[]
+}> = [
+  {
+    id: 'linear',
+    name: '精密高效',
+    desc: '靛紫点缀、白卡细边，任务看板等效率组件表现最佳',
+    swatches: ['#f7f8f8', '#ffffff', '#e6e8ef', '#5e6ad2']
+  },
+  {
+    id: 'claude',
+    name: '学术编辑',
+    desc: '陶土暖纸、衬线标题，「格物致知」的书卷气质',
+    swatches: ['#f5f4ed', '#faf9f5', '#d1cfc5', '#c96442']
+  },
+  {
+    id: 'notion',
+    name: '暖中性极简',
+    desc: '白画布配暖灰面板，内容优先、久看不累',
+    swatches: ['#ffffff', '#f7f6f3', '#e4e3e0', '#2383e2']
+  }
+]
 
 /** 报告模板编辑器：本地编辑 + 保存到设置（支持恢复默认） */
 function ReportTemplateEditor() {
@@ -165,7 +192,45 @@ export default function SettingsPage() {
       </SectionCard>
 
       <SectionCard icon={<Palette size={15} className="text-accent" />} title="外观">
-        <div className="flex items-center gap-3">
+        <div className="text-[12.5px] font-medium">界面风格</div>
+        <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-3">
+          三套设计语言（源自开源设计系统提炼），与明暗模式自由组合，即刻切换全应用换肤。
+        </p>
+        <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          {STYLE_THEMES.map((st) => {
+            const active = settings.styleTheme === st.id
+            return (
+              <button
+                key={st.id}
+                onClick={() => updateSettings({ styleTheme: st.id })}
+                className={cn(
+                  'group flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors cursor-pointer',
+                  active
+                    ? 'border-accent bg-accent-soft/50'
+                    : 'border-border bg-surface hover:border-accent/50'
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={cn('text-[13px] font-semibold', active && 'text-accent')}>
+                    {st.name}
+                  </span>
+                  {active && <Badge color="blue">当前</Badge>}
+                </div>
+                <div className="flex gap-1">
+                  {st.swatches.map((c) => (
+                    <span
+                      key={c}
+                      className="h-4 flex-1 rounded-sm border border-black/5"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <span className="text-[11px] leading-relaxed text-text-3">{st.desc}</span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="mt-3.5 flex items-center gap-3">
           <Moon size={14} className="text-text-3" />
           <Select
             value={settings.theme}

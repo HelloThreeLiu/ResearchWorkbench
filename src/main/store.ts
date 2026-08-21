@@ -31,6 +31,7 @@ interface StoreMeta {
 let settings: AppSettings = {
   dataDir: null,
   theme: 'system',
+  styleTheme: 'linear',
   hotkey: 'Alt+N',
   closeToTray: true,
   lastBackupDate: null,

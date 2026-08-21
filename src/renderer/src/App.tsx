@@ -20,6 +20,11 @@ import SettingsPage from '@/pages/SettingsPage'
 /** 主题：跟随系统或手动指定 */
 function useThemeEffect(): void {
   const theme = useStore((s) => s.settings.theme)
+  const styleTheme = useStore((s) => s.settings.styleTheme)
+  useEffect(() => {
+    // 界面风格主题（linear/claude/notion），与明暗正交，落在 <html data-style>
+    document.documentElement.dataset.style = styleTheme ?? 'linear'
+  }, [styleTheme])
   useEffect(() => {
     const apply = (): void => {
       const dark =
