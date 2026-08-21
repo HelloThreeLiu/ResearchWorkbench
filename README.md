@@ -9,7 +9,7 @@
 一台电脑上的一个应用，装下全部科研管理工作
 
 [![平台](https://img.shields.io/badge/platform-Windows10%2F11-blue)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
-[![版本](https://img.shields.io/badge/version-2.1.0-green)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
+[![版本](https://img.shields.io/badge/version-2.2.0-green)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
 [![许可证](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 
 </div>
