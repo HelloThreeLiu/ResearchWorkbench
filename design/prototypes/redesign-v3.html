@@ -1,0 +1,2143 @@
+<!doctype html>
+<html lang="zh-CN" data-style="linear">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>格致 · V3 全页布局重设计原型（3 主题 × 明暗）</title>
+<style>
+/* ============================================================
+   格致 V3 布局重设计原型
+   - 色彩 token 与 src/renderer/src/styles.css 完全一致（1:1 迁移）
+   - 圆角 token（--radius-*）在本次设计中真正启用：
+     linear 卡片 12px / claude 14px / notion 10px
+   - 字号阶收敛为 11.5 / 12.5 / 13.5 / 14 / 15 / 20 / 24 七档
+   ============================================================ */
+
+/* ---------- linear · 浅色（默认） ---------- */
+:root {
+  --color-bg: #f7f8f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f2f3f5;
+  --color-border: #e6e8ef;
+  --color-text: #191a23;
+  --color-text-2: #565860;
+  --color-text-3: #8a8f98;
+  --color-accent: #5e6ad2;
+  --color-accent-soft: #eaecfa;
+  --color-danger: #e3564f;
+  --color-danger-soft: #fdeceb;
+  --color-warn: #c98a2b;
+  --color-warn-soft: #f8eeda;
+  --color-success: #33a06c;
+  --font-display: "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  /* 圆角（默认 = linear：卡片 12 / 控件 8 / 大容器 16） */
+  --radius-lg: .5rem;    /* 控件 8px */
+  --radius-xl: .75rem;   /* 卡片 12px */
+  --radius-2xl: 1rem;    /* 弹窗 16px */
+}
+/* ---------- claude · 学术编辑（浅） ---------- */
+html[data-style='claude'] {
+  --color-bg: #f5f4ed;
+  --color-surface: #faf9f5;
+  --color-surface-2: #f0eee8;
+  --color-border: #d1cfc5;
+  --color-text: #141413;
+  --color-text-2: #4d4c48;
+  --color-text-3: #87867f;
+  --color-accent: #c96442;
+  --color-accent-soft: #f4e5dd;
+  --color-danger: #b3452f;
+  --color-danger-soft: #f3e0da;
+  --color-warn: #a0731c;
+  --color-warn-soft: #f5ecd9;
+  --color-success: #5c7a4a;
+  --font-display: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+  --radius-lg: .625rem;
+  --radius-xl: .875rem;
+  --radius-2xl: 1rem;
+}
+/* ---------- notion · 暖中性极简（浅） ---------- */
+html[data-style='notion'] {
+  --color-bg: #ffffff;
+  --color-surface: #f7f6f3;
+  --color-surface-2: #efeeea;
+  --color-border: #e4e3e0;
+  --color-text: #37352f;
+  --color-text-2: #6f6c66;
+  --color-text-3: #9b988f;
+  --color-accent: #2383e2;
+  --color-accent-soft: #dcebf7;
+  --color-danger: #eb5757;
+  --color-danger-soft: #fdeaea;
+  --color-warn: #d9730d;
+  --color-warn-soft: #fbeadb;
+  --color-success: #0f7b6c;
+  --radius-lg: .375rem;
+  --radius-xl: .625rem;
+  --radius-2xl: .75rem;
+}
+/* ---------- linear · 深色 ---------- */
+html.dark {
+  --color-bg: #101113;
+  --color-surface: #191b1f;
+  --color-surface-2: #22242a;
+  --color-border: #2d3037;
+  --color-text: #e8eaee;
+  --color-text-2: #a3a7b0;
+  --color-text-3: #6d717a;
+  --color-accent: #8388f2;
+  --color-accent-soft: #242639;
+  --color-danger: #ef7b74;
+  --color-danger-soft: #3d2422;
+  --color-warn: #e0b25e;
+  --color-warn-soft: #3a3018;
+  --color-success: #55bd8b;
+}
+/* ---------- claude · 深色（暖墨） ---------- */
+html.dark[data-style='claude'] {
+  --color-bg: #1c1a17;
+  --color-surface: #252320;
+  --color-surface-2: #2f2b27;
+  --color-border: #3e3931;
+  --color-text: #ece9e1;
+  --color-text-2: #b5aea1;
+  --color-text-3: #837c6f;
+  --color-accent: #d97757;
+  --color-accent-soft: #3a2a21;
+  --color-danger: #e07a5f;
+  --color-danger-soft: #3d2721;
+  --color-warn: #d3a453;
+  --color-warn-soft: #3a3018;
+  --color-success: #8fae72;
+}
+/* ---------- notion · 深色 ---------- */
+html.dark[data-style='notion'] {
+  --color-bg: #191918;
+  --color-surface: #222221;
+  --color-surface-2: #2e2e2c;
+  --color-border: #383836;
+  --color-text: #e9e9e7;
+  --color-text-2: #9d9b97;
+  --color-text-3: #71706c;
+  --color-accent: #4293e5;
+  --color-accent-soft: #1f3749;
+  --color-danger: #ff7369;
+  --color-danger-soft: #46231f;
+  --color-warn: #e0a45c;
+  --color-warn-soft: #44351a;
+  --color-success: #4dab9a;
+}
+
+/* ============ 基础 ============ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+h1, h2, h3 { font-family: var(--font-display); }
+button { font-family: inherit; border: 0; background: none; color: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; color: var(--color-text); }
+::selection { background: var(--color-accent-soft); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-text-3) 45%, transparent); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* lucide 图标缺省尺寸（CDN 加载失败时 i 占位同尺寸，布局不塌） */
+svg.lucide, i[data-lucide] { width: 16px; height: 16px; flex: none; }
+
+/* ============ 原型控制条（不属于应用 UI） ============ */
+.proto-bar {
+  position: fixed; top: 10px; right: 12px; z-index: 999;
+  display: flex; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border: 1px solid var(--color-border); border-radius: 999px;
+  padding: 5px 6px 5px 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+}
+.proto-bar .proto-label { font-weight: 700; letter-spacing: .02em; color: var(--color-text-2); }
+.proto-bar .seg {
+  display: flex; background: var(--color-surface-2); border-radius: 999px; padding: 2px;
+}
+.proto-bar .seg button {
+  padding: 4px 11px; border-radius: 999px; font-size: 12px; color: var(--color-text-2); white-space: nowrap;
+}
+.proto-bar .seg button.on { background: var(--color-surface); color: var(--color-accent); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.proto-bar .ghost-btn {
+  padding: 4px 11px; border-radius: 999px; border: 1px solid var(--color-border); color: var(--color-text-2); background: var(--color-surface);
+}
+
+/* ============ 视口宽度模式 ============ */
+#viewport { height: 100%; display: flex; justify: center; }
+body[data-width='w1280'] .app { max-width: 1280px; border-inline: 1px solid var(--color-border); }
+body[data-width='w1440'] .app { max-width: 1440px; border-inline: 1px solid var(--color-border); }
+body[data-width='w1920'] .app { max-width: 1920px; border-inline: 1px solid var(--color-border); }
+
+/* ============ 应用骨架 ============ */
+.app { display: flex; width: 100%; height: 100%; overflow: hidden; }
+
+/* ---------- 侧边栏（224px，分组导航 + 指示条 active） ---------- */
+.sidebar {
+  width: 224px; flex: none; display: flex; flex-direction: column;
+  background: var(--color-surface); border-right: 1px solid var(--color-border);
+}
+.side-logo { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; }
+.side-logo .mark {
+  width: 38px; height: 38px; border-radius: var(--radius-lg);
+  background: var(--color-accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700; font-family: var(--font-display);
+}
+.side-logo .name { font-size: 14.5px; font-weight: 700; line-height: 1.2; font-family: var(--font-display); }
+.side-logo .sub { font-size: 11px; color: var(--color-text-3); line-height: 1.5; }
+.side-nav { flex: 1; overflow-y: auto; padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
+.side-group-label {
+  font-size: 11px; color: var(--color-text-3); font-weight: 600; letter-spacing: .08em;
+  padding: 14px 10px 5px;
+}
+.nav-item {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  height: 34px; padding: 0 10px; border-radius: var(--radius-lg);
+  font-size: 13px; color: var(--color-text-2); transition: background .12s, color .12s;
+}
+.nav-item svg { width: 16px; height: 16px; stroke-width: 1.8; }
+.nav-item:hover { background: var(--color-surface-2); color: var(--color-text); }
+.nav-item.active { background: var(--color-accent-soft); color: var(--color-accent); font-weight: 600; }
+.nav-item.active svg { stroke-width: 2.1; }
+.nav-item.active::before {
+  content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--color-accent);
+}
+.nav-item .red-dot { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--color-danger); }
+.side-foot { border-top: 1px solid var(--color-border); padding: 10px 12px 12px; }
+.side-foot .nav-item { height: 32px; }
+.quick-capture-hint {
+  margin-top: 8px; border-radius: var(--radius-lg); background: var(--color-surface-2);
+  padding: 8px 10px; font-size: 11px; line-height: 1.7; color: var(--color-text-3);
+}
+.kbd {
+  display: inline-block; border: 1px solid var(--color-border); background: var(--color-surface);
+  border-radius: 4px; padding: 0 5px; font-family: Consolas, monospace; font-size: 10.5px; color: var(--color-text-2);
+}
+
+/* ---------- 主内容区 ---------- */
+.main { flex: 1; min-width: 0; overflow-y: auto; }
+.page { display: none; }
+.page.on { display: block; animation: page-in .18s ease-out; }
+@keyframes page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.page-inner { padding: 26px 30px 48px; }
+.page-inner.narrow { max-width: 860px; margin: 0 auto; }
+.page-inner.mid { max-width: 1080px; margin: 0 auto; }
+
+/* ---------- 页头范式：H1 20px + 副标题 + 右侧动作 ---------- */
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-title { font-size: 20px; font-weight: 700; letter-spacing: .01em; }
+.page-sub { margin-top: 4px; font-size: 12.5px; line-height: 1.7; color: var(--color-text-3); max-width: 640px; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex: none; padding-top: 2px; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 14px; border-radius: var(--radius-lg);
+  font-size: 13px; font-weight: 500; transition: all .13s; white-space: nowrap;
+}
+.btn svg { width: 14px; height: 14px; stroke-width: 2; }
+.btn.primary { background: var(--color-accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.outline { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); }
+.btn.outline:hover { background: var(--color-surface-2); }
+.btn.soft { background: var(--color-accent-soft); color: var(--color-accent); }
+.btn.soft:hover { filter: brightness(.97); }
+.btn.ghost { color: var(--color-text-2); }
+.btn.ghost:hover { background: var(--color-surface-2); color: var(--color-text); }
+.btn.sm { height: 27px; padding: 0 10px; font-size: 12.5px; }
+.btn.sm svg { width: 12.5px; height: 12.5px; }
+.btn.danger-text { color: var(--color-danger); }
+.btn.danger-text:hover { background: var(--color-danger-soft); }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 27px; height: 27px; border-radius: var(--radius-lg); color: var(--color-text-3);
+  transition: all .13s;
+}
+.icon-btn svg { width: 14px; height: 14px; stroke-width: 1.9; }
+.icon-btn:hover { background: var(--color-surface-2); color: var(--color-text); }
+.icon-btn.danger:hover { background: var(--color-danger-soft); color: var(--color-danger); }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: 18px 20px;
+}
+.card.tight { padding: 14px 16px; }
+.card-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.card-title svg { width: 15px; height: 15px; color: var(--color-accent); stroke-width: 2; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-link { font-size: 12.5px; color: var(--color-text-3); }
+.card-link:hover { color: var(--color-accent); }
+
+/* ---------- 统计大卡（icon tile + 22px 数字） ---------- */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.stat-card {
+  display: flex; align-items: center; gap: 14px; text-align: left;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: 16px 18px; transition: all .15s;
+}
+.stat-card:hover { border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border)); transform: translateY(-1px); }
+.stat-icon {
+  width: 40px; height: 40px; flex: none; border-radius: var(--radius-lg);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-accent-soft); color: var(--color-accent);
+}
+.stat-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+.stat-icon.warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.stat-icon.danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.stat-body { min-width: 0; }
+.stat-num { font-size: 23px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat-num.danger { color: var(--color-danger); }
+.stat-num.warn { color: var(--color-warn); }
+.stat-label { font-size: 12.5px; color: var(--color-text-2); margin-top: 1px; }
+.stat-hint { font-size: 11.5px; color: var(--color-text-3); margin-top: 1px; }
+
+/* ---------- 徽章 / 标签 ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 20px; padding: 0 8px; border-radius: 6px;
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+}
+.badge svg { width: 11px; height: 11px; stroke-width: 2; }
+.badge.gray   { background: var(--color-surface-2); color: var(--color-text-2); }
+.badge.red    { background: var(--color-danger-soft); color: var(--color-danger); }
+.badge.yellow { background: var(--color-warn-soft); color: var(--color-warn); }
+.badge.green  { background: color-mix(in srgb, var(--color-success) 12%, transparent); color: var(--color-success); }
+.badge.blue   { background: var(--color-accent-soft); color: var(--color-accent); }
+.badge.purple { background: #ecebfa; color: #6b5ec0; }
+html.dark .badge.purple { background: #2e2a4a; color: #a99ef0; }
+.tagchip {
+  display: inline-flex; align-items: center; height: 19px; padding: 0 7px;
+  border: 1px solid var(--color-border); border-radius: 5px; font-size: 11px; color: var(--color-text-2);
+}
+
+/* ---------- 表单控件 ---------- */
+.input, .select {
+  height: 32px; padding: 0 10px; border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); background: var(--color-surface); font-size: 13px; outline: none;
+}
+.input::placeholder { color: var(--color-text-3); }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--color-accent); }
+.select { cursor: pointer; padding-right: 26px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center; }
+.textarea {
+  width: 100%; padding: 9px 11px; border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); background: var(--color-surface); font-size: 13px; outline: none; resize: vertical;
+}
+.field-label { font-size: 12.5px; font-weight: 500; color: var(--color-text-2); margin-bottom: 6px; display: block; }
+
+/* ---------- 筛选工具条 ---------- */
+.toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: 8px 10px;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px;
+  border-radius: 999px; font-size: 12.5px; color: var(--color-text-2); transition: all .12s; white-space: nowrap;
+}
+.chip:hover { background: var(--color-surface-2); color: var(--color-text); }
+.chip.on { background: var(--color-accent-soft); color: var(--color-accent); font-weight: 600; }
+.chip .count { font-size: 11px; opacity: .75; }
+.toolbar .divider { width: 1px; height: 18px; background: var(--color-border); margin: 0 2px; }
+.toolbar .select { height: 28px; font-size: 12.5px; width: auto; max-width: 176px; }
+/* V3.1 FilterBar 双区：左 Chips 流动区（可换行）+ 右筛选锚定区（永不孤行） */
+.toolbar .zone-l { flex: 1 1 0%; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.toolbar .zone-r { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+
+/* ---------- 复选框 ---------- */
+.checkbox {
+  width: 16px; height: 16px; flex: none; border-radius: 4.5px;
+  border: 1.5px solid color-mix(in srgb, var(--color-text-3) 65%, transparent);
+  display: inline-flex; align-items: center; justify-content: center; transition: all .12s; background: transparent;
+}
+.checkbox { transition: background .12s; }
+.checkbox:hover { border-color: var(--color-accent); }
+.checkbox svg { display: none; }
+.checkbox.checked { background: var(--color-accent); border-color: var(--color-accent); }
+.checkbox.checked svg { display: block; width: 11px; height: 11px; color: #fff; stroke-width: 3; }
+
+/* ---------- 任务行 ---------- */
+.task-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px; border-radius: var(--radius-lg); transition: background .12s;
+}
+.task-row:hover { background: var(--color-surface-2); }
+.task-row .title { font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row.done .title { color: var(--color-text-3); text-decoration: line-through; }
+.task-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--color-text-3); margin-top: 2px; flex-wrap: wrap; }
+.proj-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+.due-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px;
+  border-radius: 6px; font-size: 11.5px; color: var(--color-text-3); white-space: nowrap;
+}
+.due-chip svg { width: 11.5px; height: 11.5px; }
+.due-chip.today { color: var(--color-warn); background: var(--color-warn-soft); font-weight: 600; }
+.due-chip.overdue { color: var(--color-danger); background: var(--color-danger-soft); font-weight: 600; }
+.task-row .spacer { flex: 1; }
+
+/* ---------- 列表卡（divide 行式） ---------- */
+.list-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); overflow: hidden; }
+.list-card > .row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border); transition: background .12s;
+}
+.list-card > .row:last-child { border-bottom: 0; }
+.list-card > .row:hover { background: color-mix(in srgb, var(--color-surface-2) 55%, transparent); }
+
+/* ---------- 进度条 ---------- */
+.progress { height: 6px; border-radius: 999px; background: var(--color-surface-2); overflow: hidden; }
+.progress > i { display: block; height: 100%; border-radius: 999px; }
+
+/* ---------- 空状态 ---------- */
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 44px 20px; text-align: center; }
+.empty .icon-wrap {
+  width: 52px; height: 52px; border-radius: 50%; background: var(--color-surface-2);
+  display: flex; align-items: center; justify-content: center; color: var(--color-text-3); margin-bottom: 4px;
+}
+.empty .icon-wrap svg { width: 22px; height: 22px; stroke-width: 1.6; }
+.empty .t { font-size: 14px; font-weight: 600; color: var(--color-text-2); }
+.empty .h { font-size: 12.5px; color: var(--color-text-3); max-width: 320px; line-height: 1.7; }
+
+/* ---------- Segmented 视图切换 ---------- */
+.segmented {
+  display: inline-flex; background: var(--color-surface-2); border-radius: var(--radius-lg); padding: 2.5px; gap: 2px;
+}
+.segmented button {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px;
+  border-radius: calc(var(--radius-lg) - 2px); font-size: 12.5px; color: var(--color-text-2);
+}
+.segmented button svg { width: 13px; height: 13px; stroke-width: 2; }
+.segmented button.on { background: var(--color-surface); color: var(--color-text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+/* ---------- Tabs（项目详情） ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border); }
+.tabs button {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; margin-bottom: -1px;
+  font-size: 13px; color: var(--color-text-2); border-bottom: 2px solid transparent; transition: all .12s;
+}
+.tabs button svg { width: 14px; height: 14px; stroke-width: 1.9; }
+.tabs button:hover { color: var(--color-text); }
+.tabs button.on { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 600; }
+
+/* ---------- 折叠区 ---------- */
+.fold-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text-2); }
+.fold-toggle:hover { color: var(--color-text); }
+.fold-toggle svg { width: 14px; height: 14px; }
+
+/* ---------- 时间线 ---------- */
+.timeline { position: relative; margin-left: 6px; padding-left: 22px; border-left: 2px solid var(--color-border); display: flex; flex-direction: column; gap: 14px; }
+.timeline .dot {
+  position: absolute; left: -6.5px; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--color-accent); border: 2.5px solid var(--color-bg);
+}
+
+/* 通用布局工具 */
+.row-flex { display: flex; align-items: center; }
+.gap6 { gap: 6px; } .gap8 { gap: 8px; } .gap10 { gap: 10px; } .gap12 { gap: 12px; } .gap14 { gap: 14px; }
+.mt4{margin-top:4px}.mt6{margin-top:6px}.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}
+.mt14{margin-top:14px}.mt16{margin-top:16px}.mt18{margin-top:18px}.mt20{margin-top:20px}.mt24{margin-top:24px}.mt28{margin-top:28px}
+.text3 { color: var(--color-text-3); } .text2 { color: var(--color-text-2); }
+.small { font-size: 12.5px; } .caption { font-size: 11.5px; }
+.mini { font-size: 11px; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex1 { flex: 1; min-width: 0; }
+.muted-btn { font-size: 12.5px; color: var(--color-text-3); }
+.muted-btn:hover { color: var(--color-accent); }
+</style>
+</head>
+<body data-width="fluid">
+
+<!-- ===== 原型控制条 ===== -->
+<div class="proto-bar">
+  <span class="proto-label">V3 原型</span>
+  <div class="seg" id="style-seg">
+    <button data-style-btn="linear" class="on">精密高效</button>
+    <button data-style-btn="claude">学术编辑</button>
+    <button data-style-btn="notion">暖中性</button>
+  </div>
+  <div class="seg">
+    <button id="dark-btn">🌙 深色</button>
+  </div>
+  <div class="seg" id="width-seg">
+    <button data-width-btn="fluid" class="on">适应窗口</button>
+    <button data-width-btn="w1280">1280</button>
+    <button data-width-btn="w1440">1440</button>
+    <button data-width-btn="w1920">1920</button>
+  </div>
+  <button class="ghost-btn" data-page="spec">📐 设计规范</button>
+</div>
+
+<div id="viewport">
+<div class="app">
+
+  <!-- ===== 侧边栏 ===== -->
+  <aside class="sidebar">
+    <div class="side-logo">
+      <div class="mark">格</div>
+      <div>
+        <div class="name">格致</div>
+        <div class="sub">科研工作台 · V3</div>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <div class="side-group-label">工作台</div>
+      <button class="nav-item active" data-page="dashboard"><i data-lucide="zap"></i>今日概览</button>
+
+      <div class="side-group-label">科研推进</div>
+      <button class="nav-item" data-page="projects"><i data-lucide="folder-kanban"></i>项目</button>
+      <button class="nav-item" data-page="tasks"><i data-lucide="list-todo"></i>任务</button>
+      <button class="nav-item" data-page="calendar"><i data-lucide="calendar-days"></i>日历</button>
+      <button class="nav-item" data-page="milestones"><i data-lucide="flag"></i>时间节点</button>
+      <button class="nav-item" data-page="ideas"><i data-lucide="lightbulb"></i>灵感</button>
+      <button class="nav-item" data-page="tools"><i data-lucide="wrench"></i>工具箱</button>
+
+      <div class="side-group-label">成果与汇报</div>
+      <button class="nav-item" data-page="papers"><i data-lucide="file-text"></i>论文投稿</button>
+      <button class="nav-item" data-page="achievements"><i data-lucide="trophy"></i>成果台账</button>
+      <button class="nav-item" data-page="reports"><i data-lucide="clipboard-list"></i>汇报中心</button>
+    </nav>
+    <div class="side-foot">
+      <button class="nav-item" data-page="settings" id="nav-settings">
+        <i data-lucide="settings"></i>设置
+        <span class="red-dot" title="有新版本可用"></span>
+      </button>
+      <div class="quick-capture-hint">
+        按 <span class="kbd">Alt+S</span> 随手记灵感<br>
+        数据自动同步网盘 · 单机存储
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main">
+
+    <!-- ================= 1. 今日概览 ================= -->
+    <section class="page on" id="page-dashboard">
+      <div class="page-inner">
+        <!-- 页头 -->
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">下午好，今天是 2026年8月22日 星期六</h1>
+            <div class="page-sub">
+              <span class="proj-dot" style="background: var(--color-success)"></span>
+              数据最近写入：今天 14:32（网盘将自动同步）·
+              <button class="muted-btn">查看数据目录</button>
+            </div>
+          </div>
+          <div class="head-actions">
+            <button class="btn outline"><i data-lucide="pen-line"></i>记一笔进展</button>
+            <button class="btn outline"><i data-lucide="calendar-plus"></i>新建节点</button>
+            <button class="btn primary"><i data-lucide="plus"></i>新建任务</button>
+          </div>
+        </div>
+
+        <!-- 核心指标：4 张大卡（点击跳转对应页面） -->
+        <div class="stat-grid mt20">
+          <button class="stat-card">
+            <span class="stat-icon"><i data-lucide="list-todo"></i></span>
+            <span class="stat-body">
+              <span class="stat-num">12</span>
+              <span class="stat-label">待办任务</span>
+              <span class="stat-hint">3 个进行中</span>
+            </span>
+          </button>
+          <button class="stat-card">
+            <span class="stat-icon warn"><i data-lucide="calendar-clock"></i></span>
+            <span class="stat-body">
+              <span class="stat-num warn">2</span>
+              <span class="stat-label">今日到期</span>
+              <span class="stat-hint">完成 1 项后剩 1 项</span>
+            </span>
+          </button>
+          <button class="stat-card">
+            <span class="stat-icon danger"><i data-lucide="alert-triangle"></i></span>
+            <span class="stat-body">
+              <span class="stat-num danger">3</span>
+              <span class="stat-label">逾期任务</span>
+              <span class="stat-hint">最早逾期 2 天，尽快处理</span>
+            </span>
+          </button>
+          <button class="stat-card">
+            <span class="stat-icon"><i data-lucide="flag"></i></span>
+            <span class="stat-body">
+              <span class="stat-num">4</span>
+              <span class="stat-label">30 天内节点</span>
+              <span class="stat-hint">最近：ICML 投稿 · 14 天</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- 主体：左 8 任务 / 右 4 速览+节点+灵感 -->
+        <div class="mt20" style="display:grid; grid-template-columns: repeat(12, 1fr); gap: 16px;">
+          <!-- 左：今日到期与逾期 -->
+          <div class="card" style="grid-column: span 8; padding: 16px 18px;">
+            <div class="card-head" style="margin-bottom: 8px;">
+              <h2 class="card-title"><i data-lucide="list-todo"></i>今日到期与逾期任务<span class="badge red">3 逾期</span></h2>
+              <button class="card-link">全部任务 →</button>
+            </div>
+            <div>
+              <!-- 逾期行：整行淡红底 -->
+              <div class="task-row" style="background: color-mix(in srgb, var(--color-danger-soft) 55%, transparent);">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">预约导师讨论 Rebuttal 回复策略</div>
+                  <div class="task-meta">
+                    <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span>
+                    <span class="badge blue">进行中</span>
+                  </div>
+                </div>
+                <span class="badge red"><i data-lucide="flag"></i>高</span>
+                <span class="due-chip overdue"><i data-lucide="calendar"></i>8月20日 · 逾期 2 天</span>
+              </div>
+              <div class="task-row" style="background: color-mix(in srgb, var(--color-danger-soft) 55%, transparent);">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">提交实验室耗材报销发票</div>
+                  <div class="task-meta"><span class="tagchip">#杂项</span></div>
+                </div>
+                <span class="badge gray"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip overdue"><i data-lucide="calendar"></i>8月21日 · 逾期 1 天</span>
+              </div>
+              <div class="task-row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">补跑 GNN 消融实验（3 种聚合器对比）</div>
+                  <div class="task-meta">
+                    <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span>
+                    <span class="tagchip">#实验</span><span class="tagchip">#代码</span>
+                  </div>
+                </div>
+                <span class="badge red"><i data-lucide="flag"></i>高</span>
+                <span class="due-chip today"><i data-lucide="calendar"></i>今天到期</span>
+              </div>
+              <div class="task-row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">提交组会 PPT 大纲给师兄过目</div>
+                  <div class="task-meta">
+                    <span class="row-flex gap6"><span class="proj-dot" style="background:#c98a2b"></span>组会汇报体系</span>
+                  </div>
+                </div>
+                <span class="badge yellow"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip today"><i data-lucide="calendar"></i>今天到期</span>
+              </div>
+              <div class="task-row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">整理 PubMed 数据清洗脚本注释</div>
+                  <div class="task-meta">
+                    <span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span>
+                    <span class="tagchip">#代码</span>
+                  </div>
+                </div>
+                <span class="badge gray"><i data-lucide="flag"></i>低</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>8月26日 · 4 天后</span>
+              </div>
+              <div class="task-row done">
+                <button class="checkbox checked"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div class="title">导出上周实验数据备份到移动硬盘</div>
+                  <div class="task-meta"><span class="tagchip">#数据安全</span></div>
+                </div>
+                <span class="badge gray"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>今天 · 已完成</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右列 -->
+          <div style="grid-column: span 4; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+            <!-- 本周速览（合并原 7 张小卡中的 3 个次级指标 + 趋势图） -->
+            <div class="card tight">
+              <div class="card-head" style="margin-bottom: 10px;">
+                <h2 class="card-title" style="font-size:14px;"><i data-lucide="activity"></i>本周速览</h2>
+                <span class="caption text3">8月17日 – 8月22日</span>
+              </div>
+              <!-- 近 7 天柱状趋势 -->
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:6px; height:64px;">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini text3">2</span><i style="display:block;width:100%;max-width:26px;height:28%;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--color-accent) 45%, transparent)"></i><span class="mini text3">一</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini text3">1</span><i style="display:block;width:100%;max-width:26px;height:14%;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--color-accent) 45%, transparent)"></i><span class="mini text3">二</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini text3">3</span><i style="display:block;width:100%;max-width:26px;height:42%;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--color-accent) 45%, transparent)"></i><span class="mini text3">三</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><i style="display:block;width:100%;max-width:26px;height:5px;border-radius:4px 4px 2px 2px;background:var(--color-border)"></i><span class="mini text3">四</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini text3">2</span><i style="display:block;width:100%;max-width:26px;height:28%;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--color-accent) 45%, transparent)"></i><span class="mini text3">五</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini text3">5</span><i style="display:block;width:100%;max-width:26px;height:70%;border-radius:4px 4px 2px 2px;background:color-mix(in srgb, var(--color-accent) 45%, transparent)"></i><span class="mini text3">六</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><span class="mini" style="color:var(--color-accent);font-weight:600">2</span><i style="display:block;width:100%;max-width:26px;height:28%;border-radius:4px 4px 2px 2px;background:var(--color-accent)"></i><span class="mini" style="color:var(--color-accent);font-weight:600">今天</span></div>
+              </div>
+              <div class="mt12" style="display:flex; border-top:1px solid var(--color-border); padding-top:10px;">
+                <div class="flex1" style="text-align:center;">
+                  <div style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums">15</div>
+                  <div class="caption text3">本周完成</div>
+                </div>
+                <div style="width:1px;background:var(--color-border)"></div>
+                <div class="flex1" style="text-align:center;">
+                  <div style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums">6</div>
+                  <div class="caption text3">进展日志</div>
+                </div>
+                <div style="width:1px;background:var(--color-border)"></div>
+                <div class="flex1" style="text-align:center;">
+                  <div style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums">3</div>
+                  <div class="caption text3">进行中项目</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 未来 30 天节点 -->
+            <div class="card tight">
+              <div class="card-head" style="margin-bottom: 6px;">
+                <h2 class="card-title" style="font-size:14px;"><i data-lucide="flag"></i>未来 30 天节点</h2>
+                <button class="card-link">全部 →</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <div class="task-row" style="padding:7px 8px;">
+                  <button class="checkbox"><i data-lucide="check"></i></button>
+                  <div class="flex1">
+                    <div style="font-size:13px;" class="truncate">Rebuttal 回复截止</div>
+                    <div class="caption text3">8月30日 · 会议投稿</div>
+                  </div>
+                  <span class="badge red">8 天</span>
+                </div>
+                <div class="task-row" style="padding:7px 8px;">
+                  <button class="checkbox"><i data-lucide="check"></i></button>
+                  <div class="flex1">
+                    <div style="font-size:13px;" class="truncate">ICML 2027 全文投稿截止</div>
+                    <div class="caption text3">9月5日 · 会议投稿</div>
+                  </div>
+                  <span class="badge red">14 天</span>
+                </div>
+                <div class="task-row" style="padding:7px 8px;">
+                  <button class="checkbox"><i data-lucide="check"></i></button>
+                  <div class="flex1">
+                    <div style="font-size:13px;" class="truncate">研究生中期检查</div>
+                    <div class="caption text3">10月15日 · 中期检查</div>
+                  </div>
+                  <span class="badge yellow">54 天</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 待整理灵感 -->
+            <div class="card tight">
+              <div class="card-head" style="margin-bottom: 6px;">
+                <h2 class="card-title" style="font-size:14px;"><i data-lucide="lightbulb" style="color:var(--color-warn)"></i>待整理灵感</h2>
+                <button class="card-link">灵感页 →</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:9px 11px; transition:border-color .13s;" onmouseover="this.style.borderColor='color-mix(in srgb, var(--color-accent) 50%, var(--color-border))'" onmouseout="this.style.borderColor=''">
+                  <div class="small text2" style="line-height:1.65; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">能否用对比学习做分子子结构对齐？组会上李师兄提到 SDM 有类似工作，可以先复现…</div>
+                  <div class="mt6 row-flex" style="justify-content:space-between;">
+                    <span class="mini text3">今天 13:05</span>
+                    <button class="row-flex gap6" style="font-size:11.5px;color:var(--color-accent);"><i data-lucide="list-plus" style="width:12px;height:12px"></i>转为任务</button>
+                  </div>
+                </div>
+                <div style="border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:9px 11px;">
+                  <div class="small text2" style="line-height:1.65; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">知识图谱补全可以试试让 LLM 生成实体类型约束，替代人工先验</div>
+                  <div class="mt6 row-flex" style="justify-content:space-between;">
+                    <span class="mini text3">昨天 21:47</span>
+                    <button class="row-flex gap6" style="font-size:11.5px;color:var(--color-accent);"><i data-lucide="list-plus" style="width:12px;height:12px"></i>转为任务</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 2. 项目 ================= -->
+    <section class="page" id="page-projects">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">项目</h1>
+            <div class="page-sub">3 个进行中 · 整体任务完成率 62%；点卡片进入项目工作台</div>
+          </div>
+          <div class="head-actions">
+            <button class="btn primary"><i data-lucide="plus"></i>新建项目</button>
+          </div>
+        </div>
+
+        <!-- 项目卡片：xl 3 列，每卡带项目色顶条；点击进入项目详情页 -->
+        <div class="mt20" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+          <button class="card" data-page="project-detail" style="padding:0; text-align:left; overflow:hidden; transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <i style="display:block; height:3px; background:#5e6ad2;"></i>
+            <div style="padding:16px 18px 18px; display:flex; flex-direction:column; gap:12px;">
+              <div>
+                <div class="row-flex gap10">
+                  <span class="proj-dot" style="width:9px;height:9px;background:#5e6ad2"></span>
+                  <span style="font-size:15px; font-weight:600;" class="truncate">基于图神经网络的药物相互作用预测</span>
+                </div>
+                <div class="small text3 mt6" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.65;">用 GNN 建模药物-药物相互作用，目标投 ICML / Bioinformatics，横向课题经费支持</div>
+              </div>
+              <div>
+                <div class="row-flex" style="justify-content:space-between;" >
+                  <span class="caption text3">任务 18/26</span><span class="caption" style="font-weight:600;">69%</span>
+                </div>
+                <div class="progress mt6"><i style="width:69%; background:#5e6ad2;"></i></div>
+              </div>
+              <div class="row-flex gap8" style="justify-content:space-between;">
+                <span class="badge red" style="align-self:flex-start;">ICML 投稿 · 14 天</span>
+                <span class="caption text3">2026年3月开始</span>
+              </div>
+            </div>
+          </button>
+
+          <button class="card" style="padding:0; text-align:left; overflow:hidden;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <i style="display:block; height:3px; background:#33a06c;"></i>
+            <div style="padding:16px 18px 18px; display:flex; flex-direction:column; gap:12px;">
+              <div>
+                <div class="row-flex gap10">
+                  <span class="proj-dot" style="width:9px;height:9px;background:#33a06c"></span>
+                  <span style="font-size:15px; font-weight:600;" class="truncate">面向罕见病的医学知识图谱构建</span>
+                </div>
+                <div class="small text3 mt6" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.65;">整合 PubMed 与 Orphanet 数据源，构建中文罕见病知识图谱，学位论文主体工作</div>
+              </div>
+              <div>
+                <div class="row-flex" style="justify-content:space-between;">
+                  <span class="caption text3">任务 11/27</span><span class="caption" style="font-weight:600;">41%</span>
+                </div>
+                <div class="progress mt6"><i style="width:41%; background:#33a06c;"></i></div>
+              </div>
+              <div class="row-flex gap8" style="justify-content:space-between;">
+                <span class="badge yellow">中期检查 · 54 天</span>
+                <span class="caption text3">2025年11月开始</span>
+              </div>
+            </div>
+          </button>
+
+          <button class="card" style="padding:0; text-align:left; overflow:hidden;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <i style="display:block; height:3px; background:#c98a2b;"></i>
+            <div style="padding:16px 18px 18px; display:flex; flex-direction:column; gap:12px;">
+              <div>
+                <div class="row-flex gap10">
+                  <span class="proj-dot" style="width:9px;height:9px;background:#c98a2b"></span>
+                  <span style="font-size:15px; font-weight:600;" class="truncate">实验室组会汇报体系数字化</span>
+                </div>
+                <div class="small text3 mt6" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.65;">统一论文精读与实验进展的汇报模板，搭一套组会资料库</div>
+              </div>
+              <div>
+                <div class="row-flex" style="justify-content:space-between;">
+                  <span class="caption text3">任务 12/14</span><span class="caption" style="font-weight:600;">86%</span>
+                </div>
+                <div class="progress mt6"><i style="width:86%; background:#c98a2b;"></i></div>
+              </div>
+              <div class="row-flex gap8" style="justify-content:space-between;">
+                <span class="caption text3">暂无临近节点</span>
+                <span class="caption text3">2026年5月开始</span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <!-- 已完成 / 归档 -->
+        <div class="mt24">
+          <button class="fold-toggle"><i data-lucide="chevron-right"></i>已完成 / 已归档项目（2）</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 3. 项目详情 ================= -->
+    <section class="page" id="page-project-detail">
+      <div class="page-inner">
+        <!-- 返回 + 项目头 -->
+        <div class="page-head">
+          <div style="display:flex; align-items:flex-start; gap:12px; min-width:0;">
+            <button class="icon-btn" title="返回"><i data-lucide="arrow-left"></i></button>
+            <span class="proj-dot" style="width:10px;height:10px;background:#5e6ad2;margin-top:14px;"></span>
+            <div style="min-width:0;">
+              <div class="row-flex gap10">
+                <h1 class="page-title truncate">基于图神经网络的药物相互作用预测</h1>
+                <span class="badge blue">进行中</span>
+              </div>
+              <div class="page-sub">用 GNN 建模药物-药物相互作用，目标投 ICML / Bioinformatics · 2026年3月 – 2027年1月（预计）</div>
+            </div>
+          </div>
+          <div class="head-actions">
+            <button class="btn outline"><i data-lucide="pencil"></i>编辑</button>
+            <button class="icon-btn danger" title="删除项目"><i data-lucide="trash-2"></i></button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs mt16">
+          <button class="on"><i data-lucide="file-text"></i>概览</button>
+          <button><i data-lucide="list-todo"></i>任务<span class="mini text3">8/26</span></button>
+          <button><i data-lucide="pen-line"></i>进展日志<span class="mini text3">18</span></button>
+          <button><i data-lucide="flag"></i>时间节点<span class="mini text3">3</span></button>
+        </div>
+
+        <!-- 概览 Tab -->
+        <div class="mt20">
+          <!-- 进度 Hero：大号百分比 + 时间范围 + 关键数字 -->
+          <div class="card" style="display:flex; align-items:center; gap:28px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div style="width:84px; height:84px; border-radius:50%; border:6px solid var(--color-surface-2); border-top-color:#5e6ad2; border-right-color:#5e6ad2; transform:rotate(-45deg); display:flex;"></div>
+              <div>
+                <div style="font-size:26px; font-weight:700; font-variant-numeric:tabular-nums;">69<span style="font-size:15px;">%</span></div>
+                <div class="caption text3">任务完成度</div>
+              </div>
+            </div>
+            <div style="width:1px; align-self:stretch; background:var(--color-border);"></div>
+            <div style="display:flex; gap:32px; flex-wrap:wrap;">
+              <div><div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;">18/26</div><div class="caption text3 mt4">已完成 / 总任务</div></div>
+              <div><div style="font-size:19px;font-weight:700;color:var(--color-danger);font-variant-numeric:tabular-nums;">2</div><div class="caption text3 mt4">逾期任务</div></div>
+              <div><div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;">3</div><div class="caption text3 mt4">待办节点</div></div>
+              <div><div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;">18</div><div class="caption text3 mt4">进展记录</div></div>
+              <div><div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;">14 天</div><div class="caption text3 mt4">距 ICML 投稿</div></div>
+            </div>
+          </div>
+
+          <!-- 双栏：最近日志 + 临近节点 -->
+          <div class="mt16" style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px;">
+            <div class="card tight">
+              <div class="card-head"><h2 class="card-title" style="font-size:14px;"><i data-lucide="pen-line"></i>最近进展</h2><button class="card-link">全部日志 →</button></div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div class="row-flex gap10"><span class="mini" style="color:var(--color-accent);font-weight:600;width:58px;flex:none;">8月21日</span><span class="small text2 truncate">Rebuttal 第一问的补充实验跑完，AUC 提升 2.1%</span></div>
+                <div class="row-flex gap10"><span class="mini" style="color:var(--color-accent);font-weight:600;width:58px;flex:none;">8月20日</span><span class="small text2 truncate">与导师确认了审稿意见 2/3 的回复口径</span></div>
+                <div class="row-flex gap10"><span class="mini" style="color:var(--color-accent);font-weight:600;width:58px;flex:none;">8月18日</span><span class="small text2 truncate">消融实验脚本重构完成，新增聚合器对比分支</span></div>
+              </div>
+            </div>
+            <div class="card tight">
+              <div class="card-head"><h2 class="card-title" style="font-size:14px;"><i data-lucide="flag"></i>临近节点</h2><button class="card-link">全部节点 →</button></div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="row-flex gap10" style="justify-content:space-between;">
+                  <span class="small truncate" style="flex:1;">Rebuttal 回复截止</span><span class="badge red">8 天</span>
+                </div>
+                <div class="row-flex gap10" style="justify-content:space-between;">
+                  <span class="small truncate" style="flex:1;">ICML 2027 全文投稿截止</span><span class="badge red">14 天</span>
+                </div>
+                <div class="row-flex gap10" style="justify-content:space-between;">
+                  <span class="small truncate" style="flex:1;">子课题中期汇报</span><span class="badge yellow">38 天</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. 任务 ================= -->
+    <section class="page" id="page-tasks">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">任务</h1>
+            <div class="page-sub">按项目分组，逾期自动置顶；列表看细节，看板看全局</div>
+          </div>
+          <div class="head-actions">
+            <div class="segmented">
+              <button class="on"><i data-lucide="list"></i>列表</button>
+              <button data-page="tasks-kanban"><i data-lucide="columns-3"></i>看板</button>
+            </div>
+            <button class="btn primary"><i data-lucide="plus"></i>新建任务</button>
+          </div>
+        </div>
+
+        <!-- 筛选工具条（V3.1 FilterBar）：状态 Chips 流动区 ‖ 项目/标签/截止预设锚定右侧 -->
+        <div class="toolbar mt16">
+          <div class="zone-l">
+            <button class="chip">全部 <span class="count">26</span></button>
+            <button class="chip on">未完成 <span class="count">18</span></button>
+            <button class="chip">待办 <span class="count">11</span></button>
+            <button class="chip">进行中 <span class="count">7</span></button>
+            <button class="chip">已完成 <span class="count">8</span></button>
+          </div>
+          <div class="zone-r">
+            <select class="select"><option>全部项目</option></select>
+            <select class="select"><option>全部标签</option></select>
+            <span class="row-flex gap6 caption text3">截止
+              <select class="select" style="width:96px;"><option>全部</option><option>已逾期</option><option>今天</option><option>未来 7 天</option><option>未来 30 天</option><option>自定义…</option></select>
+            </span>
+            <button class="muted-btn" style="white-space:nowrap;">清除筛选</button>
+          </div>
+        </div>
+
+        <!-- 列表视图：项目分组 -->
+        <div class="mt16" style="display:flex; flex-direction:column; gap:20px;">
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 6px;">
+              <span class="proj-dot" style="background:#5e6ad2"></span>
+              <button class="small" style="font-weight:600;color:var(--color-text-2);">药物相互作用预测</button>
+              <span class="mini text3">6</span>
+              <span class="badge red">2 逾期</span>
+            </div>
+            <div class="list-card">
+              <div class="row" style="background:color-mix(in srgb, var(--color-danger-soft) 45%, transparent);">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1">
+                  <div style="font-size:13.5px;">预约导师讨论 Rebuttal 回复策略</div>
+                  <div class="task-meta"><span class="badge blue">进行中</span><span class="tagchip">#论文</span></div>
+                </div>
+                <span class="badge red"><i data-lucide="flag"></i>高</span>
+                <span class="due-chip overdue"><i data-lucide="calendar"></i>8月20日 · 逾期 2 天</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+              <div class="row" style="background:color-mix(in srgb, var(--color-danger-soft) 45%, transparent);">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">补跑 GNN 消融实验（3 种聚合器对比）</div>
+                  <div class="task-meta"><span class="tagchip">#实验</span><span class="tagchip">#代码</span></div>
+                </div>
+                <span class="badge red"><i data-lucide="flag"></i>高</span>
+                <span class="due-chip overdue"><i data-lucide="calendar"></i>8月21日 · 逾期 1 天</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+              <div class="row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">撰写论文 Related Work 初稿</div>
+                  <div class="task-meta"><span class="tagchip">#写作</span></div>
+                </div>
+                <span class="badge yellow"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>8月25日 · 3 天后</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+              <div class="row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">绘制 Figure 3 消融结果对比图</div>
+                  <div class="task-meta"><span class="tagchip">#图表</span></div>
+                </div>
+                <span class="badge gray"><i data-lucide="flag"></i>低</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>8月28日 · 6 天后</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 6px;">
+              <span class="proj-dot" style="background:#33a06c"></span>
+              <button class="small" style="font-weight:600;color:var(--color-text-2);">医学知识图谱</button>
+              <span class="mini text3">4</span>
+            </div>
+            <div class="list-card">
+              <div class="row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">整理 PubMed 数据清洗脚本注释</div>
+                  <div class="task-meta"><span class="tagchip">#代码</span></div>
+                </div>
+                <span class="badge gray"><i data-lucide="flag"></i>低</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>8月26日 · 4 天后</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+              <div class="row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">跑通 Orphanet 实体链接 pipeline</div>
+                  <div class="task-meta"><span class="badge blue">进行中</span></div>
+                </div>
+                <span class="badge yellow"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip"><i data-lucide="calendar"></i>8月29日 · 7 天后</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 6px;">
+              <span class="proj-dot" style="border:1.5px dashed var(--color-text-3);"></span>
+              <span class="small" style="font-weight:600;color:var(--color-text-2);">其他（杂项与归档项目）</span>
+              <span class="mini text3">3</span>
+            </div>
+            <div class="list-card">
+              <div class="row">
+                <button class="checkbox"><i data-lucide="check"></i></button>
+                <div class="flex1"><div style="font-size:13.5px;">提交实验室耗材报销发票</div>
+                  <div class="task-meta"><span class="tagchip">#杂项</span></div>
+                </div>
+                <span class="badge yellow"><i data-lucide="flag"></i>中</span>
+                <span class="due-chip overdue"><i data-lucide="calendar"></i>8月21日 · 逾期 1 天</span>
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 看板视图（示意，切到看板 Tab 时显示） -->
+        <div class="mt16" style="display:none;" id="tasks-kanban-preview">
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4b. 任务 · 看板视图（独立演示页） ================= -->
+    <section class="page" id="page-tasks-kanban">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">任务 · 看板视图</h1>
+            <div class="page-sub">卡片可直接拖拽换状态；列头计数实时汇总</div>
+          </div>
+          <div class="head-actions">
+            <div class="segmented">
+              <button data-page="tasks"><i data-lucide="list"></i>列表</button>
+              <button class="on"><i data-lucide="columns-3"></i>看板</button>
+            </div>
+            <button class="btn primary"><i data-lucide="plus"></i>新建任务</button>
+          </div>
+        </div>
+
+        <div class="toolbar mt16">
+          <div class="zone-l">
+            <button class="chip">未完成 <span class="count">18</span></button>
+            <button class="chip">全部 <span class="count">26</span></button>
+          </div>
+          <div class="zone-r">
+            <select class="select"><option>全部项目</option></select>
+            <select class="select"><option>全部标签</option></select>
+          </div>
+        </div>
+
+        <div class="mt16" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start;">
+          <!-- 待办列 -->
+          <section style="background:color-mix(in srgb, var(--color-surface) 60%, var(--color-bg)); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:12px; min-height:340px;">
+            <div class="row-flex gap8" style="padding:0 4px 10px;">
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-2);">待办</span>
+              <span class="badge gray">11</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="card tight" style="padding:12px 14px; cursor:grab;" onmouseover="this.style.borderColor='color-mix(in srgb, var(--color-accent) 55%, var(--color-border))'" onmouseout="this.style.borderColor=''">
+                <div style="font-size:13px; line-height:1.5;">撰写论文 Related Work 初稿</div>
+                <div class="task-meta mt6"><span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span><span class="badge yellow"><i data-lucide="flag"></i>中</span></div>
+                <div class="mt6"><span class="due-chip"><i data-lucide="calendar"></i>8月25日 · 3 天后</span></div>
+              </div>
+              <div class="card tight" style="padding:12px 14px; cursor:grab;">
+                <div style="font-size:13px; line-height:1.5;">整理 PubMed 数据清洗脚本注释</div>
+                <div class="task-meta mt6"><span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span></div>
+                <div class="mt6"><span class="due-chip"><i data-lucide="calendar"></i>8月26日 · 4 天后</span></div>
+              </div>
+              <div class="card tight" style="padding:12px 14px; cursor:grab;">
+                <div style="font-size:13px; line-height:1.5;">绘制 Figure 3 消融结果对比图</div>
+                <div class="task-meta mt6"><span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span></div>
+                <div class="mt6"><span class="due-chip"><i data-lucide="calendar"></i>8月28日 · 6 天后</span></div>
+              </div>
+            </div>
+          </section>
+          <!-- 进行中列 -->
+          <section style="background:color-mix(in srgb, var(--color-surface) 60%, var(--color-bg)); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:12px; min-height:340px;">
+            <div class="row-flex gap8" style="padding:0 4px 10px;">
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-2);">进行中</span>
+              <span class="badge blue">4</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="card tight" style="padding:12px 14px; cursor:grab; border-color:color-mix(in srgb, var(--color-danger) 45%, var(--color-border));">
+                <div style="font-size:13px; line-height:1.5;">预约导师讨论 Rebuttal 回复策略</div>
+                <div class="task-meta mt6"><span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span><span class="badge red"><i data-lucide="flag"></i>高</span></div>
+                <div class="mt6"><span class="due-chip overdue"><i data-lucide="calendar"></i>逾期 2 天</span></div>
+              </div>
+              <div class="card tight" style="padding:12px 14px; cursor:grab;">
+                <div style="font-size:13px; line-height:1.5;">跑通 Orphanet 实体链接 pipeline</div>
+                <div class="task-meta mt6"><span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span></div>
+                <div class="mt6"><span class="due-chip"><i data-lucide="calendar"></i>8月29日 · 7 天后</span></div>
+              </div>
+            </div>
+          </section>
+          <!-- 已完成列 -->
+          <section style="background:color-mix(in srgb, var(--color-surface) 60%, var(--color-bg)); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:12px; min-height:340px;">
+            <div class="row-flex gap8" style="padding:0 4px 10px;">
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-2);">已完成</span>
+              <span class="badge green">8</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="card tight" style="padding:12px 14px; cursor:grab; opacity:.75;">
+                <div style="font-size:13px; line-height:1.5; color:var(--color-text-3); text-decoration:line-through;">导出上周实验数据备份到移动硬盘</div>
+                <div class="task-meta mt6"><span class="mini">今天完成</span></div>
+              </div>
+              <div class="card tight" style="padding:12px 14px; cursor:grab; opacity:.75;">
+                <div style="font-size:13px; line-height:1.5; color:var(--color-text-3); text-decoration:line-through;">重跑 Table 2 基线对比（修正随机种子）</div>
+                <div class="task-meta mt6"><span class="mini">昨天完成</span></div>
+              </div>
+              <div style="border:1.5px dashed var(--color-border); border-radius:var(--radius-lg); padding:18px; text-align:center;" class="caption text3">
+                拖拽任务卡片到这里
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 5. 日历 ================= -->
+    <section class="page" id="page-calendar">
+      <div class="page-inner">
+        <div class="page-head">
+          <div class="row-flex gap14">
+            <h1 class="page-title">2026年8月</h1>
+            <div class="row-flex gap6">
+              <button class="icon-btn" title="上个月"><i data-lucide="chevron-left"></i></button>
+              <button class="chip">今天</button>
+              <button class="icon-btn" title="下个月"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="head-actions">
+            <div class="segmented">
+              <button class="on"><i data-lucide="calendar-days"></i>月视图</button>
+              <button><i data-lucide="calendar-range"></i>周视图</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 图例 -->
+        <div class="row-flex gap14 mt12 caption text3">
+          <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span>
+          <span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span>
+          <span class="row-flex gap6"><span class="proj-dot" style="border:1.5px dashed var(--color-text-3);"></span>无项目</span>
+          <span class="row-flex gap6"><span style="width:12px;height:12px;border-radius:4px;background:var(--color-accent-soft);display:inline-block;"></span>时间节点</span>
+        </div>
+
+        <!-- 月网格 -->
+        <div class="mt12" style="border:1px solid var(--color-border); border-radius:var(--radius-xl); overflow:hidden;">
+          <!-- 星期表头 -->
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); background:var(--color-surface);">
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周一</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周二</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周三</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周四</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周五</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周六</div>
+            <div class="caption text3" style="text-align:center; padding:9px 0; font-weight:600; border-bottom:1px solid var(--color-border);">周日</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--color-border);">
+            <!-- 每格 min-height 96px；非本月 opacity .38；今天浅 accent 底 + 圆形日期 -->
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">27</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">28</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">29</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">30</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">31</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">1</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">2</span></div>
+
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">3</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">4</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">5</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">6</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">基线代码复现</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">7</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">8</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">9</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#33a06c"></span><span class="mini text2 truncate">爬取 Orphanet 全量数据</span></div></div>
+
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">10</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">11</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">12</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">跑通主模型第一版</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">13</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">14</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">15</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">16</span></div>
+
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">17</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">中期材料初稿</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">18</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">19</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">20</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini truncate" style="color:var(--color-danger)">预约导师讨论 Rebuttal</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">21</span></div>
+            <!-- 今天 -->
+            <div style="min-height:96px;background:color-mix(in srgb, var(--color-accent-soft) 42%, var(--color-surface));padding:6px;">
+              <span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;background:var(--color-accent);color:#fff;font-weight:700;">22</span>
+              <div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">补跑 GNN 消融实验</span></div>
+              <div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#c98a2b"></span><span class="mini text2 truncate">组会 PPT 大纲</span></div>
+            </div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">23</span></div>
+
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">24</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">25</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">Related Work 初稿</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">26</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#33a06c"></span><span class="mini text2 truncate">清洗脚本注释</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">27</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">28</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#5e6ad2"></span><span class="mini text2 truncate">Figure 3 对比图</span></div></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">29</span><div class="row-flex gap6 mt4" style="padding:0 2px;"><span class="proj-dot" style="background:#33a06c"></span><span class="mini text2 truncate">实体链接 pipeline</span></div></div>
+            <!-- 节点日 -->
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;">
+              <span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">30</span>
+              <div class="mt4 row-flex gap6" style="background:var(--color-accent-soft); border-radius:5px; padding:3px 6px; margin:0 2px;"><i data-lucide="send" style="width:11px;height:11px;color:var(--color-accent)"></i><span class="mini truncate" style="color:var(--color-accent);font-weight:500;">Rebuttal 截止</span></div>
+            </div>
+
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">31</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">1</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">2</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">3</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">4</span></div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;">
+              <span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">5</span>
+              <div class="mt4 row-flex gap6" style="background:var(--color-accent-soft); border-radius:5px; padding:3px 6px; margin:0 2px;"><i data-lucide="send" style="width:11px;height:11px;color:var(--color-accent)"></i><span class="mini truncate" style="color:var(--color-accent);font-weight:500;">ICML 投稿截止</span></div>
+            </div>
+            <div style="min-height:96px;background:var(--color-surface);padding:6px;opacity:.38;"><span class="mini" style="display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;">6</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 6. 时间节点 ================= -->
+    <section class="page" id="page-milestones">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">时间节点</h1>
+            <div class="page-sub">开题、投稿截止、会议、中期检查、答辩……进入提醒窗口后自动出现在今日概览</div>
+          </div>
+          <div class="head-actions">
+            <button class="btn primary"><i data-lucide="calendar-plus"></i>新建节点</button>
+          </div>
+        </div>
+
+        <div class="toolbar mt16">
+          <div class="zone-l">
+            <button class="chip on">全部类型 <span class="count">6</span></button>
+            <button class="chip">会议投稿 <span class="count">2</span></button>
+            <button class="chip">答辩 <span class="count">1</span></button>
+            <button class="chip">中期检查 <span class="count">1</span></button>
+          </div>
+          <div class="zone-r">
+            <select class="select"><option>全部项目</option></select>
+          </div>
+        </div>
+
+        <!-- 节点列表：左侧日期块 + 主行 + 倒计时 -->
+        <div class="list-card mt16">
+          <div class="row" style="padding:14px 18px; gap:16px;">
+            <!-- 日期块 -->
+            <div style="width:52px; flex:none; text-align:center; border-right:1px solid var(--color-border); padding-right:14px;">
+              <div class="mini text3">周日</div>
+              <div style="font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3;">8/30</div>
+            </div>
+            <button class="checkbox"><i data-lucide="check"></i></button>
+            <div class="flex1">
+              <div style="font-size:14px; font-weight:500;">Rebuttal 回复截止</div>
+              <div class="task-meta">会议投稿 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span> · 提前 14/7/3 天提醒</div>
+            </div>
+            <span class="badge red" style="height:24px; font-size:12px;">还剩 8 天</span>
+            <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+          </div>
+          <div class="row" style="padding:14px 18px; gap:16px;">
+            <div style="width:52px; flex:none; text-align:center; border-right:1px solid var(--color-border); padding-right:14px;">
+              <div class="mini text3">周六</div>
+              <div style="font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3;">9/5</div>
+            </div>
+            <button class="checkbox"><i data-lucide="check"></i></button>
+            <div class="flex1">
+              <div style="font-size:14px; font-weight:500;">ICML 2027 全文投稿截止</div>
+              <div class="task-meta">会议投稿 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span> · 提前 30/14/7 天提醒</div>
+            </div>
+            <span class="badge red" style="height:24px; font-size:12px;">还剩 14 天</span>
+            <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+          </div>
+          <div class="row" style="padding:14px 18px; gap:16px;">
+            <div style="width:52px; flex:none; text-align:center; border-right:1px solid var(--color-border); padding-right:14px;">
+              <div class="mini text3">周六</div>
+              <div style="font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3;">9/26</div>
+            </div>
+            <button class="checkbox"><i data-lucide="check"></i></button>
+            <div class="flex1">
+              <div style="font-size:14px; font-weight:500;">子课题中期汇报（实验室内部）</div>
+              <div class="task-meta">中期检查 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span></div>
+            </div>
+            <span class="badge yellow" style="height:24px; font-size:12px;">还剩 35 天</span>
+            <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+          </div>
+          <div class="row" style="padding:14px 18px; gap:16px;">
+            <div style="width:52px; flex:none; text-align:center; border-right:1px solid var(--color-border); padding-right:14px;">
+              <div class="mini text3">周四</div>
+              <div style="font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3;">10/15</div>
+            </div>
+            <button class="checkbox"><i data-lucide="check"></i></button>
+            <div class="flex1">
+              <div style="font-size:14px; font-weight:500;">研究生中期检查</div>
+              <div class="task-meta">中期检查 · 全局节点 · 提前 30/14 天提醒</div>
+            </div>
+            <span class="badge yellow" style="height:24px; font-size:12px;">还剩 54 天</span>
+            <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+          </div>
+          <div class="row" style="padding:14px 18px; gap:16px;">
+            <div style="width:52px; flex:none; text-align:center; border-right:1px solid var(--color-border); padding-right:14px;">
+              <div class="mini text3">周一</div>
+              <div style="font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3;">12/20</div>
+            </div>
+            <button class="checkbox"><i data-lucide="check"></i></button>
+            <div class="flex1">
+              <div style="font-size:14px; font-weight:500;">硕士学位论文预答辩</div>
+              <div class="task-meta">答辩 · 全局节点</div>
+            </div>
+            <span class="badge gray" style="height:24px; font-size:12px;">还剩 120 天</span>
+            <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+          </div>
+        </div>
+
+        <div class="mt24">
+          <button class="fold-toggle"><i data-lucide="chevron-right"></i>已完成节点（3）</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 7. 灵感 ================= -->
+    <section class="page" id="page-ideas">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">灵感</h1>
+            <div class="page-sub">读论文、开会、走路时冒出的想法，按 <span class="kbd">Alt+S</span> 随手记，定期整理</div>
+          </div>
+          <div class="head-actions">
+            <div class="segmented">
+              <button class="on"><i data-lucide="rows-3"></i>列表</button>
+              <button><i data-lucide="layout-grid"></i>卡片</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar mt16">
+          <div class="zone-l">
+            <div style="position:relative; width:210px; max-width:100%;">
+              <i data-lucide="search" style="position:absolute; left:9px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:var(--color-text-3);"></i>
+              <input class="input" placeholder="全文搜索灵感内容…" style="height:28px; padding-left:28px; font-size:12.5px; width:100%;">
+            </div>
+            <span class="divider"></span>
+            <button class="chip on">全部 <span class="count">10</span></button>
+            <button class="chip">待整理 <span class="count">2</span></button>
+            <button class="chip">已整理 <span class="count">3</span></button>
+            <button class="chip">已转任务 <span class="count">5</span></button>
+          </div>
+          <div class="zone-r">
+            <select class="select"><option>全部项目</option></select>
+            <select class="select"><option>全部标签</option></select>
+          </div>
+        </div>
+
+        <div class="mt16" style="display:flex; flex-direction:column; gap:12px;">
+          <!-- 左缘色条标注状态：黄=待整理 / 蓝=已整理 / 绿=已转任务 -->
+          <div class="card" style="padding:14px 18px 14px 16px; border-left:3px solid var(--color-warn);">
+            <div class="row-flex" style="align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div class="flex1 small" style="line-height:1.75;">能否用对比学习做分子子结构对齐？组会上李师兄提到 SDM 有类似工作，可以先复现他们的 setting，再把我们的图增强策略叠上去对比效果。</div>
+              <div class="row-flex gap6" style="opacity:0;">
+                <button class="btn soft sm"><i data-lucide="list-plus"></i>转为任务</button>
+                <button class="icon-btn" title="标记为已整理"><i data-lucide="check"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="task-meta mt8" style="border-top:1px dashed var(--color-border); padding-top:8px;">
+              <span class="badge yellow">待整理</span>
+              <span>今天 13:05</span>
+              <span class="tagchip">#对比学习</span><span class="tagchip">#分子</span>
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px 18px 14px 16px; border-left:3px solid var(--color-warn);">
+            <div class="row-flex" style="align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div class="flex1 small" style="line-height:1.75;">知识图谱补全可以试试让 LLM 生成实体类型约束，替代人工整理的先验规则——组会汇报时可以作为下一步计划提出来</div>
+              <div class="row-flex gap6" style="opacity:0;">
+                <button class="btn soft sm"><i data-lucide="list-plus"></i>转为任务</button>
+                <button class="icon-btn" title="标记为已整理"><i data-lucide="check"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="task-meta mt8" style="border-top:1px dashed var(--color-border); padding-top:8px;">
+              <span class="badge yellow">待整理</span>
+              <span>昨天 21:47</span>
+              <span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span>
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px 18px 14px 16px; border-left:3px solid var(--color-accent);">
+            <div class="row-flex" style="align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div class="flex1 small text2" style="line-height:1.75;">把消融结果整理成自动出图脚本，以后论文所有表格图表直接从 JSON 生成</div>
+              <div class="row-flex gap6" style="opacity:0;">
+                <button class="icon-btn" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="task-meta mt8" style="border-top:1px dashed var(--color-border); padding-top:8px;">
+              <span class="badge blue">已整理</span>
+              <span>8月19日</span>
+              <span class="tagchip">#工具链</span>
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px 18px 14px 16px; border-left:3px solid var(--color-success);">
+            <div class="row-flex" style="align-items:flex-start; justify-content:space-between; gap:12px;">
+              <div class="flex1 small text2" style="line-height:1.75; color:var(--color-text-3);">调研一下 NeurIPS 的 Datasets &amp; Benchmarks track，知识图谱数据集或许可以投</div>
+              <div class="row-flex gap6" style="opacity:0;">
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="task-meta mt8" style="border-top:1px dashed var(--color-border); padding-top:8px;">
+              <span class="badge green">已转任务</span>
+              <span>8月15日</span>
+              <span class="mini" style="color:var(--color-accent);">→ 调研 NeurIPS D&amp;B track 投稿要求</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 8. 工具箱 ================= -->
+    <section class="page" id="page-tools">
+      <div class="page-inner">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">工具箱</h1>
+            <div class="page-sub">文献数据库、计算平台、VPN、数据集目录……常用入口集中放这里，点击即打开</div>
+          </div>
+          <div class="head-actions">
+            <button class="icon-btn" title="刷新有效性检测" style="border:1px solid var(--color-border); width:32px; height:32px;"><i data-lucide="refresh-cw"></i></button>
+            <button class="btn outline"><i data-lucide="folder-plus"></i>新建分组</button>
+            <button class="btn primary"><i data-lucide="plus"></i>新增收藏</button>
+          </div>
+        </div>
+
+        <div class="mt20" style="display:flex; flex-direction:column; gap:26px;">
+          <!-- 分组：文献数据库 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 2px 10px;">
+              <h2 style="font-size:14px; font-weight:600;">文献数据库</h2>
+              <span class="mini text3">4</span>
+              <span class="flex1"></span>
+              <span class="row-flex gap6" style="opacity:0;">
+                <button class="icon-btn" style="width:24px;height:24px;" title="上移"><i data-lucide="arrow-up"></i></button>
+                <button class="icon-btn" style="width:24px;height:24px;" title="下移"><i data-lucide="arrow-down"></i></button>
+                <button class="icon-btn" style="width:24px;height:24px;" title="重命名"><i data-lucide="pencil"></i></button>
+                <button class="icon-btn danger" style="width:24px;height:24px;" title="删除分组"><i data-lucide="trash-2"></i></button>
+              </span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;">
+              <!-- 收藏卡：36px 图标 tile + 名称 + 路径 + 类型角标 -->
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#b3541e;font-size:15px;">P</span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">PubMed</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">pubmed.ncbi.nlm.nih.gov</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#1a6dcc;font-size:15px;">W</span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">Web of Science</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">webofscience.com（需校园网）</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#4285f4;font-size:15px;">G</span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">Google Scholar</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">scholar.google.com</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(0,0,0,.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;"><i data-lucide="folder" style="color:var(--color-warn)"></i></span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">文献 PDF 库</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">D:\Papers\library</span>
+                  <span class="tagchip" style="margin-top:8px;">文件夹</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 分组：计算资源 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 2px 10px;">
+              <h2 style="font-size:14px; font-weight:600;">计算资源</h2>
+              <span class="mini text3">3</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;">
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;"><i data-lucide="monitor" style="color:var(--color-success)"></i></span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">实验室 GPU 服务器</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">ssh://lab-gpu01.uni.edu.cn</span>
+                  <span class="tagchip" style="margin-top:8px;">程序</span>
+                </span>
+              </button>
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#f9ab00;font-size:15px;">C</span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">Google Colab Pro</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">colab.research.google.com</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+              <!-- 失效项示意：灰化 + 红色提示 -->
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px; opacity:.55; filter:grayscale(.6);">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;"><i data-lucide="folder" style="color:var(--color-warn)"></i></span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">旧数据集快照</span>
+                  <span class="mini truncate" style="display:block;margin-top:2px;color:var(--color-danger);">路径不存在（硬盘未挂载）</span>
+                  <span class="tagchip" style="margin-top:8px;">文件夹</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 分组：学校服务 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 2px 10px;">
+              <h2 style="font-size:14px; font-weight:600;">学校服务</h2>
+              <span class="mini text3">2</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px;">
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;"><i data-lucide="globe" style="color:var(--color-accent)"></i></span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">校园 VPN</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">vpn.uni.edu.cn · 记得连 VPN</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+              <button class="card tight" style="text-align:left; display:flex; gap:12px; align-items:flex-start; padding:14px;">
+                <span style="width:36px;height:36px;flex:none;border-radius:var(--radius-lg);background:var(--color-surface-2);display:flex;align-items:center;justify-content:center;"><i data-lucide="globe" style="color:var(--color-accent)"></i></span>
+                <span class="flex1" style="min-width:0;">
+                  <span style="display:block;font-size:13px;font-weight:600;" class="truncate">研究生教务系统</span>
+                  <span class="mini text3 truncate" style="display:block;margin-top:2px;">gs.uni.edu.cn</span>
+                  <span class="tagchip" style="margin-top:8px;">网址</span>
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 未分组：拖放目标 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 2px 10px;">
+              <h2 style="font-size:14px; font-weight:600; color:var(--color-text-2);">未分组</h2>
+              <span class="mini text3">0</span>
+            </div>
+            <div style="border:1.5px dashed var(--color-border); border-radius:var(--radius-xl); padding:22px; text-align:center;" class="caption text3">
+              拖拽收藏项到这里，或点击右上角「新增收藏」
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 9. 论文投稿 ================= -->
+    <section class="page" id="page-papers">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">论文投稿</h1>
+            <!-- 状态流转：图形化 stepper 代替原纯文字副标题 -->
+            <div class="row-flex gap6 mt8" style="flex-wrap:wrap;">
+              <span class="tagchip">构思</span><span class="mini text3">→</span>
+              <span class="tagchip">写作中</span><span class="mini text3">→</span>
+              <span class="tagchip">已投稿</span><span class="mini text3">→</span>
+              <span class="tagchip">审稿中</span><span class="mini text3">→</span>
+              <span class="tagchip">大修/小修</span><span class="mini text3">→</span>
+              <span class="tagchip" style="color:var(--color-success); border-color:color-mix(in srgb, var(--color-success) 40%, transparent);">录用</span>
+              <span class="mini text3">/</span>
+              <span class="tagchip" style="color:var(--color-danger); border-color:color-mix(in srgb, var(--color-danger) 40%, transparent);">拒稿→改投</span>
+            </div>
+          </div>
+          <div class="head-actions">
+            <button class="btn primary"><i data-lucide="file-plus-2"></i>新建论文</button>
+          </div>
+        </div>
+
+        <!-- 状态分组列表 -->
+        <div class="mt20" style="display:flex; flex-direction:column; gap:22px;">
+          <!-- 审稿中 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 8px;">
+              <span class="badge purple">审稿中</span><span class="mini text3">1 篇</span>
+            </div>
+            <div class="list-card">
+              <div class="row" style="padding:14px 18px;">
+                <button class="flex1" style="text-align:left; min-width:0;">
+                  <div style="font-size:14px; font-weight:500;">知识图谱嵌入稀疏性问题的对比研究</div>
+                  <div class="task-meta mt4">IEEE JBHI · 期刊论文 · 第 1 轮 · <span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span> · 章节 7/7</div>
+                </button>
+                <span class="badge yellow">审稿意见 15 天</span>
+                <select class="select" style="width:104px; height:28px; font-size:12.5px;"><option>审稿中</option></select>
+                <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 写作中 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 8px;">
+              <span class="badge yellow">写作中</span><span class="mini text3">1 篇</span>
+            </div>
+            <div class="list-card">
+              <div class="row" style="padding:14px 18px;">
+                <button class="flex1" style="text-align:left; min-width:0;">
+                  <div style="font-size:14px; font-weight:500;">GNN-DDI：基于图神经网络的药物相互作用预测</div>
+                  <div class="task-meta mt4">目标 ICML 2027 · 会议论文 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span> · 章节 3/7 · 2 个自动节点</div>
+                </button>
+                <span class="badge red">全文截稿 14 天</span>
+                <select class="select" style="width:104px; height:28px; font-size:12.5px;"><option>写作中</option></select>
+                <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 大修 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 8px;">
+              <span class="badge yellow">大修</span><span class="mini text3">1 篇</span>
+            </div>
+            <div class="list-card">
+              <div class="row" style="padding:14px 18px;">
+                <button class="flex1" style="text-align:left; min-width:0;">
+                  <div style="font-size:14px; font-weight:500;">多视图分子表示学习在副作用预测中的应用</div>
+                  <div class="task-meta mt4">Bioinformatics · 期刊论文 · 第 2 轮 · 章节 8/8 · 3 个自动节点</div>
+                </button>
+                <span class="badge red">Rebuttal 截止 8 天</span>
+                <select class="select" style="width:104px; height:28px; font-size:12.5px;"><option>大修</option></select>
+                <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 构思 -->
+          <section>
+            <div class="row-flex gap8" style="padding:0 4px 8px;">
+              <span class="badge gray">构思</span><span class="mini text3">1 篇</span>
+            </div>
+            <div class="list-card">
+              <div class="row" style="padding:14px 18px;">
+                <button class="flex1" style="text-align:left; min-width:0;">
+                  <div style="font-size:14px; font-weight:500;">LLM 辅助的罕见病表型标准化方法（暂定名）</div>
+                  <div class="task-meta mt4">暂无目标 venue · <span class="row-flex gap6"><span class="proj-dot" style="background:#33a06c"></span>医学知识图谱</span> · 章节 0/6</div>
+                </button>
+                <select class="select" style="width:104px; height:28px; font-size:12.5px;"><option>构思</option></select>
+                <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+                <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 10. 成果台账 ================= -->
+    <section class="page" id="page-achievements">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">成果台账</h1>
+            <div class="page-sub">论文录用后自动生成草稿项；专利、获奖、项目可手动登记 · 按年份归档，一键复制进简历</div>
+          </div>
+          <div class="head-actions">
+            <button class="btn outline"><i data-lucide="copy"></i>复制为纯文本</button>
+            <button class="btn primary"><i data-lucide="plus"></i>登记成果</button>
+          </div>
+        </div>
+
+        <!-- 草稿提示条 -->
+        <div class="mt16" style="border:1.5px dashed color-mix(in srgb, var(--color-accent) 55%, transparent); background:color-mix(in srgb, var(--color-accent-soft) 50%, transparent); border-radius:var(--radius-lg); padding:9px 14px;" >
+          <span class="small" style="color:var(--color-accent);">有 1 项论文录用自动生成的草稿，点击编辑补全级别与证明材料后转正。</span>
+        </div>
+
+        <div class="toolbar mt16">
+          <button class="chip on">全部类型 <span class="count">6</span></button>
+          <button class="chip">论文 <span class="count">3</span></button>
+          <button class="chip">获奖 <span class="count">2</span></button>
+          <button class="chip">专利 <span class="count">1</span></button>
+        </div>
+
+        <!-- 年份时间线 -->
+        <div class="mt20 timeline" id="ach-timeline-outer">
+          <!-- 2026 -->
+          <section style="position:relative;">
+            <span class="dot"></span>
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:10px;">2026 年</h2>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="card tight row-flex gap14" style="padding:14px 16px; align-items:flex-start;">
+                <span style="width:34px;height:34px;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-soft);color:var(--color-accent);display:flex;align-items:center;justify-content:center;"><i data-lucide="award"></i></span>
+                <div class="flex1">
+                  <div class="row-flex gap8" style="flex-wrap:wrap;"><span style="font-size:13.5px;font-weight:600;">研究生国家奖学金</span><span class="badge purple">国家级</span></div>
+                  <div class="task-meta mt4">10月12日 · 获奖 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span></div>
+                  <div class="small text2 mt6">全校硕士研究生 8 个名额，凭一篇 CCF-B 在读成果与横向课题产出获得</div>
+                </div>
+                <span class="row-flex gap6"><button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button><button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button></span>
+              </div>
+              <div class="card tight row-flex gap14" style="padding:14px 16px; align-items:flex-start; border-style:dashed;">
+                <span style="width:34px;height:34px;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-soft);color:var(--color-accent);display:flex;align-items:center;justify-content:center;"><i data-lucide="file-text"></i></span>
+                <div class="flex1">
+                  <div class="row-flex gap8" style="flex-wrap:wrap;"><span style="font-size:13.5px;font-weight:600;">Contrastive Molecular Structure Alignment（录用）</span><span class="badge yellow">草稿</span></div>
+                  <div class="task-meta mt4">6月28日 · 论文 · <span class="row-flex gap6"><span class="proj-dot" style="background:#5e6ad2"></span>药物相互作用预测</span></div>
+                  <button class="mini mt6" style="color:var(--color-text-3);">📎 D:\Papers\acceptance-letter.pdf</button>
+                </div>
+                <span class="row-flex gap6"><button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button><button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2025 -->
+          <section style="position:relative;">
+            <span class="dot"></span>
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:10px;">2025 年</h2>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="card tight row-flex gap14" style="padding:14px 16px; align-items:flex-start;">
+                <span style="width:34px;height:34px;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-soft);color:var(--color-accent);display:flex;align-items:center;justify-content:center;"><i data-lucide="medal"></i></span>
+                <div class="flex1">
+                  <div class="row-flex gap8" style="flex-wrap:wrap;"><span style="font-size:13.5px;font-weight:600;">「挑战杯」省赛二等奖（团队负责人）</span><span class="badge purple">省级</span></div>
+                  <div class="task-meta mt4">5月20日 · 获奖</div>
+                  <div class="small text2 mt6">项目：面向社区医院的智能分诊问答系统</div>
+                </div>
+                <span class="row-flex gap6"><button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button><button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button></span>
+              </div>
+              <div class="card tight row-flex gap14" style="padding:14px 16px; align-items:flex-start;">
+                <span style="width:34px;height:34px;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-soft);color:var(--color-accent);display:flex;align-items:center;justify-content:center;"><i data-lucide="lightbulb"></i></span>
+                <div class="flex1">
+                  <div class="row-flex gap8" style="flex-wrap:wrap;"><span style="font-size:13.5px;font-weight:600;">发明专利：一种基于知识图谱的用药风险预警方法（实审中）</span></div>
+                  <div class="task-meta mt4">3月8日 · 专利 · 申请号 CN20251008XXXX.X</div>
+                </div>
+                <span class="row-flex gap6"><button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button><button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button></span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 11. 汇报中心 ================= -->
+    <section class="page" id="page-reports">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">汇报中心</h1>
+            <div class="page-sub">自动聚合周期内的任务、日志、灵感与节点事件 → 草稿 → 人工润色 → 导出发导师</div>
+          </div>
+        </div>
+
+        <!-- 快速生成：3 张入口卡 -->
+        <div class="mt20" style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+          <button class="card" style="text-align:left; display:flex; gap:14px; align-items:center;" onmouseover="this.style.borderColor='color-mix(in srgb, var(--color-accent) 55%, var(--color-border))';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='';this.style.transform=''">
+            <span class="stat-icon"><i data-lucide="file-text"></i></span>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:600;">生成本周周报</span>
+              <span class="caption text3" style="display:block;margin-top:2px;">8月17日 – 8月23日</span>
+            </span>
+            <i data-lucide="chevron-right" style="margin-left:auto;color:var(--color-text-3)"></i>
+          </button>
+          <button class="card" style="text-align:left; display:flex; gap:14px; align-items:center;" onmouseover="this.style.borderColor='color-mix(in srgb, var(--color-accent) 55%, var(--color-border))';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='';this.style.transform=''">
+            <span class="stat-icon"><i data-lucide="history"></i></span>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:600;">生成上周周报</span>
+              <span class="caption text3" style="display:block;margin-top:2px;">8月10日 – 8月16日</span>
+            </span>
+            <i data-lucide="chevron-right" style="margin-left:auto;color:var(--color-text-3)"></i>
+          </button>
+          <button class="card" style="text-align:left; display:flex; gap:14px; align-items:center;" onmouseover="this.style.borderColor='color-mix(in srgb, var(--color-accent) 55%, var(--color-border))';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='';this.style.transform=''">
+            <span class="stat-icon"><i data-lucide="calendar-days"></i></span>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:600;">生成本月月报</span>
+              <span class="caption text3" style="display:block;margin-top:2px;">2026-08</span>
+            </span>
+            <i data-lucide="chevron-right" style="margin-left:auto;color:var(--color-text-3)"></i>
+          </button>
+        </div>
+
+        <!-- 工作总结（自定义时间段） -->
+        <div class="card tight mt14 row-flex gap12" style="flex-wrap:wrap;">
+          <span class="small" style="font-weight:600;color:var(--color-text-2);">工作总结</span>
+          <input class="input" type="date" value="2026-07-23" style="width:140px;">
+          <span class="text3">～</span>
+          <input class="input" type="date" value="2026-08-22" style="width:140px;">
+          <button class="btn outline">生成总结</button>
+          <span class="caption text3">任务统计 + 成果列表 + 进展摘要，适合年终总结</span>
+        </div>
+
+        <!-- 历史报告 -->
+        <div class="row-flex gap8 mt24" style="padding:0 2px 8px;">
+          <h2 class="card-title"><i data-lucide="archive"></i>历史报告</h2>
+          <span class="mini text3">4</span>
+        </div>
+        <div class="list-card">
+          <div class="row" style="padding:13px 18px;">
+            <button class="flex1" style="text-align:left; min-width:0;">
+              <div style="font-size:13.5px; font-weight:500;">第 33 周周报（8月11日 – 8月17日）</div>
+              <div class="task-meta mt4">生成于 8月17日 20:15 · 已修改</div>
+            </button>
+            <span class="badge blue">周报</span>
+            <span class="row-flex gap6">
+              <button class="icon-btn" title="编辑"><i data-lucide="pencil"></i></button>
+              <button class="icon-btn" title="导出 Markdown"><i data-lucide="file-down"></i></button>
+              <button class="icon-btn" title="导出 Word"><i data-lucide="file-down" style="color:var(--color-accent)"></i></button>
+              <button class="icon-btn" title="复制全文"><i data-lucide="copy"></i></button>
+              <button class="icon-btn danger" title="删除"><i data-lucide="trash-2"></i></button>
+            </span>
+          </div>
+          <div class="row" style="padding:13px 18px;">
+            <button class="flex1" style="text-align:left; min-width:0;">
+              <div style="font-size:13.5px; font-weight:500;">7 月月报</div>
+              <div class="task-meta mt4">生成于 8月1日 09:02</div>
+            </button>
+            <span class="badge purple">月报</span>
+            <span class="row-flex gap6">
+              <button class="icon-btn"><i data-lucide="pencil"></i></button>
+              <button class="icon-btn"><i data-lucide="file-down"></i></button>
+              <button class="icon-btn"><i data-lucide="file-down" style="color:var(--color-accent)"></i></button>
+              <button class="icon-btn"><i data-lucide="copy"></i></button>
+              <button class="icon-btn danger"><i data-lucide="trash-2"></i></button>
+            </span>
+          </div>
+          <div class="row" style="padding:13px 18px;">
+            <button class="flex1" style="text-align:left; min-width:0;">
+              <div style="font-size:13.5px; font-weight:500;">上半年工作总结（导师面谈用）</div>
+              <div class="task-meta mt4">2026年1月1日 – 6月30日 · 生成于 6月30日 16:40</div>
+            </button>
+            <span class="badge gray">总结</span>
+            <span class="row-flex gap6">
+              <button class="icon-btn"><i data-lucide="pencil"></i></button>
+              <button class="icon-btn"><i data-lucide="file-down"></i></button>
+              <button class="icon-btn"><i data-lucide="file-down" style="color:var(--color-accent)"></i></button>
+              <button class="icon-btn"><i data-lucide="copy"></i></button>
+              <button class="icon-btn danger"><i data-lucide="trash-2"></i></button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 12. 设置 ================= -->
+    <section class="page" id="page-settings">
+      <div class="page-inner narrow">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">设置</h1>
+            <div class="page-sub">数据、外观、快捷键与数据安全均在本地，不上传任何服务器</div>
+          </div>
+        </div>
+
+        <div class="mt20" style="display:flex; flex-direction:column; gap:16px;">
+          <!-- 数据目录 -->
+          <section class="card">
+            <div class="card-head" style="margin-bottom:10px;"><h2 class="card-title"><i data-lucide="folder-open"></i>数据目录</h2></div>
+            <div class="small text2" style="word-break:break-all;">D:\GezhiData（网盘同步目录）</div>
+            <p class="caption text3 mt6" style="line-height:1.75;">数据以明文 JSON 存储在该目录，网盘会自动同步。可直接复制整个目录完成迁移或冷备份；更换目录后将加载新目录中的数据。</p>
+            <div class="row-flex gap8 mt12">
+              <button class="btn outline">更改数据目录…</button>
+              <button class="btn ghost">打开数据目录</button>
+            </div>
+          </section>
+
+          <!-- 外观 -->
+          <section class="card">
+            <div class="card-head" style="margin-bottom:10px;"><h2 class="card-title"><i data-lucide="palette"></i>外观</h2></div>
+            <div class="small" style="font-weight:600;">界面风格</div>
+            <div class="mt10" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+              <button class="card tight" data-style-btn="linear" style="padding:12px; text-align:left; border-width:1.5px;">
+                <span class="row-flex" style="justify-content:space-between;">
+                  <span style="font-size:13px; font-weight:600;">精密高效</span>
+                  <span class="badge blue">当前</span>
+                </span>
+                <span class="row-flex gap6 mt8">
+                  <i style="height:18px;flex:1;border-radius:4px;background:#f7f8f8;border:1px solid #e6e8ef;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#ffffff;border:1px solid #e6e8ef;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#5e6ad2;"></i>
+                </span>
+                <span class="mini text3 mt8" style="display:block; line-height:1.6;">靛紫点缀、白卡细边，效率组件表现最佳</span>
+              </button>
+              <button class="card tight" data-style-btn="claude" style="padding:12px; text-align:left;">
+                <span style="font-size:13px; font-weight:600;">学术编辑</span>
+                <span class="row-flex gap6 mt8">
+                  <i style="height:18px;flex:1;border-radius:4px;background:#f5f4ed;border:1px solid #d1cfc5;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#faf9f5;border:1px solid #d1cfc5;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#c96442;"></i>
+                </span>
+                <span class="mini text3 mt8" style="display:block; line-height:1.6;">陶土暖纸、衬线标题，「格物致知」书卷气</span>
+              </button>
+              <button class="card tight" data-style-btn="notion" style="padding:12px; text-align:left;">
+                <span style="font-size:13px; font-weight:600;">暖中性极简</span>
+                <span class="row-flex gap6 mt8">
+                  <i style="height:18px;flex:1;border-radius:4px;background:#ffffff;border:1px solid #e4e3e0;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#f7f6f3;border:1px solid #e4e3e0;"></i>
+                  <i style="height:18px;flex:1;border-radius:4px;background:#2383e2;"></i>
+                </span>
+                <span class="mini text3 mt8" style="display:block; line-height:1.6;">白画布配暖灰面板，内容优先、久看不累</span>
+              </button>
+            </div>
+            <div class="row-flex gap10 mt14" style="border-top:1px solid var(--color-border); padding-top:12px;">
+              <i data-lucide="moon" style="color:var(--color-text-3)"></i>
+              <select class="select" style="width:160px;"><option>跟随系统</option><option>浅色</option><option>深色</option></select>
+            </div>
+          </section>
+
+          <!-- 快捷键 -->
+          <section class="card">
+            <div class="card-head" style="margin-bottom:10px;"><h2 class="card-title"><i data-lucide="keyboard"></i>全局速记快捷键</h2></div>
+            <p class="caption text3" style="line-height:1.75;">应用运行中（含最小化到托盘）按此快捷键，随时弹出灵感速记框。</p>
+            <div class="row-flex gap12 mt12">
+              <span class="kbd" style="height:32px; display:inline-flex; align-items:center; padding:0 12px; font-size:13px; border-radius:var(--radius-lg); background:var(--color-surface-2);">Alt+S</span>
+              <button class="btn outline">修改快捷键</button>
+            </div>
+          </section>
+
+          <!-- 数据安全 -->
+          <section class="card">
+            <div class="card-head" style="margin-bottom:10px;"><h2 class="card-title"><i data-lucide="database"></i>数据安全</h2></div>
+            <div class="row-flex" style="justify-content:space-between; padding:4px 0;">
+              <span class="small text2">关闭窗口时最小化到托盘（保证速记随时可用）</span>
+              <span style="width:38px; height:21px; border-radius:999px; background:var(--color-accent); position:relative; cursor:pointer;">
+                <i style="position:absolute; top:2.5px; left:19px; width:16px; height:16px; border-radius:50%; background:#fff; display:block;"></i>
+              </span>
+            </div>
+            <div class="row-flex gap8 mt10" style="justify-content:space-between; flex-wrap:wrap;">
+              <span class="small text2">自动备份 <span class="badge green">已启用</span></span>
+              <span class="caption text3">上次备份：今天 09:12（backups/，保留 30 份）</span>
+            </div>
+            <div class="mt12"><button class="btn outline sm">立即备份</button></div>
+          </section>
+
+          <!-- 关于 -->
+          <section class="card">
+            <div class="card-head" style="margin-bottom:10px;"><h2 class="card-title"><i data-lucide="info"></i>关于</h2></div>
+            <div class="row-flex gap8"><span class="small" style="font-weight:600;">格致 · 科研工作台</span><span class="badge gray">V2.2.0</span><span class="badge red">新版本 V2.3.0 可用</span></div>
+            <p class="caption text3 mt6" style="line-height:1.75;">「格物致知」—— 一台电脑上的一个应用，装下你全部的科研管理工作。</p>
+            <div class="row-flex gap8 mt12">
+              <button class="btn outline sm"><i data-lucide="refresh-cw"></i>检查更新</button>
+              <button class="btn ghost sm danger-text">退出应用（退出前自动备份）</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 13. 设计规范（评审用） ================= -->
+    <section class="page" id="page-spec">
+      <div class="page-inner mid">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">V3 设计规范摘要</h1>
+            <div class="page-sub">本页说明这次重设计的核心决策；确认后按此规范逐页迁移到 React + Tailwind 代码</div>
+          </div>
+        </div>
+
+        <div class="mt20" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <section class="card">
+            <h2 class="card-title"><i data-lucide="type"></i>字号阶：18 档 → 7 档</h2>
+            <div class="mt12" style="display:flex; flex-direction:column; gap:9px;">
+              <div class="row-flex gap12"><span style="font-size:20px; font-weight:700; width:130px;">20 页面标题</span><span class="caption text3">H1，衬线主题自动换衬线</span></div>
+              <div class="row-flex gap12"><span style="font-size:17px; font-weight:700; width:130px;">17 年份/大数字</span><span class="caption text3">成果年份、概览 Hero 数字</span></div>
+              <div class="row-flex gap12"><span style="font-size:23px; font-weight:700; width:130px;">23 统计数字</span><span class="caption text3">tabular-nums 等宽数字</span></div>
+              <div class="row-flex gap12"><span style="font-size:15px; font-weight:600; width:130px;">15 区块标题</span><span class="caption text3">卡片标题 + 项目卡名称</span></div>
+              <div class="row-flex gap12"><span style="font-size:14px; font-weight:500; width:130px;">14 列表主文本</span><span class="caption text3">节点/论文/报告行</span></div>
+              <div class="row-flex gap12"><span style="font-size:13.5px; width:130px;">13.5 正文基准</span><span class="caption text3">任务行、卡片正文（原 13/13.5/14 合并）</span></div>
+              <div class="row-flex gap12"><span style="font-size:12.5px; width:130px;" class="text2">12.5 次级文本</span><span class="caption text3">副标题、说明（吸收原 12/12.5）</span></div>
+              <div class="row-flex gap12"><span style="font-size:11.5px; width:130px;" class="text3">11.5 辅助说明</span><span class="caption text3">状态行/时间戳（吸收原 10/10.5/11，最小字号）</span></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2 class="card-title"><i data-lucide="ruler"></i>间距与栅格</h2>
+            <ul class="mt12 small text2" style="line-height:2; padding-left:18px;">
+              <li>页面内边距 <b>26 / 30</b>（原 16/24 混用），阅读型页面居中限宽 860 / 1080</li>
+              <li>区块纵向节奏 <b>16 / 20 / 24</b> 三档（原 gap-2.5~6 随意取值）</li>
+              <li>卡片内边距统一 <b>18/20</b>，紧凑卡 14/16（原 12~20 六种）</li>
+              <li>卡片圆角改用 <b>var(--radius-xl)</b>：三主题真正差异化 12 / 14 / 10px（原 token 是死代码）</li>
+              <li>侧边栏 192 → <b>224px</b>，11 项分 3 组 + active 左指示条</li>
+              <li>图标统一 16（导航）/ 14（行内）/ 18（统计 tile），描边 1.8</li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <h2 class="card-title"><i data-lucide="layout-dashboard"></i>页面级改动</h2>
+            <ul class="mt12 small text2" style="line-height:2; padding-left:18px;">
+              <li><b>今日概览</b>：7 小卡 → 4 核心大卡 + 右栏「本周速览」合并趋势图与 3 个次级指标；新增「记一笔进展」入口</li>
+              <li><b>项目卡</b>：项目色顶条 + 名称 15px + 两行描述 + 进度 + 节点 chip，xl 三列</li>
+              <li><b>项目详情·概览</b>：环形进度 Hero + 5 项关键数字 + 最近日志/临近节点双栏</li>
+              <li><b>任务筛选</b>：select 平铺 → 状态 chips + 下拉组合工具条</li>
+              <li><b>时间节点</b>：新增左侧日期块（星期 + 大日期），倒计时 badge 放大</li>
+              <li><b>灵感</b>：左缘状态色条（黄待整理/蓝已整理/绿已转）一眼分区</li>
+              <li><b>论文投稿</b>：纯文字流转说明 → 图形化状态链 chips</li>
+              <li><b>成果台账</b>：年份大标题 + 时间线圆点 + 类型图标 tile</li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <h2 class="card-title"><i data-lucide="paintbrush"></i>主题适配策略</h2>
+            <ul class="mt12 small text2" style="line-height:2; padding-left:18px;">
+              <li>全部颜色仍走 <b>原有 6 套 CSS token</b>，零新增色值（purple badge 除外，沿用现有定义）</li>
+              <li>圆角/字体 token（--radius-* / --font-display）真正接入组件层</li>
+              <li>notion 主题「卡深底浅」的反转关系在原型中可直接验证</li>
+              <li>深色模式下所有 soft 底色均为主题专属（暖墨/冷灰/中性），不再叠 black/40</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+<!-- ==PAGES== -->
+  </main>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.474.0/dist/umd/lucide.min.js"></script>
+<script>
+(function () {
+  // 图标渲染（CDN 失败时 i 占位元素保持尺寸，不影响布局评审）
+  function renderIcons() { if (window.lucide) lucide.createIcons() }
+  renderIcons()
+
+  function activate(name) {
+    document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('on') })
+    var target = document.getElementById('page-' + name)
+    if (target) target.classList.add('on')
+    document.querySelectorAll('.side-nav .nav-item, .side-foot .nav-item').forEach(function (n) {
+      n.classList.toggle('active', n.dataset.page === name)
+    })
+    document.querySelector('.main').scrollTop = 0
+  }
+
+  // 页面切换（侧边栏即导航）
+  document.querySelectorAll('[data-page]').forEach(function (btn) {
+    btn.addEventListener('click', function () { activate(btn.dataset.page) })
+  })
+
+  // 风格主题切换
+  function setStyle(style) {
+    document.documentElement.dataset.style = style
+    document.querySelectorAll('#style-seg button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.styleBtn === style)
+    })
+  }
+  document.querySelectorAll('[data-style-btn]').forEach(function (btn) {
+    btn.addEventListener('click', function () { setStyle(btn.dataset.styleBtn) })
+  })
+
+  // 明暗切换
+  var darkBtn = document.getElementById('dark-btn')
+  function setDark(dark) {
+    document.documentElement.classList.toggle('dark', dark)
+    darkBtn.textContent = dark ? '☀️ 浅色' : '🌙 深色'
+  }
+  darkBtn.addEventListener('click', function () {
+    setDark(!document.documentElement.classList.contains('dark'))
+  })
+
+  // 视口宽度
+  document.querySelectorAll('#width-seg button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.body.dataset.width = btn.dataset.widthBtn
+      document.querySelectorAll('#width-seg button').forEach(function (b) { b.classList.toggle('on', b === btn) })
+    })
+  })
+
+  // URL hash 初始态：#page=tasks-kanban,style=claude,dark,w=1440（可分享/可截图）
+  var hash = decodeURIComponent(location.hash.replace(/^#/, ''))
+  if (hash) {
+    hash.split(',').forEach(function (part) {
+      if (part === 'dark') setDark(true)
+      else if (part.indexOf('page=') === 0) activate(part.slice(5))
+      else if (part.indexOf('style=') === 0) setStyle(part.slice(6))
+      else if (part.indexOf('w=') === 0) {
+        var w = part.slice(2)
+        document.body.dataset.width = w
+        document.querySelectorAll('#width-seg button').forEach(function (b) { b.classList.toggle('on', b.dataset.widthBtn === w) })
+      }
+    })
+  }
+})()
+</script>
+</body>
+</html>

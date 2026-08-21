@@ -2,18 +2,29 @@
 import { useMemo, useState } from 'react'
 import {
   ArrowLeft,
+  CalendarDays,
   Check,
+  ChevronRight,
   Copy,
   FileDown,
   FileText,
+  History,
   Pencil,
-  Plus,
   RefreshCw,
   Trash2
 } from 'lucide-react'
 import type { Report, ReportKind } from '@shared/types'
 import { useStore } from '@/store'
-import { Badge, Button, ConfirmDialog, EmptyState, Input, Textarea } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  IconButton,
+  Input,
+  PageHeader,
+  Textarea
+} from '@/components/ui'
 import {
   exportFileName,
   generateReport,
@@ -117,44 +128,46 @@ export default function ReportsPage() {
     const isNew = draft.mode === 'new'
     const period = isNew ? draft.period : { start: draft.report.period_start, end: draft.report.period_end }
     return (
-      <div className="px-4 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <button
-              onClick={() => setDraft({ mode: 'idle' })}
-              className="rounded-lg p-1.5 text-text-3 hover:bg-surface-2 hover:text-text cursor-pointer"
-              title="返回列表"
-            >
-              <ArrowLeft size={17} />
-            </button>
-            <h1 className="text-lg font-semibold">
+      <div className="page page-mid">
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2.5">
+              <button
+                onClick={() => setDraft({ mode: 'idle' })}
+                className="-ml-1 rounded-lg p-1.5 text-text-3 hover:bg-surface-2 hover:text-text cursor-pointer [&_svg]:h-4 [&_svg]:w-4"
+                title="返回列表"
+              >
+                <ArrowLeft />
+              </button>
               {isNew ? '生成草稿' : '编辑报告'}
-              <span className="ml-2 text-[12px] font-normal text-text-3">
+              <span className="text-[12.5px] font-normal text-text-3">
                 {period.start} ~ {period.end}
               </span>
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {savedFlash && (
-              <span className="flex items-center gap-1 text-[12px] text-success">
-                <Check size={12} /> 已保存
-              </span>
-            )}
-            {isNew && (
-              <Button
-                onClick={() => doGenerate(draft.kind, draft.period)}
-                title="放弃当前编辑，重新按最新数据聚合"
-              >
-                <RefreshCw size={13} /> 重新聚合
+            </span>
+          }
+          actions={
+            <>
+              {savedFlash && (
+                <span className="flex items-center gap-1 text-[12.5px] text-success">
+                  <Check size={12} /> 已保存
+                </span>
+              )}
+              {isNew && (
+                <Button
+                  onClick={() => doGenerate(draft.kind, draft.period)}
+                  title="放弃当前编辑，重新按最新数据聚合"
+                >
+                  <RefreshCw /> 重新聚合
+                </Button>
+              )}
+              <Button variant="primary" onClick={doSave}>
+                保存为正式版本
               </Button>
-            )}
-            <Button variant="primary" onClick={doSave}>
-              保存为正式版本
-            </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-5 flex flex-col gap-3">
           <Input
             value={draft.title}
             onChange={(e) =>
@@ -184,10 +197,10 @@ export default function ReportsPage() {
             {draftReportForExport && (
               <>
                 <Button size="sm" onClick={() => doExport(draftReportForExport!, 'md')}>
-                  <FileDown size={12.5} /> Markdown (.md)
+                  <FileDown /> Markdown (.md)
                 </Button>
                 <Button size="sm" onClick={() => doExport(draftReportForExport!, 'docx')}>
-                  <FileDown size={12.5} /> Word (.docx)
+                  <FileDown /> Word (.docx)
                 </Button>
               </>
             )}
@@ -203,80 +216,86 @@ export default function ReportsPage() {
   const lastWeek = periodOf('lastWeek')
   const thisMonth = periodOf('thisMonth')
 
-  return (
-    <div className="px-4 py-5 sm:px-6">
-      <h1 className="text-lg font-semibold">汇报中心</h1>
-      <p className="mt-0.5 text-[12px] text-text-3">
-        自动聚合周期内完成的任务、进展日志、灵感与节点事件，生成草稿后人工润色，导出发给导师。
-      </p>
+  const GENERATORS: Array<{
+    label: string
+    icon: React.ReactNode
+    kind: ReportKind
+    period: Period
+    desc: string
+  }> = [
+    { label: '生成本周周报', icon: <FileText />, kind: 'weekly', period: thisWeek, desc: `本周（${thisWeek.start.slice(5)} ~ ${thisWeek.end.slice(5)}）` },
+    { label: '生成上周周报', icon: <History />, kind: 'weekly', period: lastWeek, desc: `上周（${lastWeek.start.slice(5)} ~ ${lastWeek.end.slice(5)}）` },
+    { label: '生成本月月报', icon: <CalendarDays />, kind: 'monthly', period: thisMonth, desc: `${thisMonth.start.slice(0, 7)} 月` }
+  ]
 
-      {/* 生成入口 */}
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-        {(
-          [
-            ['本周周报', 'weekly', thisWeek, `本周（${thisWeek.start.slice(5)} ~ ${thisWeek.end.slice(5)}）`],
-            ['上周周报', 'weekly', lastWeek, `上周（${lastWeek.start.slice(5)} ~ ${lastWeek.end.slice(5)}）`],
-            ['本月月报', 'monthly', thisMonth, `${thisMonth.start.slice(0, 7)} 月`]
-          ] as Array<[string, ReportKind, Period, string]>
-        ).map(([label, kind, period, desc]) => (
+  return (
+    <div className="page page-mid">
+      <PageHeader
+        title="汇报中心"
+        sub="自动聚合周期内的任务、日志、灵感与节点事件 → 草稿 → 人工润色 → 导出发导师"
+      />
+
+      {/* 快速生成：3 张入口卡 */}
+      <div className="mt-5 grid grid-cols-1 gap-3.5 md:grid-cols-3">
+        {GENERATORS.map((g) => (
           <button
-            key={label}
-            onClick={() => doGenerate(kind, period)}
-            className="flex flex-col gap-1.5 rounded-xl border border-border bg-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md cursor-pointer"
+            key={g.label}
+            onClick={() => doGenerate(g.kind, g.period)}
+            className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-4 text-left transition-all cursor-pointer hover:-translate-y-0.5 hover:border-accent/50"
           >
-            <span className="flex items-center gap-1.5 text-[13.5px] font-medium">
-              <Plus size={14} className="text-accent" />
-              生成{label}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent [&_svg]:h-4.5 [&_svg]:w-4.5 [&_svg]:stroke-2">
+              {g.icon}
             </span>
-            <span className="text-[11.5px] text-text-3">{desc}</span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{g.label}</span>
+              <span className="mt-0.5 block text-[11.5px] text-text-3">{g.desc}</span>
+            </span>
+            <ChevronRight size={15} className="ml-auto shrink-0 text-text-3" />
           </button>
         ))}
       </div>
 
       {/* 工作总结（自定义时间段） */}
-      <div className="mt-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-border bg-surface p-3.5">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11.5px] text-text-3">工作总结（自定义时间段）</span>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="date"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="w-36"
-            />
-            <span className="text-text-3">～</span>
-            <Input
-              type="date"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="w-36"
-            />
-          </div>
-        </div>
+      <div className="mt-3.5 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5">
+        <span className="text-[12.5px] font-semibold text-text-2">工作总结</span>
+        <Input
+          type="date"
+          value={customStart}
+          onChange={(e) => setCustomStart(e.target.value)}
+          className="w-35"
+        />
+        <span className="text-text-3">～</span>
+        <Input
+          type="date"
+          value={customEnd}
+          onChange={(e) => setCustomEnd(e.target.value)}
+          className="w-35"
+        />
         <Button
           disabled={!customStart || !customEnd || customStart > customEnd}
           onClick={() => doGenerate('summary', { start: customStart, end: customEnd })}
         >
-          生成工作总结
+          生成总结
         </Button>
-        <span className="text-[11px] text-text-3">任务统计 + 成果列表 + 进展摘要</span>
+        <span className="text-[11.5px] text-text-3">任务统计 + 成果列表 + 进展摘要，适合年终总结</span>
       </div>
 
       {/* 历史归档 */}
-      <h2 className="mt-6 flex items-center gap-2 text-[14px] font-semibold">
+      <div className="mt-6 mb-2 flex items-center gap-2 px-1">
         <FileText size={15} className="text-accent" />
-        历史报告（{reports.length}）
-      </h2>
+        <h2 className="text-[15px] font-semibold">历史报告</h2>
+        <span className="text-[11.5px] text-text-3">{reports.length}</span>
+      </div>
       {reports.length === 0 ? (
         <EmptyState
-          icon={<FileText size={30} />}
+          icon={<FileText />}
           title="还没有归档的报告"
           hint="生成草稿并「保存为正式版本」后出现在这里。"
         />
       ) : (
-        <div className="mt-3 flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
+        <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
           {reports.map((r) => (
-            <div key={r.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 hover:bg-surface-2/40">
+            <div key={r.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4.5 py-3.5 hover:bg-surface-2/40">
               <button
                 className="min-w-0 flex-1 text-left"
                 onClick={() =>
@@ -284,7 +303,7 @@ export default function ReportsPage() {
                 }
               >
                 <div className="truncate text-[13.5px] font-medium">{r.title}</div>
-                <div className="mt-0.5 text-[11px] text-text-3">
+                <div className="mt-1 text-[11.5px] text-text-3">
                   {r.period_start} ~ {r.period_end} · 生成于 {friendlyDateTime(r.generated_at)}
                   {r.updated_at !== r.generated_at && ' · 已修改'}
                 </div>
@@ -293,37 +312,32 @@ export default function ReportsPage() {
                 {r.kind === 'weekly' ? '周报' : r.kind === 'monthly' ? '月报' : '总结'}
               </Badge>
               <div className="flex shrink-0 gap-0.5">
-                <Button size="sm" variant="ghost" title="编辑" onClick={() => setDraft({ mode: 'edit', report: r, content: r.content, title: r.title })}>
-                  <Pencil size={12.5} />
-                </Button>
-                <Button size="sm" variant="ghost" title="导出 Markdown" onClick={() => doExport(r, 'md')}>
-                  <FileDown size={12.5} />
-                </Button>
-                <Button size="sm" variant="ghost" title="导出 Word" onClick={() => doExport(r, 'docx')}>
-                  <FileDown size={12.5} className="text-blue-500" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
+                <IconButton title="编辑" onClick={() => setDraft({ mode: 'edit', report: r, content: r.content, title: r.title })}>
+                  <Pencil />
+                </IconButton>
+                <IconButton title="导出 Markdown" onClick={() => doExport(r, 'md')}>
+                  <FileDown />
+                </IconButton>
+                <IconButton title="导出 Word" onClick={() => doExport(r, 'docx')}>
+                  <FileDown className="text-accent" />
+                </IconButton>
+                <IconButton
                   title="复制全文"
-                  className="text-text-3 hover:text-text"
                   onClick={async () => {
                     await copyText(r.content)
                     setExportMsg('已复制到剪贴板')
                     setTimeout(() => setExportMsg(null), 2500)
                   }}
                 >
-                  <Copy size={12.5} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-danger hover:text-danger"
+                  <Copy />
+                </IconButton>
+                <IconButton
                   title="删除"
+                  className="hover:bg-danger-soft hover:text-danger"
                   onClick={() => setDeleteTarget(r)}
                 >
-                  <Trash2 size={12.5} />
-                </Button>
+                  <Trash2 />
+                </IconButton>
               </div>
             </div>
           ))}

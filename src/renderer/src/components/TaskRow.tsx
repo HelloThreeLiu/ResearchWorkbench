@@ -1,10 +1,11 @@
-// 任务行：勾选完成、行内改截止日期/优先级、逾期标红（今日概览与任务列表共用）
+// 任务行（V3 §5.6，今日概览与任务列表共用）：
+// 勾选完成、行内改截止日期/优先级、逾期/今日到期用 DueChip 语义色
 import { useState } from 'react'
-import { Calendar, Flag, Trash2 } from 'lucide-react'
+import { Flag, Trash2 } from 'lucide-react'
 import type { Project, Task } from '@shared/types'
 import { PRIORITY_LABELS } from '@shared/types'
 import { useStore } from '@/store'
-import { Badge, CheckBox, IconButton, Tag } from '@/components/ui'
+import { Badge, CheckBox, DueChip, IconButton, Tag } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { countdownText, daysUntil, friendlyDate } from '@/lib/date'
 
@@ -39,8 +40,8 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
   return (
     <div
       className={cn(
-        'group flex items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 transition-colors',
-        'hover:border-border hover:bg-surface-2/60',
+        'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors',
+        'hover:bg-surface-2',
         compact ? 'text-[13px]' : 'text-[13.5px]'
       )}
     >
@@ -52,13 +53,13 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
 
       <div className="min-w-0 flex-1">
         <div className={cn('truncate', done && 'text-text-3 line-through')}>{task.title}</div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-text-3">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
           {project && onNavigateToProject && (
             <button
-              className="flex items-center gap-1 hover:text-accent cursor-pointer"
+              className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
               onClick={() => onNavigateToProject(project.id)}
             >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: project.color }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
               {project.name}
             </button>
           )}
@@ -73,10 +74,10 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
       <button
         title={`优先级：${PRIORITY_LABELS[task.priority]}（点击切换）`}
         onClick={() => updateTask(task.id, { priority: nextPriority[task.priority] })}
-        className="cursor-pointer"
+        className="shrink-0 cursor-pointer"
       >
         <Badge color={priorityColor[task.priority]}>
-          <Flag size={10} className="mr-0.5" />
+          <Flag />
           {PRIORITY_LABELS[task.priority]}
         </Badge>
       </button>
@@ -96,24 +97,21 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
         <button
           title="点击修改截止日期"
           onClick={() => setEditingDue(true)}
-          className={cn(
-            'flex max-w-44 shrink-0 items-center gap-1 rounded px-1.5 py-1 text-[11.5px] cursor-pointer hover:bg-surface-2',
-            overdue
-              ? 'font-medium text-danger'
-              : dueToday
-                ? 'font-medium text-warn'
-                : 'text-text-3'
-          )}
+          className="max-w-44 shrink-0 cursor-pointer"
         >
-          <Calendar size={11.5} className="shrink-0" />
-          {task.due_date ? (
-            <>
-              <span className="hidden truncate lg:inline">{friendlyDate(task.due_date)} </span>
-              {countdownText(daysUntil(task.due_date))}
-            </>
-          ) : (
-            '无截止'
-          )}
+          <DueChip
+            tone={overdue ? 'overdue' : dueToday ? 'today' : 'default'}
+            text={
+              task.due_date ? (
+                <>
+                  <span className="hidden truncate lg:inline">{friendlyDate(task.due_date)} </span>
+                  {countdownText(daysUntil(task.due_date))}
+                </>
+              ) : (
+                '无截止'
+              )
+            }
+          />
         </button>
       )}
 

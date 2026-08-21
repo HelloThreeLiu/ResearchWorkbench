@@ -1,4 +1,4 @@
-// 今日概览：今天做什么、最近有什么大事（默认启动页）；顶部统计卡片 + 近 7 天完成趋势
+// 今日概览（V3 §5.1）：4 张核心统计大卡 + 左任务 / 右（本周速览·节点·灵感）
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
@@ -7,14 +7,13 @@ import {
   Flag,
   Lightbulb,
   ListPlus,
-  Plus,
-  FileText
+  Plus
 } from 'lucide-react'
 import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useMilestoneTypeLabel } from '@/hooks/useVocab'
-import { Badge, Button, CheckBox, EmptyState } from '@/components/ui'
+import { Badge, Button, CheckBox, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
@@ -65,7 +64,7 @@ export default function Dashboard() {
     [ideas]
   )
 
-  // 顶部统计
+  // 核心统计（次级指标并入右栏「本周速览」）
   const stats = useMemo(() => {
     const open = tasks.filter((t) => t.status !== 'done')
     const overdue = open.filter((t) => t.due_date !== null && daysUntil(t.due_date) < 0)
@@ -73,17 +72,16 @@ export default function Dashboard() {
     const weekStart = dayjs().startOf('week')
     const weekLogs = logs.filter(
       (l) => l.date >= weekStart.format('YYYY-MM-DD') && l.date <= dayjs().format('YYYY-MM-DD')
-    )
+    ).length
     return {
       openCount: open.length,
-      inProgress: open.filter((t) => t.status === 'in_progress').length,
       dueToday: dueToday.length,
       overdue: overdue.length,
       milestoneCount: upcomingMilestones.length,
-      ideaCount: ideas.filter((i) => i.status === 'new').length,
-      weekLogs: weekLogs.length
+      weekLogs,
+      activeProjects: projects.filter((p) => p.status === 'active').length
     }
-  }, [tasks, logs, ideas, upcomingMilestones])
+  }, [tasks, logs, projects, upcomingMilestones])
 
   // 近 7 天每日完成任务数
   const weeklyTrend = useMemo(() => {
@@ -101,6 +99,9 @@ export default function Dashboard() {
     })
   }, [tasks])
 
+  const weekDone = weeklyTrend.reduce((sum, d) => sum + d.count, 0)
+  const trendMax = Math.max(...weeklyTrend.map((x) => x.count), 1)
+
   const convertIdea = (ideaId: string, content: string): void => {
     const firstLine = content.split('\n')[0].slice(0, 80)
     const task = addTask({ title: firstLine })
@@ -111,62 +112,85 @@ export default function Dashboard() {
   const greeting = hour < 6 ? '夜深了' : hour < 12 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      {/* 头部问候 + 快速操作 */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">
-            {greeting}，今天是 {dayjs().format('YYYY年M月D日 dddd')}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-text-3">
-            <span className="flex shrink-0 items-center gap-1.5">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: lastWriteAt ? 'var(--color-success)' : 'var(--color-text-3)' }}
-              />
-              {lastWriteAt
-                ? `数据最近写入：${friendlyDateTime(lastWriteAt)}（网盘将自动同步）`
-                : '今天还没有数据写入'}
-            </span>
+    <div className="page">
+      <PageHeader
+        title={`${greeting}，今天是 ${dayjs().format('YYYY年M月D日 dddd')}`}
+        sub={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span
+              className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: lastWriteAt ? 'var(--color-success)' : 'var(--color-text-3)' }}
+            />
+            {lastWriteAt
+              ? `数据最近写入：${friendlyDateTime(lastWriteAt)}（网盘将自动同步）`
+              : '今天还没有数据写入'}
             {dataDir && (
-              <button className="hover:text-accent cursor-pointer" onClick={() => navigate({ name: 'settings' })}>
+              <button
+                className="hover:text-accent cursor-pointer"
+                onClick={() => navigate({ name: 'settings' })}
+              >
                 · 查看数据目录
               </button>
             )}
-          </div>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="primary" onClick={() => setTaskModalOpen(true)}>
-            <Plus size={14} /> 新建任务
-          </Button>
-          <Button onClick={() => setMilestoneModalOpen(true)}>
-            <CalendarPlus size={14} /> 新建节点
-          </Button>
-        </div>
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => setMilestoneModalOpen(true)}>
+              <CalendarPlus /> 新建节点
+            </Button>
+            <Button variant="primary" onClick={() => setTaskModalOpen(true)}>
+              <Plus /> 新建任务
+            </Button>
+          </>
+        }
+      />
+
+      {/* 核心指标：4 张大卡 */}
+      <div className="mt-5 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+        <StatCard
+          label="待办任务"
+          value={stats.openCount}
+          hint={`${tasks.filter((t) => t.status === 'in_progress').length} 个进行中`}
+          icon={<ListPlus />}
+          onClick={() => navigate({ name: 'tasks' })}
+        />
+        <StatCard
+          label="今日到期"
+          value={stats.dueToday}
+          tone={stats.dueToday > 0 ? 'warn' : 'default'}
+          icon={<CalendarClock />}
+          onClick={() => navigate({ name: 'tasks' })}
+        />
+        <StatCard
+          label="逾期任务"
+          value={stats.overdue}
+          tone={stats.overdue > 0 ? 'danger' : 'default'}
+          hint={stats.overdue > 0 ? '尽快处理，避免堆积' : '保持住'}
+          icon={<AlertTriangle />}
+          onClick={() => navigate({ name: 'tasks' })}
+        />
+        <StatCard
+          label="30 天内节点"
+          value={stats.milestoneCount}
+          hint={upcomingMilestones[0] ? `最近：${upcomingMilestones[0].m.title} · ${countdownText(upcomingMilestones[0].days)}` : '暂无临近节点'}
+          icon={<Flag />}
+          onClick={() => navigate({ name: 'milestones' })}
+        />
       </div>
 
-      {/* 统计卡片行 */}
-      <div className="mt-4 grid grid-cols-3 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
-        <StatCard label="待办任务" value={stats.openCount} hint={`${stats.inProgress} 进行中`} icon={<ListPlus size={14} />} onClick={() => navigate({ name: 'tasks' })} />
-        <StatCard label="今日到期" value={stats.dueToday} icon={<CalendarClock size={14} />} tone={stats.dueToday > 0 ? 'warn' : 'default'} onClick={() => navigate({ name: 'tasks' })} />
-        <StatCard label="逾期" value={stats.overdue} icon={<AlertTriangle size={14} />} tone={stats.overdue > 0 ? 'danger' : 'default'} onClick={() => navigate({ name: 'tasks' })} />
-        <StatCard label="30天节点" value={stats.milestoneCount} icon={<Flag size={14} />} onClick={() => navigate({ name: 'milestones' })} />
-        <StatCard label="待整理灵感" value={stats.ideaCount} icon={<Lightbulb size={14} />} onClick={() => navigate({ name: 'ideas' })} />
-        <StatCard label="本周日志" value={stats.weekLogs} icon={<FileText size={14} />} onClick={() => navigate({ name: 'projects' })} />
-        <StatCard label="进行中项目" value={projects.filter((p) => p.status === 'active').length} icon={<Flag size={14} />} onClick={() => navigate({ name: 'projects' })} />
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-5 2xl:grid-cols-6">
-        {/* 左列：任务 */}
-        <section className="min-w-0 rounded-xl border border-border bg-surface p-3.5 sm:p-4 lg:col-span-3 2xl:col-span-4">
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
+      {/* 主体：左 8 任务 / 右 4 速览+节点+灵感 */}
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* 左：任务 */}
+        <section className="min-w-0 rounded-xl border border-border bg-surface px-4.5 py-4 lg:col-span-8">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold">
               <ListPlus size={15} className="shrink-0 text-accent" />
               <span className="truncate">今日到期与逾期任务</span>
-              {todayTasks.length > 0 && <Badge>{todayTasks.length}</Badge>}
+              {stats.overdue > 0 && <Badge color="red">{stats.overdue} 逾期</Badge>}
             </h2>
             <button
-              className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
+              className="shrink-0 text-[12.5px] text-text-3 hover:text-accent cursor-pointer"
               onClick={() => navigate({ name: 'tasks' })}
             >
               全部任务 →
@@ -174,7 +198,7 @@ export default function Dashboard() {
           </div>
           {todayTasks.length === 0 ? (
             <EmptyState
-              icon={<ListPlus size={30} />}
+              icon={<ListPlus />}
               title="今天没有到期任务"
               hint="暂无逾期与今日到期任务。有新安排就记进来，别放在脑子里。"
             />
@@ -183,7 +207,7 @@ export default function Dashboard() {
               {todayTasks.map((t) => {
                 const overdue = t.due_date !== null && daysUntil(t.due_date) < 0
                 return (
-                  <div key={t.id} className={cn(overdue && 'rounded-lg bg-danger-soft/40')}>
+                  <div key={t.id} className={cn('rounded-lg', overdue && 'bg-danger-soft/45')}>
                     <TaskRow
                       task={t}
                       project={t.project_id ? projectMap.get(t.project_id) : undefined}
@@ -196,27 +220,77 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* 右列：节点倒计时 + 灵感 */}
-        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-          <section className="rounded-xl border border-border bg-surface p-3.5 sm:p-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
-                <Flag size={15} className="shrink-0 text-accent" />
+        {/* 右列 */}
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-4">
+          {/* 本周速览：趋势图 + 3 个次级指标 */}
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-[14px] font-semibold">
+                <ListPlus size={14} className="text-accent" />
+                本周速览
+              </h2>
+              <span className="text-[11.5px] text-text-3">
+                {dayjs().startOf('week').format('M月D日')} – 今天
+              </span>
+            </div>
+            <div className="flex h-16 items-end justify-between gap-1.5">
+              {weeklyTrend.map((d) => {
+                const height = d.count === 0 ? 3 : Math.max(8, Math.round((d.count / trendMax) * 100))
+                return (
+                  <div
+                    key={d.date}
+                    className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
+                    title={`${d.date}：完成 ${d.count} 项`}
+                  >
+                    <span className={cn('text-[11px]', d.count > 0 ? 'text-text-2' : 'text-text-3')}>
+                      {d.count > 0 ? d.count : ''}
+                    </span>
+                    <div
+                      className={cn(
+                        'w-full max-w-6.5 rounded-t-md transition-all',
+                        d.isToday ? 'bg-accent' : d.count > 0 ? 'bg-accent/45' : 'bg-border'
+                      )}
+                      style={{ height: `${height}%` }}
+                    />
+                    <span
+                      className={cn(
+                        'text-[11px]',
+                        d.isToday ? 'font-semibold text-accent' : 'text-text-3'
+                      )}
+                    >
+                      {d.isToday ? '今天' : `周${d.label}`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-3 flex border-t border-border pt-2.5">
+              <Metric value={weekDone} label="本周完成" />
+              <div className="w-px bg-border" />
+              <Metric value={stats.weekLogs} label="进展日志" />
+              <div className="w-px bg-border" />
+              <Metric value={stats.activeProjects} label="进行中项目" />
+            </div>
+          </section>
+
+          {/* 节点倒计时 */}
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold">
+                <Flag size={14} className="shrink-0 text-accent" />
                 <span className="truncate">未来 30 天节点</span>
               </h2>
               <button
-                className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
+                className="shrink-0 text-[12.5px] text-text-3 hover:text-accent cursor-pointer"
                 onClick={() => navigate({ name: 'milestones' })}
               >
                 全部 →
               </button>
             </div>
             {upcomingMilestones.length === 0 ? (
-              <div className="py-6 text-center text-[12.5px] text-text-3">
-                30 天内没有关键节点
-              </div>
+              <div className="py-6 text-center text-[12.5px] text-text-3">30 天内没有关键节点</div>
             ) : (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 {upcomingMilestones.map(({ m, days }) => (
                   <MilestoneCountdownItem key={m.id} milestone={m} days={days} />
                 ))}
@@ -224,14 +298,15 @@ export default function Dashboard() {
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-surface p-3.5 sm:p-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold">
-                <Lightbulb size={15} className="shrink-0 text-warn" />
+          {/* 待整理灵感 */}
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-semibold">
+                <Lightbulb size={14} className="shrink-0 text-warn" />
                 <span className="truncate">待整理灵感</span>
               </h2>
               <button
-                className="shrink-0 text-[12px] text-text-3 hover:text-accent cursor-pointer"
+                className="shrink-0 text-[12.5px] text-text-3 hover:text-accent cursor-pointer"
                 onClick={() => navigate({ name: 'ideas' })}
               >
                 灵感页 →
@@ -242,58 +317,30 @@ export default function Dashboard() {
                 暂无未整理灵感 · 按 {useStore.getState().settings.hotkey} 随手记
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {recentIdeas.map((idea) => (
                   <div
                     key={idea.id}
-                    className="group rounded-lg border border-border px-2.5 py-2 transition-colors hover:border-accent"
+                    className="rounded-lg border border-border px-2.5 py-2 transition-colors hover:border-accent/50"
                   >
                     <div className="line-clamp-2 text-[12.5px] leading-relaxed text-text-2">
                       {idea.content}
                     </div>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="text-[10.5px] text-text-3">
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <span className="text-[11.5px] text-text-3">
                         {friendlyDateTime(idea.created_at)}
                       </span>
                       <button
-                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-accent hover:bg-accent-soft cursor-pointer"
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] text-accent hover:bg-accent-soft cursor-pointer"
                         onClick={() => convertIdea(idea.id, idea.content)}
                       >
-                        <ListPlus size={11} /> 转为任务
+                        <ListPlus size={12} /> 转为任务
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </section>
-
-          {/* 近 7 天任务完成趋势 */}
-          <section className="rounded-xl border border-border bg-surface p-4">
-            <h2 className="text-[14px] font-semibold">近 7 天完成趋势</h2>
-            <div className="mt-3 flex h-20 items-end justify-between gap-1.5">
-              {weeklyTrend.map((d) => {
-                const max = Math.max(...weeklyTrend.map((x) => x.count), 1)
-                const height = d.count === 0 ? 3 : Math.max(8, Math.round((d.count / max) * 100))
-                return (
-                  <div key={d.date} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${d.date}：完成 ${d.count} 项`}>
-                    <span className={cn('text-[10px]', d.count > 0 ? 'text-text-2' : 'text-text-3')}>
-                      {d.count > 0 ? d.count : ''}
-                    </span>
-                    <div
-                      className={cn(
-                        'w-full max-w-7 rounded-t-md transition-all',
-                        d.isToday ? 'bg-accent' : d.count > 0 ? 'bg-accent/45' : 'bg-border'
-                      )}
-                      style={{ height: `${height}%` }}
-                    />
-                    <span className={cn('text-[10px]', d.isToday ? 'font-semibold text-accent' : 'text-text-3')}>
-                      {d.isToday ? '今天' : `周${d.label}`}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
           </section>
         </div>
       </div>
@@ -304,42 +351,13 @@ export default function Dashboard() {
   )
 }
 
-/** 统计卡片：数值 + 标签 + 角标提示，点击跳转对应页面 */
-function StatCard({
-  label,
-  value,
-  hint,
-  icon,
-  tone = 'default',
-  onClick
-}: {
-  label: string
-  value: number
-  hint?: string
-  icon: React.ReactNode
-  tone?: 'default' | 'warn' | 'danger'
-  onClick?: () => void
-}) {
+/** 本周速览底部三列指标 */
+function Metric({ value, label }: { value: number; label: string }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex min-w-0 flex-col gap-1 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-accent/50 cursor-pointer"
-    >
-      <span className="flex items-center gap-1 truncate text-[11px] text-text-3">
-        {icon}
-        {label}
-      </span>
-      <span
-        className={cn(
-          'text-xl leading-none font-semibold',
-          tone === 'danger' && value > 0 && 'text-danger',
-          tone === 'warn' && value > 0 && 'text-warn'
-        )}
-      >
-        {value}
-      </span>
-      {hint && <span className="truncate text-[10px] text-text-3">{hint}</span>}
-    </button>
+    <div className="flex-1 text-center">
+      <div className="text-[17px] font-bold tabular-nums">{value}</div>
+      <div className="text-[11.5px] text-text-3">{label}</div>
+    </div>
   )
 }
 
@@ -347,7 +365,6 @@ function MilestoneCountdownItem({ milestone, days }: { milestone: Milestone; day
   const updateMilestone = useStore((s) => s.updateMilestone)
   const typeLabel = useMilestoneTypeLabel()
   const urgent = days <= 7 // ≤7 天红色，≤30 天黄色
-  const color = urgent ? 'red' : 'yellow'
   return (
     <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2/60">
       <CheckBox
@@ -357,11 +374,11 @@ function MilestoneCountdownItem({ milestone, days }: { milestone: Milestone; day
       />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px]">{milestone.title}</div>
-        <div className="text-[11px] text-text-3">
+        <div className="text-[11.5px] text-text-3">
           {milestone.date} · {typeLabel(milestone.type)}
         </div>
       </div>
-      <Badge color={color} className="shrink-0">
+      <Badge color={urgent ? 'red' : 'yellow'} className="shrink-0">
         {countdownText(days)}
       </Badge>
     </div>

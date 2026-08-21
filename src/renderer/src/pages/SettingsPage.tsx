@@ -1,9 +1,10 @@
-// 设置：数据目录 / 主题 / 全局快捷键 / 关闭行为 / 备份 / 词汇库入口 / 报告模板
+// 设置（V3 §5.13，窄栏）：数据目录 / 主题 / 全局快捷键 / 关闭行为 / 备份 / 词汇库入口 / 报告模板
 import { useState } from 'react'
 import {
   Database,
   FileText,
   FolderOpen,
+  Info,
   Keyboard,
   Moon,
   Palette,
@@ -15,7 +16,7 @@ import {
 import { DEFAULT_REPORT_TEMPLATE, type StyleTheme, type ThemeMode } from '@shared/types'
 import { useStore } from '@/store'
 import { useUpdateStore } from '@/updateStore'
-import { Badge, Button, Select, Textarea } from '@/components/ui'
+import { Badge, Button, PageHeader, Select, Textarea } from '@/components/ui'
 import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
 
@@ -74,14 +75,14 @@ function ReportTemplateEditor() {
             setTimeout(() => setSavedFlash(false), 2000)
           }}
         >
-          <Save size={12.5} /> 保存模板
+          <Save /> 保存模板
         </Button>
         <Button
           size="sm"
           onClick={() => setText(DEFAULT_REPORT_TEMPLATE)}
           title="恢复默认模板（未保存前仅重置编辑区）"
         >
-          <RotateCcw size={12.5} /> 恢复默认
+          <RotateCcw /> 恢复默认
         </Button>
         {savedFlash && <span className="text-[11.5px] text-success">已保存，下次生成报告生效</span>}
       </div>
@@ -116,7 +117,7 @@ function SectionCard({
 }) {
   return (
     <section className="rounded-xl border border-border bg-surface p-5">
-      <h2 className="mb-3 flex items-center gap-2 text-[14px] font-semibold">
+      <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold [&_svg]:h-[15px] [&_svg]:w-[15px] [&_svg]:text-accent [&_svg]:stroke-2">
         {icon}
         {title}
       </h2>
@@ -166,231 +167,231 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6">
-      <h1 className="text-lg font-semibold">设置</h1>
+    <div className="page page-narrow">
+      <PageHeader title="设置" sub="数据、外观、快捷键与数据安全均在本地，不上传任何服务器" />
 
-      <SectionCard icon={<FolderOpen size={15} className="text-accent" />} title="数据目录">
-        <div className="break-all text-[12.5px] text-text-2">{dataDir ?? '未配置'}</div>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-3">
-          数据以明文 JSON 存储在该目录，网盘（如坚果云）会自动同步。可直接复制整个目录完成迁移或冷备份；
-          更换目录后将加载新目录中的数据。
-        </p>
-        <div className="mt-3 flex gap-2">
-          <Button onClick={() => chooseDataDir()}>更改数据目录…</Button>
-          <Button variant="ghost" onClick={() => window.api.openDataDir()}>
-            打开数据目录
-          </Button>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon={<SlidersHorizontal size={15} className="text-accent" />} title="标签与节点类型">
-        <p className="text-[11.5px] leading-relaxed text-text-3">
-          管理任务/灵感的标签库与时间节点的类型（内置类型可改名不可删除，支持自定义类型）。
-          录入任务、灵感与节点时也可就地打开管理。
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button variant="primary" onClick={() => setVocabOpen(true)}>
-            打开管理弹窗
-          </Button>
-          <span className="text-[11.5px] text-text-3">
-            当前：{vocab.tags.length} 个标签 · {vocab.milestoneTypes.length} 种节点类型
-          </span>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon={<Palette size={15} className="text-accent" />} title="外观">
-        <div className="text-[12.5px] font-medium">界面风格</div>
-        <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-3">
-          三套设计语言（源自开源设计系统提炼），与明暗模式自由组合，即刻切换全应用换肤。
-        </p>
-        <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          {STYLE_THEMES.map((st) => {
-            const active = settings.styleTheme === st.id
-            return (
-              <button
-                key={st.id}
-                onClick={() => updateSettings({ styleTheme: st.id })}
-                className={cn(
-                  'group flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors cursor-pointer',
-                  active
-                    ? 'border-accent bg-accent-soft/50'
-                    : 'border-border bg-surface hover:border-accent/50'
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={cn('text-[13px] font-semibold', active && 'text-accent')}>
-                    {st.name}
-                  </span>
-                  {active && <Badge color="blue">当前</Badge>}
-                </div>
-                <div className="flex gap-1">
-                  {st.swatches.map((c) => (
-                    <span
-                      key={c}
-                      className="h-4 flex-1 rounded-sm border border-black/5"
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-                <span className="text-[11px] leading-relaxed text-text-3">{st.desc}</span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="mt-3.5 flex items-center gap-3">
-          <Moon size={14} className="text-text-3" />
-          <Select
-            value={settings.theme}
-            onChange={(e) => updateSettings({ theme: e.target.value as ThemeMode })}
-            className="w-44"
-          >
-            <option value="system">跟随系统</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </Select>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon={<Keyboard size={15} className="text-accent" />} title="全局速记快捷键">
-        <p className="text-[11.5px] leading-relaxed text-text-3">
-          应用运行中（含最小化到托盘）按此快捷键，随时弹出灵感速记框。
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          {capturing ? (
-            <input
-              autoFocus
-              readOnly
-              value={pendingHotkey || '请按下组合键（需包含 Alt / Ctrl / Shift 之一 + 字母或数字）…'}
-              onKeyDown={(e) => {
-                e.preventDefault()
-                const acc = eventToAccelerator(e)
-                if (acc) setPendingHotkey(acc)
-              }}
-              onBlur={() => {
-                if (pendingHotkey) saveHotkey()
-                else setCapturing(false)
-              }}
-              className={cn(
-                'h-8.5 w-full max-w-md rounded-lg border px-2.5 text-[13px] focus:outline-none',
-                pendingHotkey ? 'border-accent text-text' : 'border-border text-text-3'
-              )}
-            />
-          ) : (
-            <kbd className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 font-mono text-[13px]">
-              {settings.hotkey}
-            </kbd>
-          )}
-          {!capturing && (
-            <Button
-              onClick={() => {
-                setPendingHotkey('')
-                setCapturing(true)
-              }}
-            >
-              修改快捷键
+      <div className="mt-5 flex flex-col gap-4">
+        <SectionCard icon={<FolderOpen />} title="数据目录">
+          <div className="text-[12.5px] break-all text-text-2">{dataDir ?? '未配置'}</div>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-3">
+            数据以明文 JSON 存储在该目录，网盘（如坚果云）会自动同步。可直接复制整个目录完成迁移或冷备份；
+            更换目录后将加载新目录中的数据。
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button onClick={() => chooseDataDir()}>更改数据目录…</Button>
+            <Button variant="ghost" onClick={() => window.api.openDataDir()}>
+              打开数据目录
             </Button>
-          )}
-          {capturing && pendingHotkey && (
-            <Button variant="primary" onClick={saveHotkey}>
-              <Save size={13} /> 保存
-            </Button>
-          )}
-          {capturing && !pendingHotkey && (
-            <Button variant="ghost" onClick={() => setCapturing(false)}>
-              取消
-            </Button>
-          )}
-        </div>
-        {hotkeyMsg && (
-          <div className={cn('mt-2 text-[12px]', hotkeyMsg.ok ? 'text-success' : 'text-danger')}>
-            {hotkeyMsg.text}
           </div>
-        )}
-      </SectionCard>
+        </SectionCard>
 
-      <SectionCard icon={<Database size={15} className="text-accent" />} title="数据安全">
-        <div className="flex flex-col gap-2.5 text-[12.5px] text-text-2">
-          <div className="flex items-center justify-between gap-3">
-            <span>关闭窗口时最小化到托盘（保证快捷键速记随时可用）</span>
-            <button
-              onClick={() => updateSettings({ closeToTray: !settings.closeToTray })}
-              className={cn(
-                'relative h-5.5 w-10 shrink-0 rounded-full transition-colors cursor-pointer',
-                settings.closeToTray ? 'bg-accent' : 'bg-border'
-              )}
-              title={settings.closeToTray ? '已开启' : '已关闭'}
+        <SectionCard icon={<SlidersHorizontal />} title="标签与节点类型">
+          <p className="text-[11.5px] leading-relaxed text-text-3">
+            管理任务/灵感的标签库与时间节点的类型（内置类型可改名不可删除，支持自定义类型）。
+            录入任务、灵感与节点时也可就地打开管理。
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button variant="primary" onClick={() => setVocabOpen(true)}>
+              打开管理弹窗
+            </Button>
+            <span className="text-[11.5px] text-text-3">
+              当前：{vocab.tags.length} 个标签 · {vocab.milestoneTypes.length} 种节点类型
+            </span>
+          </div>
+        </SectionCard>
+
+        <SectionCard icon={<Palette />} title="外观">
+          <div className="text-[12.5px] font-semibold">界面风格</div>
+          <p className="mt-0.5 text-[11.5px] leading-relaxed text-text-3">
+            三套设计语言（源自开源设计系统提炼），与明暗模式自由组合，即刻切换全应用换肤。
+          </p>
+          <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {STYLE_THEMES.map((st) => {
+              const active = settings.styleTheme === st.id
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => updateSettings({ styleTheme: st.id })}
+                  className={cn(
+                    'flex flex-col gap-2 rounded-xl p-3 text-left transition-colors cursor-pointer',
+                    active
+                      ? 'border-[1.5px] border-accent bg-accent-soft/40'
+                      : 'border border-border hover:border-accent/50'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={cn('text-[13px] font-semibold', active && 'text-accent')}>
+                      {st.name}
+                    </span>
+                    {active && <Badge color="blue">当前</Badge>}
+                  </div>
+                  <div className="flex gap-1">
+                    {st.swatches.map((c) => (
+                      <span
+                        key={c}
+                        className="h-4.5 flex-1 rounded-sm border border-black/5"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[11px] leading-relaxed text-text-3">{st.desc}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-3.5 flex items-center gap-3 border-t border-border pt-3.5">
+            <Moon size={14} className="text-text-3" />
+            <Select
+              value={settings.theme}
+              onChange={(e) => updateSettings({ theme: e.target.value as ThemeMode })}
+              className="w-44"
             >
-              <span
+              <option value="system">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </Select>
+          </div>
+        </SectionCard>
+
+        <SectionCard icon={<Keyboard />} title="全局速记快捷键">
+          <p className="text-[11.5px] leading-relaxed text-text-3">
+            应用运行中（含最小化到托盘）按此快捷键，随时弹出灵感速记框。
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {capturing ? (
+              <input
+                autoFocus
+                readOnly
+                value={pendingHotkey || '请按下组合键（需包含 Alt / Ctrl / Shift 之一 + 字母或数字）…'}
+                onKeyDown={(e) => {
+                  e.preventDefault()
+                  const acc = eventToAccelerator(e)
+                  if (acc) setPendingHotkey(acc)
+                }}
+                onBlur={() => {
+                  if (pendingHotkey) saveHotkey()
+                  else setCapturing(false)
+                }}
                 className={cn(
-                  'absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white transition-all',
-                  settings.closeToTray ? 'left-5' : 'left-0.5'
+                  'h-8 w-full max-w-md rounded-lg border px-2.5 text-[13px] focus:outline-none',
+                  pendingHotkey ? 'border-accent text-text' : 'border-border text-text-3'
                 )}
               />
-            </button>
+            ) : (
+              <kbd className="kbd h-8 px-3 text-[13px] leading-8">{settings.hotkey}</kbd>
+            )}
+            {!capturing && (
+              <Button
+                onClick={() => {
+                  setPendingHotkey('')
+                  setCapturing(true)
+                }}
+              >
+                修改快捷键
+              </Button>
+            )}
+            {capturing && pendingHotkey && (
+              <Button variant="primary" onClick={saveHotkey}>
+                <Save /> 保存
+              </Button>
+            )}
+            {capturing && !pendingHotkey && (
+              <Button variant="ghost" onClick={() => setCapturing(false)}>
+                取消
+              </Button>
+            )}
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span>
-              自动备份
-              <Badge color="green" className="ml-1.5">已启用</Badge>
+          {hotkeyMsg && (
+            <div className={cn('mt-2 text-[12px]', hotkeyMsg.ok ? 'text-success' : 'text-danger')}>
+              {hotkeyMsg.text}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard icon={<Database />} title="数据安全">
+          <div className="flex flex-col gap-2.5 text-[12.5px] text-text-2">
+            <div className="flex items-center justify-between gap-3">
+              <span>关闭窗口时最小化到托盘（保证快捷键速记随时可用）</span>
+              <button
+                onClick={() => updateSettings({ closeToTray: !settings.closeToTray })}
+                className={cn(
+                  'relative h-[21px] w-[38px] shrink-0 rounded-full transition-colors cursor-pointer',
+                  settings.closeToTray ? 'bg-accent' : 'bg-border'
+                )}
+                title={settings.closeToTray ? '已开启' : '已关闭'}
+              >
+                <span
+                  className={cn(
+                    'absolute top-[2.5px] h-4 w-4 rounded-full bg-white transition-all',
+                    settings.closeToTray ? 'left-[19px]' : 'left-[2.5px]'
+                  )}
+                />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                自动备份
+                <Badge color="green" className="ml-1.5">已启用</Badge>
+              </span>
+              <span className="text-[11.5px] text-text-3">
+                上次备份：{settings.lastBackupDate ?? '从未'}
+              </span>
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-text-3">
+              每日首次运行与应用退出时自动快照到数据目录的{' '}
+              <code className="rounded bg-surface-2 px-1">backups/</code>
+              （保留最近 30 份）；删除项目等批量操作前也会先备份。
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={doBackup}>
+                立即备份
+              </Button>
+              {backupMsg && <span className="text-[11.5px] text-success">{backupMsg}</span>}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard icon={<FileText />} title="周报/月报模板">
+          <p className="text-[11.5px] leading-relaxed text-text-3">
+            生成报告时按此 Markdown 模板渲染。可用占位符：
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{TITLE}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{PERIOD}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{WORK}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{PLAN}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{THOUGHTS}}'}</code>
+          </p>
+          <ReportTemplateEditor />
+        </SectionCard>
+
+        <SectionCard icon={<Info />} title="关于">
+          <div className="flex flex-col gap-2 text-[12.5px] text-text-2">
+            <span className="flex flex-wrap items-center gap-1.5">
+              格致 · 科研工作台
+              <Badge>V{currentVersion ?? '—'}</Badge>
+              {hasUpdate && (
+                <Badge color="red" className="cursor-pointer">
+                  新版本 V{available?.version} 可用
+                </Badge>
+              )}
             </span>
             <span className="text-[11.5px] text-text-3">
-              上次备份：{settings.lastBackupDate ?? '从未'}
+              「格物致知」—— 一台电脑上的一个应用，装下你全部的科研管理工作。
             </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={() => void checkForUpdates()}>
+                <RefreshCw /> 检查更新
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-danger hover:bg-danger-soft hover:text-danger"
+                onClick={() => window.api.quitApp()}
+              >
+                退出应用（退出前自动备份）
+              </Button>
+            </div>
           </div>
-          <p className="text-[11.5px] leading-relaxed text-text-3">
-            每日首次运行与应用退出时自动快照到数据目录的{' '}
-            <code className="rounded bg-surface-2 px-1">backups/</code>
-            （保留最近 30 份）；删除项目等批量操作前也会先备份。
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={doBackup}>
-              立即备份
-            </Button>
-            {backupMsg && <span className="text-[11.5px] text-success">{backupMsg}</span>}
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard icon={<FileText size={15} className="text-accent" />} title="周报/月报模板">
-        <p className="text-[11.5px] leading-relaxed text-text-3">
-          生成报告时按此 Markdown 模板渲染。可用占位符：
-          <code className="mx-1 rounded bg-surface-2 px-1">{'{{TITLE}}'}</code>
-          <code className="mx-1 rounded bg-surface-2 px-1">{'{{PERIOD}}'}</code>
-          <code className="mx-1 rounded bg-surface-2 px-1">{'{{WORK}}'}</code>
-          <code className="mx-1 rounded bg-surface-2 px-1">{'{{PLAN}}'}</code>
-          <code className="mx-1 rounded bg-surface-2 px-1">{'{{THOUGHTS}}'}</code>
-        </p>
-        <ReportTemplateEditor />
-      </SectionCard>
-
-      <SectionCard icon={<span className="text-[13px]">ℹ️</span>} title="关于">
-        <div className="flex flex-col gap-2 text-[12.5px] text-text-2">
-          <span className="flex flex-wrap items-center gap-1.5">
-            格致 · 科研工作台
-            <Badge>V{currentVersion ?? '—'}</Badge>
-            {hasUpdate && (
-              <Badge color="red" className="cursor-pointer" >
-                新版本 V{available?.version} 可用
-              </Badge>
-            )}
-          </span>
-          <span className="text-[11.5px] text-text-3">
-            「格物致知」—— 一台电脑上的一个应用，装下你全部的科研管理工作。
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={() => void checkForUpdates()}>
-              <RefreshCw size={12.5} /> 检查更新
-            </Button>
-            <Button
-              variant="ghost"
-              className="px-0 text-danger hover:text-danger"
-              onClick={() => window.api.quitApp()}
-            >
-              退出应用（退出前自动备份）
-            </Button>
-          </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      </div>
 
       <VocabManagerModal open={vocabOpen} onClose={() => setVocabOpen(false)} />
     </div>

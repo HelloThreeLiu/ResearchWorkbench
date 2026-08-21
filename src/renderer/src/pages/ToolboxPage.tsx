@@ -27,6 +27,7 @@ import {
   IconButton,
   Input,
   Modal,
+  PageHeader,
   Select,
   Textarea
 } from '@/components/ui'
@@ -39,7 +40,7 @@ const TYPE_ICONS: Record<ToolType, typeof Globe> = {
   app: Monitor
 }
 
-/** 网址收藏图标：直连站点 favicon，失败回退默认图标 */
+/** 网址收藏图标：直连站点 favicon，失败回退默认图标（V3：36px 图标 tile 内居中） */
 function ToolIcon({ item }: { item: ToolBookmark }) {
   const [failed, setFailed] = useState(false)
   const Icon = TYPE_ICONS[item.type]
@@ -52,18 +53,24 @@ function ToolIcon({ item }: { item: ToolBookmark }) {
     }
     if (fav) {
       return (
-        <img
-          src={fav}
-          alt=""
-          width={18}
-          height={18}
-          className="shrink-0 rounded-sm"
-          onError={() => setFailed(true)}
-        />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+          <img
+            src={fav}
+            alt=""
+            width={20}
+            height={20}
+            className="rounded-sm"
+            onError={() => setFailed(true)}
+          />
+        </span>
       )
     }
   }
-  return <Icon size={18} className="shrink-0 text-text-2" />
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+      <Icon size={17} className="text-text-2" />
+    </span>
+  )
 }
 
 export default function ToolboxPage() {
@@ -150,7 +157,7 @@ export default function ToolboxPage() {
   }
 
   const renderItems = (items: ToolBookmark[]): React.ReactNode => (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
       {items.map((item) => {
         const invalid = item.type !== 'url' && validity[item.id] === false
         return (
@@ -163,22 +170,22 @@ export default function ToolboxPage() {
               setDragOverGroup(null)
             }}
             className={cn(
-              'group flex cursor-pointer flex-col gap-2 rounded-xl border bg-surface p-3 transition-all',
+              'group flex cursor-pointer flex-col gap-2.5 rounded-xl border bg-surface p-3.5 transition-all',
               invalid
-                ? 'border-border opacity-55 grayscale'
-                : 'border-border hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-sm',
+                ? 'border-border opacity-55 grayscale-[.6]'
+                : 'border-border hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md',
               draggingId === item.id && 'opacity-40'
             )}
             onClick={() => openTool(item)}
             title={invalid ? '路径不存在，点击「重新指定」' : item.target}
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-3">
               <ToolIcon item={item} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-medium">{item.name}</div>
-                <div className="truncate text-[10.5px] text-text-3" title={item.target}>
+                <div className="truncate text-[13px] font-semibold">{item.name}</div>
+                <div className="mt-0.5 truncate text-[11.5px] text-text-3" title={item.target}>
                   {invalid ? (
-                    <span className="text-danger">路径不存在</span>
+                    <span className="text-danger">路径不存在（点击修复）</span>
                   ) : (
                     item.target.replace(/^https?:\/\//, '').replace(/^file:\/\//, '')
                   )}
@@ -186,7 +193,7 @@ export default function ToolboxPage() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-text-3">
+              <span className="inline-flex h-[19px] items-center rounded-[5px] border border-border px-1.5 text-[11px] text-text-2">
                 {TOOL_TYPE_LABELS[item.type]}
               </span>
               <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -204,7 +211,7 @@ export default function ToolboxPage() {
                 </IconButton>
                 <IconButton
                   title="删除"
-                  className="h-6 w-6 hover:text-danger"
+                  className="hover:bg-danger-soft h-6 w-6 hover:text-danger"
                   onClick={() => deleteToolItem(item.id)}
                 >
                   <Trash2 size={12.5} />
@@ -232,9 +239,9 @@ export default function ToolboxPage() {
           dragOverGroup === groupId && draggingId && 'bg-accent-soft ring-1 ring-accent/40'
         )}
       >
-        <div className="mb-2 flex items-center gap-1.5 px-1">
-          <h2 className="text-[13px] font-semibold text-text-2">{label}</h2>
-          <span className="text-[11px] text-text-3">{items.length}</span>
+        <div className="mb-2.5 flex items-center gap-2 px-1">
+          <h2 className="text-[14px] font-semibold text-text">{label}</h2>
+          <span className="text-[11.5px] text-text-3">{items.length}</span>
           {extra}
         </div>
         {items.length === 0 ? (
@@ -249,28 +256,26 @@ export default function ToolboxPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold">工具箱</h1>
-          <p className="mt-0.5 text-[12px] text-text-3">
-            文献数据库、计算平台、VPN、数据集目录……常用入口集中放这里（点击即打开）
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <IconButton title="刷新有效性检测" onClick={() => checkValidity()} className="h-8 w-8 border border-border">
-            <RefreshCw size={14} />
-          </IconButton>
-          <Button onClick={() => setGroupModal('add')}>
-            <FolderPlus size={14} /> 新建分组
-          </Button>
-          <Button variant="primary" onClick={() => setAddOpen(true)}>
-            <Plus size={14} /> 新增收藏
-          </Button>
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="工具箱"
+        sub="文献数据库、计算平台、VPN、数据集目录……常用入口集中放这里（点击即打开）"
+        actions={
+          <>
+            <IconButton title="刷新有效性检测" onClick={() => checkValidity()} className="h-8 w-8 border border-border">
+              <RefreshCw size={14} />
+            </IconButton>
+            <Button onClick={() => setGroupModal('add')}>
+              <FolderPlus /> 新建分组
+            </Button>
+            <Button variant="primary" onClick={() => setAddOpen(true)}>
+              <Plus /> 新增收藏
+            </Button>
+          </>
+        }
+      />
 
-      <div className="mt-4 flex flex-col gap-5">
+      <div className="mt-5 flex flex-col gap-6">
         {groups.map((g) =>
           groupSection(
             g.id,
@@ -278,21 +283,21 @@ export default function ToolboxPage() {
             <div className="ml-1.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
               <IconButton
                 title="上移分组"
-                className="h-5 w-5"
+                className="h-6 w-6"
                 onClick={() => moveGroup(g.id, -1)}
               >
                 <ArrowUp size={11} />
               </IconButton>
               <IconButton
                 title="下移分组"
-                className="h-5 w-5"
+                className="h-6 w-6"
                 onClick={() => moveGroup(g.id, 1)}
               >
                 <ArrowDown size={11} />
               </IconButton>
               <IconButton
                 title="重命名分组"
-                className="h-5 w-5"
+                className="h-6 w-6"
                 onClick={() => {
                   setRenamingGroup(g.id)
                   setRenameText(g.name)
@@ -302,7 +307,7 @@ export default function ToolboxPage() {
               </IconButton>
               <IconButton
                 title="删除分组（收藏项移入未分组）"
-                className="h-5 w-5 hover:text-danger"
+                className="hover:bg-danger-soft h-6 w-6 hover:text-danger"
                 onClick={() => setDeleteGroupTarget(g.id)}
               >
                 <Trash2 size={11} />

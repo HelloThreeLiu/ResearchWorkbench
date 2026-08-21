@@ -31,6 +31,10 @@
   /* 标题显示字体（各主题可覆盖；正文统一系统无衬线） */
   --font-display:
     "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  /* 圆角（V3 规范：控件 8 / 卡片 12 / 弹窗 16；各主题覆盖形成差异） */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
 }
 
 /* ---------- claude · 学术编辑风（浅） ---------- */
@@ -147,6 +151,12 @@ html.dark[data-style='notion'] {
   --color-warn: var(--color-warn);
   --color-warn-soft: var(--color-warn-soft);
   --color-success: var(--color-success);
+  /* 圆角接入 Tailwind：rounded-lg/xl/2xl 随主题切换（V3 规范 §1.2） */
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  /* 标题字体：font-display 工具类随主题切换（claude 衬线） */
+  --font-display: var(--font-display);
 }
 
 html,
@@ -163,7 +173,43 @@ body {
     "PingFang SC",
     system-ui,
     sans-serif;
-  font-size: 14px;
+  font-size: 13.5px;
+}
+
+/* ============================================================
+   V3 布局骨架（设计规范 §3.2）
+   .page       每个页面的内容壳：统一内边距
+   .page-mid   中等阅读宽度（时间节点/灵感/论文/成果/汇报）
+   .page-narrow 窄阅读宽度（设置）
+   ============================================================ */
+.page {
+  padding: 26px 30px 48px;
+}
+.page-mid {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.page-narrow {
+  max-width: 860px;
+  margin: 0 auto;
+}
+@media (max-width: 640px) {
+  .page {
+    padding: 18px 16px 40px;
+  }
+}
+
+/* 快捷键展示（V3 规范 §4 Modal/Kbd） */
+.kbd {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 4px;
+  padding: 0 5px;
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--color-text-2);
+  line-height: 1.6;
 }
 
 /* 标题显示字体：claude 主题为衬线（学术编辑感），其余主题与正文一致 */

@@ -234,7 +234,7 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
                       </span>
                     )}
                     {linkedTask ? (
-                      <span className="flex items-center gap-1 text-[10.5px] text-text-3">
+                      <span className="flex items-center gap-1 text-[11.5px] text-text-3">
                         <Link2 size={10} />
                         {linkedTask.status === 'done' ? '任务已完成' : '已同步任务'}
                       </span>
@@ -258,7 +258,7 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
                       </Select>
                     ) : (
                       <button
-                        className="text-[10.5px] text-accent hover:underline cursor-pointer opacity-0 group-hover:opacity-100"
+                        className="text-[11.5px] text-accent hover:underline cursor-pointer opacity-0 group-hover:opacity-100"
                         onClick={() => setLinkingSection(sec.id)}
                       >
                         关联任务

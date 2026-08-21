@@ -1,12 +1,25 @@
-// 全局任务列表：按项目分组（含杂项），支持按项目/状态/标签/截止区间筛选；列表/看板双视图
+// 全局任务（V3 §5.5）：按项目分组，列表/看板双视图；FilterBar 双区筛选（Chips 流动 + 维度筛选锚定右侧）
 import { useMemo, useState } from 'react'
 import { Columns3, ListTodo, Plus } from 'lucide-react'
+import dayjs from 'dayjs'
 import type { Priority, Task } from '@shared/types'
 import { TASK_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useAllTags } from '@/hooks/useVocab'
-import { Badge, Button, EmptyState, Input, Select } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Chip,
+  ChipCount,
+  DueChip,
+  EmptyState,
+  FilterBar,
+  Input,
+  PageHeader,
+  Segmented,
+  Select
+} from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
 import { cn } from '@/lib/utils'
@@ -16,6 +29,55 @@ const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 }
 
 const KANBAN_COLUMNS: Array<Task['status']> = ['todo', 'in_progress', 'done']
 
+type StatusFilter = 'all' | 'undone' | Task['status']
+
+const STATUS_CHIPS: Array<{ value: StatusFilter; label: string }> = [
+  { value: 'all', label: '全部' },
+  { value: 'undone', label: '未完成' },
+  { value: 'todo', label: TASK_STATUS_LABELS.todo },
+  { value: 'in_progress', label: TASK_STATUS_LABELS.in_progress },
+  { value: 'done', label: TASK_STATUS_LABELS.done }
+]
+
+/** 截止筛选预设：收敛为单下拉，自定义时才展开区间输入框 */
+type DuePreset = 'all' | 'overdue' | 'today' | 'd7' | 'd30' | 'custom'
+
+const DUE_PRESET_LABELS: Record<DuePreset, string> = {
+  all: '全部',
+  overdue: '已逾期',
+  today: '今天',
+  d7: '未来 7 天',
+  d30: '未来 30 天',
+  custom: '自定义…'
+}
+
+const duePresetOf = (from: string, to: string): DuePreset => {
+  const today = dayjs().format('YYYY-MM-DD')
+  if (!from && !to) return 'all'
+  if (!from && to === dayjs().subtract(1, 'day').format('YYYY-MM-DD')) return 'overdue'
+  if (from === today && to === today) return 'today'
+  if (from === today && to === dayjs().add(6, 'day').format('YYYY-MM-DD')) return 'd7'
+  if (from === today && to === dayjs().add(29, 'day').format('YYYY-MM-DD')) return 'd30'
+  return 'custom'
+}
+
+const dueDatesOf = (preset: DuePreset): { from: string; to: string } => {
+  const today = dayjs().format('YYYY-MM-DD')
+  switch (preset) {
+    case 'overdue':
+      return { from: '', to: dayjs().subtract(1, 'day').format('YYYY-MM-DD') }
+    case 'today':
+      return { from: today, to: today }
+    case 'd7':
+      return { from: today, to: dayjs().add(6, 'day').format('YYYY-MM-DD') }
+    case 'd30':
+      return { from: today, to: dayjs().add(29, 'day').format('YYYY-MM-DD') }
+    default:
+      // 自定义展开为「今天起两周」——刻意避开预设值，避免下拉又跳回预设项
+      return { from: today, to: dayjs().add(13, 'day').format('YYYY-MM-DD') }
+  }
+}
+
 export default function TasksPage() {
   const tasks = useStore((s) => s.tasks)
   const projects = useStore((s) => s.projects)
@@ -24,7 +86,7 @@ export default function TasksPage() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [filterProject, setFilterProject] = useState('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | Task['status'] | 'undone'>('undone')
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>('undone')
   const [filterTag, setFilterTag] = useState('all')
   const [filterDueFrom, setFilterDueFrom] = useState('')
   const [filterDueTo, setFilterDueTo] = useState('')
@@ -50,6 +112,18 @@ export default function TasksPage() {
       return true
     })
   }, [tasks, filterProject, filterStatus, filterTag, filterDueFrom, filterDueTo])
+
+  const hasFilter =
+    filterProject !== 'all' ||
+    filterStatus !== 'undone' ||
+    filterTag !== 'all' ||
+    filterDueFrom !== '' ||
+    filterDueTo !== ''
+
+  const countOf = (f: StatusFilter): number =>
+    tasks.filter((t) =>
+      f === 'all' ? true : f === 'undone' ? t.status !== 'done' : t.status === f
+    ).length
 
   // 分组：进行中项目在前；已完成/归档项目与无项目任务归入「其他」
   const groups = useMemo(() => {
@@ -85,142 +159,161 @@ export default function TasksPage() {
   }, [filtered, projects])
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">任务</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border p-0.5">
-            {(
-              [
-                ['list', '列表', <ListTodo key="l" size={13} />],
-                ['kanban', '看板', <Columns3 key="k" size={13} />]
-              ] as const
-            ).map(([v, label, icon]) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={cn(
-                  'flex items-center gap-1 rounded-md px-2.5 py-1 text-[12.5px] transition-colors cursor-pointer',
-                  view === v ? 'bg-accent-soft font-medium text-accent' : 'text-text-2 hover:text-text'
-                )}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
-          </div>
-          <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            <Plus size={14} /> 新建任务
-          </Button>
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="任务"
+        sub="按项目分组，逾期自动置顶；列表看细节，看板看全局"
+        actions={
+          <>
+            <Segmented
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'list', label: <><Columns3 className="rotate-90" />列表</> },
+                { value: 'kanban', label: <><Columns3 />看板</> }
+              ]}
+            />
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              <Plus /> 新建任务
+            </Button>
+          </>
+        }
+      />
 
-      {/* 筛选栏（单行，窄窗口可横向滑动） */}
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2">
-        <Select
-          value={filterProject}
-          onChange={(e) => setFilterProject(e.target.value)}
-          className="min-w-30 flex-[1.3]"
-        >
-          <option value="all">全部项目</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-          <option value="__none__">仅杂项任务</option>
-        </Select>
-        <Select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-          className="min-w-24 flex-1"
-        >
-          <option value="undone">未完成</option>
-          <option value="all">全部状态</option>
-          {Object.entries(TASK_STATUS_LABELS).map(([v, label]) => (
-            <option key={v} value={v}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="min-w-24 flex-1">
-          <option value="all">全部标签</option>
-          {allTags.map((t) => (
-            <option key={t} value={t}>
-              #{t}
-            </option>
-          ))}
-        </Select>
-        <div className="flex shrink-0 items-center gap-1" title="截止日期区间">
-          <Input
-            type="date"
-            value={filterDueFrom}
-            onChange={(e) => setFilterDueFrom(e.target.value)}
-            className="w-29"
-          />
-          <span className="text-text-3">–</span>
-          <Input
-            type="date"
-            value={filterDueTo}
-            onChange={(e) => setFilterDueTo(e.target.value)}
-            className="w-29"
-          />
-        </div>
-        {(filterProject !== 'all' ||
-          filterStatus !== 'undone' ||
-          filterTag !== 'all' ||
-          filterDueFrom ||
-          filterDueTo) && (
-          <button
-            className="shrink-0 whitespace-nowrap px-1 text-[12px] text-accent hover:underline cursor-pointer"
-            onClick={() => {
-              setFilterProject('all')
-              setFilterStatus('undone')
-              setFilterTag('all')
-              setFilterDueFrom('')
-              setFilterDueTo('')
-            }}
+      {/* 筛选工具条（V3 FilterBar）：状态 Chips 流动 ‖ 项目/标签/截止锚定右侧 */}
+      <FilterBar
+        filters={
+          <>
+            <Select
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="h-7 w-auto min-w-28 max-w-44 shrink-0 text-[12.5px]"
+            >
+              <option value="all">全部项目</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+              <option value="__none__">仅杂项任务</option>
+            </Select>
+            <Select
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+              className="h-7 w-auto min-w-24 max-w-36 shrink-0 text-[12.5px]"
+            >
+              <option value="all">全部标签</option>
+              {allTags.map((t) => (
+                <option key={t} value={t}>
+                  #{t}
+                </option>
+              ))}
+            </Select>
+            <span className="flex shrink-0 items-center gap-1.5 text-[11.5px] text-text-3">
+              截止
+              <Select
+                value={duePresetOf(filterDueFrom, filterDueTo)}
+                onChange={(e) => {
+                  const { from, to } = dueDatesOf(e.target.value as DuePreset)
+                  setFilterDueFrom(from)
+                  setFilterDueTo(to)
+                }}
+                className="h-7 w-24 text-[12.5px]"
+                title="按截止日期筛选"
+              >
+                {(Object.keys(DUE_PRESET_LABELS) as Array<DuePreset>).map((p) => (
+                  <option key={p} value={p}>
+                    {DUE_PRESET_LABELS[p]}
+                  </option>
+                ))}
+              </Select>
+              {duePresetOf(filterDueFrom, filterDueTo) === 'custom' && (
+                <>
+                  <Input
+                    type="date"
+                    value={filterDueFrom}
+                    onChange={(e) => setFilterDueFrom(e.target.value)}
+                    className="h-7 w-26 text-[12.5px]"
+                  />
+                  –
+                  <Input
+                    type="date"
+                    value={filterDueTo}
+                    onChange={(e) => setFilterDueTo(e.target.value)}
+                    className="h-7 w-26 text-[12.5px]"
+                  />
+                </>
+              )}
+            </span>
+            {hasFilter && (
+              <button
+                className="shrink-0 text-[12.5px] text-accent hover:underline cursor-pointer"
+                onClick={() => {
+                  setFilterProject('all')
+                  setFilterStatus('undone')
+                  setFilterTag('all')
+                  setFilterDueFrom('')
+                  setFilterDueTo('')
+                }}
+              >
+                清除筛选
+              </button>
+            )}
+          </>
+        }
+      >
+        {STATUS_CHIPS.map((chip) => (
+          <Chip
+            key={chip.value}
+            active={filterStatus === chip.value}
+            onClick={() => setFilterStatus(chip.value)}
           >
-            清除筛选
-          </button>
-        )}
-      </div>
+            {chip.label} <ChipCount>{countOf(chip.value)}</ChipCount>
+          </Chip>
+        ))}
+      </FilterBar>
 
       {view === 'list' ? (
         groups.length === 0 ? (
-          <EmptyState icon={<ListTodo size={30} />} title="没有符合条件的任务" hint="调整筛选条件，或新建一个任务。" />
+          <EmptyState icon={<ListTodo />} title="没有符合条件的任务" hint="调整筛选条件，或新建一个任务。" />
         ) : (
-          <div className="mt-4 flex flex-col gap-5">
-            {groups.map((g) => (
-              <section key={g.key}>
-                <div className="mb-1 flex items-center gap-2 px-1">
-                  {g.color ? (
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.color }} />
-                  ) : (
-                    <span className="h-2.5 w-2.5 rounded-full border border-dashed border-text-3" />
-                  )}
-                  <button
-                    className="text-[13px] font-medium text-text-2 hover:text-accent cursor-pointer"
-                    onClick={() =>
-                      g.key !== '__misc__' &&
-                      navigate({ name: 'project-detail', projectId: g.key, tab: 'tasks' })
-                    }
-                  >
-                    {g.name}
-                  </button>
-                  <span className="text-[11px] text-text-3">{g.tasks.length}</span>
-                </div>
-                <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface p-1.5">
-                  {g.tasks.map((t) => (
-                    <TaskRow
-                      key={t.id}
-                      task={t}
-                      onDelete={() => useStore.getState().deleteTask(t.id)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+          <div className="mt-5 flex flex-col gap-5">
+            {groups.map((g) => {
+              const overdueCount = g.tasks.filter(
+                (t) => t.status !== 'done' && t.due_date !== null && daysUntil(t.due_date) < 0
+              ).length
+              return (
+                <section key={g.key}>
+                  <div className="mb-1.5 flex items-center gap-2 px-1">
+                    {g.color ? (
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
+                    ) : (
+                      <span className="h-2 w-2 rounded-full border border-dashed border-text-3" />
+                    )}
+                    <button
+                      className="text-[13px] font-semibold text-text-2 hover:text-accent cursor-pointer"
+                      onClick={() =>
+                        g.key !== '__misc__' &&
+                        navigate({ name: 'project-detail', projectId: g.key, tab: 'tasks' })
+                      }
+                    >
+                      {g.name}
+                    </button>
+                    <span className="text-[11.5px] text-text-3">{g.tasks.length}</span>
+                    {overdueCount > 0 && <Badge color="red">{overdueCount} 逾期</Badge>}
+                  </div>
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-surface p-1.5">
+                    {g.tasks.map((t) => (
+                      <TaskRow
+                        key={t.id}
+                        task={t}
+                        onDelete={() => useStore.getState().deleteTask(t.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
           </div>
         )
       ) : (
@@ -271,7 +364,7 @@ function KanbanBoard({
   }
 
   return (
-    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div className="mt-5 grid grid-cols-1 items-start gap-4 md:grid-cols-3">
       {KANBAN_COLUMNS.map((col) => {
         const list = tasks
           .filter((t) => t.status === col)
@@ -295,11 +388,11 @@ function KanbanBoard({
             onDragLeave={() => setDragOverCol(null)}
             onDrop={() => dropOn(col)}
             className={cn(
-              'flex min-h-60 flex-col gap-2 rounded-xl border border-border bg-surface/60 p-2.5 transition-colors',
+              'flex min-h-60 flex-col gap-2 rounded-xl border border-border bg-surface/60 p-3 transition-colors',
               dragOverCol === col && dragTaskId && 'border-accent/60 bg-accent-soft/40'
             )}
           >
-            <div className="flex items-center justify-between px-0.5">
+            <div className="flex items-center gap-2 px-0.5 pb-1">
               <span className="text-[13px] font-semibold text-text-2">
                 {TASK_STATUS_LABELS[col]}
               </span>
@@ -325,7 +418,7 @@ function KanbanBoard({
                     setDragOverCol(null)
                   }}
                   className={cn(
-                    'cursor-grab rounded-lg border border-border bg-surface p-2.5 shadow-sm transition-all',
+                    'cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm transition-all',
                     'hover:border-accent/50 hover:shadow',
                     dragTaskId === t.id && 'opacity-40',
                     t.status === 'done' && 'opacity-80'
@@ -334,16 +427,11 @@ function KanbanBoard({
                   <div className={cn('text-[13px] leading-snug', t.status === 'done' && 'text-text-3 line-through')}>
                     {t.title}
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] text-text-3">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-text-3">
                     {project && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
                         {project.name}
-                      </span>
-                    )}
-                    {t.due_date && (
-                      <span className={overdue ? 'font-medium text-danger' : ''}>
-                        {formatDate(t.due_date)}（{countdownText(daysUntil(t.due_date))}）
                       </span>
                     )}
                     {t.priority === 'high' && <Badge color="red">高优先</Badge>}
@@ -351,6 +439,14 @@ function KanbanBoard({
                       <span key={tag}>#{tag}</span>
                     ))}
                   </div>
+                  {t.due_date && (
+                    <div className="mt-1.5">
+                      <DueChip
+                        tone={overdue ? 'overdue' : daysUntil(t.due_date) === 0 ? 'today' : 'default'}
+                        text={`${formatDate(t.due_date)} · ${countdownText(daysUntil(t.due_date))}`}
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })}

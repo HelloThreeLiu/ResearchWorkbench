@@ -8,12 +8,14 @@ import { achievementTypeIcon, useAchievementTypes, useAchievementTypeLabel } fro
 import {
   Badge,
   Button,
+  Chip,
   ConfirmDialog,
   EmptyState,
   Field,
   IconButton,
   Input,
   Modal,
+  PageHeader,
   Select,
   Textarea
 } from '@/components/ui'
@@ -45,6 +47,8 @@ export default function AchievementsPage() {
     [achievements, filterType]
   )
 
+  const typeCount = (typeId: string): number => achievements.filter((a) => a.type === typeId).length
+
   // 按年份分组的时间线
   const byYear = useMemo(() => {
     const map = new Map<string, Achievement[]>()
@@ -64,62 +68,59 @@ export default function AchievementsPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold">成果台账</h1>
-          <p className="mt-0.5 text-[12px] text-text-3">
-            论文录用后自动生成草稿项；也可手动登记专利、获奖、项目等成果。
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={doCopy}>
-            <Copy size={13.5} /> 复制为纯文本
-          </Button>
-          <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            <Plus size={14} /> 登记成果
-          </Button>
-        </div>
-      </div>
-      {copyMsg && <div className="mt-1.5 text-[12px] text-success">已复制 {achievements.length} 项到剪贴板（可直接粘贴进简历/年终总结）</div>}
+    <div className="page page-mid">
+      <PageHeader
+        title="成果台账"
+        sub="论文录用后自动生成草稿项；专利、获奖、项目可手动登记 · 按年份归档，一键复制进简历"
+        actions={
+          <>
+            <Button onClick={doCopy}>
+              <Copy /> 复制为纯文本
+            </Button>
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              <Plus /> 登记成果
+            </Button>
+          </>
+        }
+      />
 
-      {/* 筛选 */}
-      <div className="mt-4 flex items-center gap-2">
-        <Select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="w-40"
-        >
-          <option value="all">全部类型（{achievements.length}）</option>
-          {achievementTypes.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      {achievements.length > 0 && achievements.some((a) => a.is_draft) && (
-        <div className="mt-3 rounded-lg border border-dashed border-accent/50 bg-accent-soft/40 px-3.5 py-2 text-[11.5px] text-accent">
+      {/* 草稿提示条 */}
+      {achievements.some((a) => a.is_draft) && (
+        <div className="mt-4 rounded-lg border border-dashed border-accent/55 bg-accent-soft/50 px-3.5 py-2 text-[12.5px] text-accent">
           有 {achievements.filter((a) => a.is_draft).length} 项论文录用自动生成的草稿，点击编辑补全级别与证明材料后转正。
         </div>
       )}
+      {copyMsg && (
+        <div className="mt-2 text-[12px] text-success">
+          已复制 {achievements.length} 项到剪贴板（可直接粘贴进简历/年终总结）
+        </div>
+      )}
+
+      {/* 类型筛选 Chips */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2">
+        <Chip active={filterType === 'all'} onClick={() => setFilterType('all')}>
+          全部类型 <span className="text-[11px] opacity-75">{achievements.length}</span>
+        </Chip>
+        {achievementTypes.map((t) => (
+          <Chip key={t.id} active={filterType === t.id} onClick={() => setFilterType(t.id)}>
+            {t.name} <span className="text-[11px] opacity-75">{typeCount(t.id)}</span>
+          </Chip>
+        ))}
+      </div>
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<Trophy size={30} />}
+          icon={<Trophy />}
           title={achievements.length === 0 ? '还没有登记成果' : '没有该类型的成果'}
           hint={achievements.length === 0 ? '论文录用会自动生成草稿项；也可以手动登记获奖、专利等。' : '换个类型看看。'}
         />
       ) : (
-        <div className="mt-4 flex flex-col gap-6">
+        <div className="mt-5 ml-1.5 flex flex-col gap-6">
           {byYear.map(([year, list]) => (
-            <section key={year} className="relative ml-1 border-l-2 border-border pl-6">
-              <div className="absolute -left-[9px] top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-surface bg-accent-soft">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              </div>
-              <h2 className="mb-2 text-[15px] font-semibold">{year} 年</h2>
-              <div className="flex flex-col gap-2">
+            <section key={year} className="relative border-l-2 border-border pl-6">
+              <div className="absolute top-0.5 -left-[6.5px] h-3 w-3 rounded-full border-[2.5px] border-bg bg-accent" />
+              <h2 className="mb-2.5 text-[17px] font-bold">{year} 年</h2>
+              <div className="flex flex-col gap-2.5">
                 {list.map((a) => {
                   const Icon = achievementTypeIcon(a.type)
                   const project = a.project_id ? projectMap.get(a.project_id) : undefined
@@ -127,23 +128,26 @@ export default function AchievementsPage() {
                     <div
                       key={a.id}
                       className={cn(
-                        'group flex flex-wrap items-start gap-3 rounded-xl border border-border bg-surface p-3.5',
-                        a.is_draft && 'border-dashed opacity-85'
+                        'group flex flex-wrap items-start gap-3.5 rounded-xl border border-border bg-surface p-4',
+                        a.is_draft && 'border-dashed opacity-90'
                       )}
                     >
-                      <Icon size={17} className="mt-0.5 shrink-0 text-accent" />
+                      {/* 类型图标 tile */}
+                      <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent [&_svg]:h-4 [&_svg]:w-4 [&_svg]:stroke-2">
+                        <Icon />
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[13.5px] font-medium">{a.title}</span>
+                          <span className="text-[13.5px] font-semibold">{a.title}</span>
                           {a.is_draft && <Badge color="yellow">草稿</Badge>}
                           {a.level && <Badge color="purple">{a.level}</Badge>}
                         </div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-3">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
                           <span>{dayjs(a.date).format('M月D日')}</span>
                           <span>· {typeLabel(a.type)}</span>
                           {project && (
                             <button
-                              className="flex items-center gap-1 hover:text-accent cursor-pointer"
+                              className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
                               onClick={() => navigate({ name: 'project-detail', projectId: project.id, tab: 'overview' })}
                             >
                               ·
@@ -152,10 +156,10 @@ export default function AchievementsPage() {
                             </button>
                           )}
                         </div>
-                        {a.detail && <div className="mt-1 text-[12px] text-text-2">{a.detail}</div>}
+                        {a.detail && <div className="mt-1.5 text-[12.5px] text-text-2">{a.detail}</div>}
                         {a.evidence_path && (
                           <button
-                            className="mt-0.5 text-[11px] text-text-3 hover:text-accent cursor-pointer"
+                            className="mt-1 text-[11.5px] text-text-3 hover:text-accent cursor-pointer"
                             onClick={() => window.api.openPath(a.evidence_path)}
                             title="打开证明材料"
                           >
@@ -165,14 +169,14 @@ export default function AchievementsPage() {
                       </div>
                       <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                         <IconButton title="编辑" onClick={() => setEditTarget(a)}>
-                          <Pencil size={13} />
+                          <Pencil />
                         </IconButton>
                         <IconButton
                           title="删除"
-                          className="hover:text-danger"
+                          className="hover:bg-danger-soft hover:text-danger"
                           onClick={() => setDeleteTarget(a)}
                         >
-                          <Trash2 size={13} />
+                          <Trash2 />
                         </IconButton>
                       </div>
                     </div>

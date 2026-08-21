@@ -1,14 +1,19 @@
-// 节点总览：全部未完成节点按日期排序 + 倒计时；可按类型/项目筛选；已完成进入历史
+// 时间节点（V3 §5.4）：左侧日期块 + 倒计时徽章；类型 Chips + 项目筛选；已完成折叠
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronRight, Flag, Plus } from 'lucide-react'
 import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useMilestoneTypes, useMilestoneTypeLabel } from '@/hooks/useVocab'
-import { Badge, Button, CheckBox, EmptyState, Select } from '@/components/ui'
+import { Badge, Button, CheckBox, Chip, ChipCount, EmptyState, FilterBar, PageHeader, Select } from '@/components/ui'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 
 import { countdownText, daysUntil, friendlyDate } from '@/lib/date'
+
+const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+const weekdayOf = (date: string): string =>
+  WEEKDAY_LABELS[new Date(date + 'T00:00:00').getDay()] ?? ''
 
 export default function MilestonesPage() {
   const milestones = useStore((s) => s.milestones)
@@ -44,40 +49,51 @@ export default function MilestonesPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">时间节点</h1>
-        <Button variant="primary" onClick={() => setCreateOpen(true)}>
-          <Plus size={14} /> 新建节点
-        </Button>
-      </div>
-      <p className="mt-1 text-[12px] text-text-3">
-        开题、投稿截止、会议、中期检查、答辩等重要日期；进入提醒窗口的节点会出现在今日概览。
-      </p>
+    <div className="page page-mid">
+      <PageHeader
+        title="时间节点"
+        sub="开题、投稿截止、会议、中期检查、答辩等重要日期；进入提醒窗口的节点会出现在今日概览"
+        actions={
+          <Button variant="primary" onClick={() => setCreateOpen(true)}>
+            <Plus /> 新建节点
+          </Button>
+        }
+      />
 
-      {/* 筛选（单行） */}
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto">
-        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="min-w-28 flex-1">
-          <option value="all">全部类型</option>
-          {milestoneTypes.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
-        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="min-w-30 flex-[1.2]">
-          <option value="all">全部项目</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-          <option value="__none__">仅全局节点</option>
-        </Select>
-      </div>
+      {/* 筛选（V3 FilterBar）：类型 Chips 流动 ‖ 项目 Select 锚定右侧 */}
+      <FilterBar
+        filters={
+          <Select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)}
+            className="h-7 w-auto min-w-28 max-w-44 shrink-0 text-[12.5px]"
+          >
+            <option value="all">全部项目</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+            <option value="__none__">仅全局节点</option>
+          </Select>
+        }
+      >
+        <Chip active={filterType === 'all'} onClick={() => setFilterType('all')}>
+          全部类型{' '}
+          <ChipCount>{milestones.filter((m) => m.status === 'pending').length}</ChipCount>
+        </Chip>
+        {milestoneTypes.map((t) => (
+          <Chip key={t.id} active={filterType === t.id} onClick={() => setFilterType(t.id)}>
+            {t.name}{' '}
+            <ChipCount>
+              {milestones.filter((m) => m.status === 'pending' && m.type === t.id).length}
+            </ChipCount>
+          </Chip>
+        ))}
+      </FilterBar>
 
       {pending.length === 0 ? (
-        <EmptyState icon={<Flag size={30} />} title="没有符合条件的未完成节点" hint="把关键日期登记进来，别靠记忆。" />
+        <EmptyState icon={<Flag />} title="没有符合条件的未完成节点" hint="把关键日期登记进来，别靠记忆。" />
       ) : (
         <div className="mt-4 flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
           {pending.map((m) => {
@@ -87,8 +103,15 @@ export default function MilestonesPage() {
             return (
               <div
                 key={m.id}
-                className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2/40"
+                className="group flex items-center gap-4 px-4.5 py-3.5 transition-colors hover:bg-surface-2/40"
               >
+                {/* 日期块：星期 + 大日期 */}
+                <div className="w-13 shrink-0 border-r border-border pr-3.5 text-center">
+                  <div className="text-[11px] text-text-3">{weekdayOf(m.date)}</div>
+                  <div className="text-[19px] leading-[1.3] font-bold tabular-nums">
+                    {m.date.slice(5).replace('-', '/')}
+                  </div>
+                </div>
                 <CheckBox
                   checked={false}
                   onChange={() => useStore.getState().updateMilestone(m.id, { status: 'done' })}
@@ -96,18 +119,17 @@ export default function MilestonesPage() {
                 />
                 <div className="min-w-0 flex-1">
                   <button
-                    className="block max-w-full truncate text-left text-[13.5px] font-medium hover:text-accent cursor-pointer"
+                    className="block max-w-full truncate text-left text-sm font-medium hover:text-accent cursor-pointer"
                     onClick={() => setEditTarget(m)}
                     title="点击编辑"
                   >
                     {m.title}
                   </button>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
-                    <span>{friendlyDate(m.date)}</span>
-                    <span>· {typeLabel(m.type)}</span>
+                    <span>{typeLabel(m.type)}</span>
                     {project ? (
                       <button
-                        className="flex items-center gap-1 hover:text-accent cursor-pointer"
+                        className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
                         onClick={() =>
                           navigate({ name: 'project-detail', projectId: project.id, tab: 'milestones' })
                         }
@@ -124,7 +146,7 @@ export default function MilestonesPage() {
                 </div>
                 <Badge
                   color={overdue ? 'red' : inWindow(m) ? (days <= 7 ? 'red' : 'yellow') : 'gray'}
-                  className="shrink-0"
+                  className="h-6 shrink-0 text-xs"
                 >
                   {overdue ? `已过期 ${-days} 天` : countdownText(days)}
                 </Badge>
@@ -145,16 +167,16 @@ export default function MilestonesPage() {
       {doneHistory.length > 0 && (
         <div className="mt-6">
           <button
-            className="flex items-center gap-1 text-[13px] font-medium text-text-2 hover:text-text cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-text-2 hover:text-text cursor-pointer [&_svg]:h-3.5 [&_svg]:w-3.5"
             onClick={() => setHistoryOpen(!historyOpen)}
           >
-            {historyOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            {historyOpen ? <ChevronDown /> : <ChevronRight />}
             已完成节点（{doneHistory.length}）
           </button>
           {historyOpen && (
             <div className="mt-2 flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
               {doneHistory.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div key={m.id} className="flex items-center gap-4 px-4.5 py-3">
                   <CheckBox
                     checked
                     onChange={() => useStore.getState().updateMilestone(m.id, { status: 'pending' })}

@@ -1,4 +1,4 @@
-// 灵感页：全部灵感按时间倒序；标签/全文搜索/项目筛选；一键转任务
+// 灵感页（V3 §5.8）：左缘状态色条卡片；搜索 + 状态 Chips + 项目/标签筛选；一键转任务
 import { useMemo, useState } from 'react'
 import { Check, Lightbulb, ListPlus, Search, Trash2 } from 'lucide-react'
 import type { Idea, IdeaStatus } from '@shared/types'
@@ -6,11 +6,30 @@ import { IDEA_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useAllTags } from '@/hooks/useVocab'
-import { Badge, Button, EmptyState, Input, Select } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Chip,
+  ChipCount,
+  EmptyState,
+  FilterBar,
+  IconButton,
+  Input,
+  PageHeader,
+  Select,
+  Tag
+} from '@/components/ui'
 
 import { friendlyDateTime } from '@/lib/date'
 
-const STATUS_COLORS: Record<IdeaStatus, 'yellow' | 'blue' | 'green'> = {
+/** 状态 → 左缘色条颜色（待整理黄 / 已整理蓝 / 已转任务绿） */
+const STATUS_BAR: Record<IdeaStatus, string> = {
+  new: 'var(--color-warn)',
+  organized: 'var(--color-accent)',
+  converted: 'var(--color-success)'
+}
+
+const STATUS_BADGE: Record<IdeaStatus, 'yellow' | 'blue' | 'green'> = {
   new: 'yellow',
   organized: 'blue',
   converted: 'green'
@@ -46,6 +65,9 @@ export default function IdeasPage() {
     })
   }, [ideas, search, filterStatus, filterProject, filterTag])
 
+  const statusCount = (status: IdeaStatus): number =>
+    ideas.filter((i) => i.status === status).length
+
   const convert = (idea: Idea): void => {
     const firstLine = idea.content.split('\n')[0].slice(0, 80)
     const task = addTask({ title: firstLine, project_id: idea.project_id })
@@ -65,66 +87,83 @@ export default function IdeasPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">灵感</h1>
-        <span className="text-[12px] text-text-3">
-          按 <kbd className="rounded border border-border bg-surface-2 px-1 font-mono">{useStore.getState().settings.hotkey}</kbd> 随手记录
-        </span>
-      </div>
+    <div className="page page-mid">
+      <PageHeader
+        title="灵感"
+        sub={
+          <>
+            读论文、开会、走路时冒出的想法，按 <kbd className="kbd">{useStore.getState().settings.hotkey}</kbd> 随手记，定期整理
+          </>
+        }
+      />
 
-      {/* 搜索与筛选（单行，窄窗口可横向滑动） */}
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-surface p-2">
-        <div className="relative min-w-40 flex-[1.6]">
-          <Search size={13.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-3" />
+      {/* 搜索 + 状态 Chips（流动区） ‖ 项目/标签（锚定区） */}
+      <FilterBar
+        filters={
+          <>
+            <Select
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="h-7 w-auto min-w-28 max-w-44 shrink-0 text-[12.5px]"
+            >
+              <option value="all">全部项目</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+              <option value="__none__">仅未关联</option>
+            </Select>
+            <Select
+              value={filterTag}
+              onChange={(e) => setFilterTag(e.target.value)}
+              className="h-7 w-auto min-w-24 max-w-36 shrink-0 text-[12.5px]"
+            >
+              <option value="all">全部标签</option>
+              {allTags.map((t) => (
+                <option key={t} value={t}>
+                  #{t}
+                </option>
+              ))}
+            </Select>
+          </>
+        }
+      >
+        <div className="relative min-w-44 max-w-60 flex-1">
+          <Search size={13} className="absolute top-1/2 left-2.5 -translate-y-1/2 text-text-3" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="全文搜索灵感内容…"
-            className="pl-7.5"
+            className="h-7 pl-7.5 text-[12.5px]"
           />
         </div>
-        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)} className="min-w-24 flex-1">
-          <option value="all">全部状态</option>
-          {Object.entries(IDEA_STATUS_LABELS).map(([v, label]) => (
-            <option key={v} value={v}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <Select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="min-w-28 flex-[1.2]">
-          <option value="all">全部项目</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-          <option value="__none__">仅未关联</option>
-        </Select>
-        <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="min-w-24 flex-1">
-          <option value="all">全部标签</option>
-          {allTags.map((t) => (
-            <option key={t} value={t}>
-              #{t}
-            </option>
-          ))}
-        </Select>
-      </div>
+        <span className="mx-0.5 h-4.5 w-px bg-border" />
+        <Chip active={filterStatus === 'all'} onClick={() => setFilterStatus('all')}>
+          全部 <ChipCount>{ideas.length}</ChipCount>
+        </Chip>
+        {(Object.keys(IDEA_STATUS_LABELS) as Array<IdeaStatus>).map((s) => (
+          <Chip key={s} active={filterStatus === s} onClick={() => setFilterStatus(s)}>
+            {IDEA_STATUS_LABELS[s]} <ChipCount>{statusCount(s)}</ChipCount>
+          </Chip>
+        ))}
+      </FilterBar>
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={<Lightbulb size={30} />}
+          icon={<Lightbulb />}
           title={ideas.length === 0 ? '还没有灵感记录' : '没有符合条件的灵感'}
           hint={ideas.length === 0 ? '读论文、开会、走路时冒出的想法，按快捷键随手记下来。' : '换个筛选条件试试。'}
         />
       ) : (
-        <div className="mt-4 flex flex-col gap-2.5">
+        <div className="mt-4 flex flex-col gap-3">
           {filtered.map((idea) => {
             const project = idea.project_id ? projectMap.get(idea.project_id) : undefined
             return (
               <div
                 key={idea.id}
-                className="group rounded-xl border border-border bg-surface p-3.5 transition-colors hover:border-accent/50"
+                className="group rounded-xl border border-border border-l-[3px] bg-surface py-3.5 pr-4.5 pl-4 transition-colors hover:border-accent/50"
+                style={{ borderLeftColor: STATUS_BAR[idea.status] }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -142,7 +181,7 @@ export default function IdeasPage() {
                       </div>
                     ) : (
                       <div
-                        className="cursor-pointer whitespace-pre-wrap text-[13.5px] leading-relaxed"
+                        className="cursor-pointer whitespace-pre-wrap text-[13.5px] leading-[1.75]"
                         onDoubleClick={() => startEdit(idea)}
                         title="双击编辑"
                       >
@@ -153,44 +192,44 @@ export default function IdeasPage() {
                   <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     {idea.status !== 'converted' && (
                       <Button size="sm" variant="soft" onClick={() => convert(idea)}>
-                        <ListPlus size={12} /> 转为任务
+                        <ListPlus /> 转为任务
                       </Button>
                     )}
                     {idea.status === 'new' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      <IconButton
                         title="标记为已整理"
                         onClick={() => updateIdea(idea.id, { status: 'organized' })}
                       >
-                        <Check size={13} />
-                      </Button>
+                        <Check />
+                      </IconButton>
                     )}
-                    <Button size="sm" variant="ghost" className="text-danger hover:text-danger" onClick={() => deleteIdea(idea.id)}>
-                      <Trash2 size={13} />
-                    </Button>
+                    <IconButton
+                      title="删除"
+                      className="hover:bg-danger-soft hover:text-danger"
+                      onClick={() => deleteIdea(idea.id)}
+                    >
+                      <Trash2 />
+                    </IconButton>
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-text-3">
-                  <Badge color={STATUS_COLORS[idea.status]}>{IDEA_STATUS_LABELS[idea.status]}</Badge>
+                {/* meta 行：状态 · 时间 · 项目 · 标签 */}
+                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-dashed border-border pt-2 text-[11.5px] text-text-3">
+                  <Badge color={STATUS_BADGE[idea.status]}>{IDEA_STATUS_LABELS[idea.status]}</Badge>
                   <span>{friendlyDateTime(idea.created_at)}</span>
                   {project && (
                     <button
-                      className="flex items-center gap-1 hover:text-accent cursor-pointer"
+                      className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
                       onClick={() =>
                         project.status === 'active' &&
                         navigate({ name: 'project-detail', projectId: project.id, tab: 'overview' })
                       }
                     >
-                      ·
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
                       {project.name}
                     </button>
                   )}
                   {idea.tags.map((t) => (
-                    <span key={t} className="rounded border border-border px-1 py-px">
-                      #{t}
-                    </span>
+                    <Tag key={t} label={t} />
                   ))}
                 </div>
               </div>

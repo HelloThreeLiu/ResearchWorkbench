@@ -6,7 +6,7 @@ import type { Milestone, Task } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { milestoneTypeIcon, useMilestoneTypeLabel } from '@/hooks/useVocab'
-import { Badge, Button, CheckBox, Modal } from '@/components/ui'
+import { Badge, Button, CheckBox, Modal, Segmented } from '@/components/ui'
 import TaskEditModal from '@/components/TaskEditModal'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 import { cn } from '@/lib/utils'
@@ -84,63 +84,69 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
     }
   }
 
-  const cellClass = (date: dayjs.Dayjs): string =>
-    cn(
-      'min-w-0',
-      date.format('YYYY-MM') !== cursor.format('YYYY-MM') && 'opacity-40',
-      date.format('YYYY-MM-DD') === today && 'bg-accent-soft/50'
-    )
-
   return (
-    <div className="px-4 py-5 sm:px-6">
-      {/* 工具栏 */}
+    <div className="page">
+      {/* 工具栏：月份标题 + 翻页 + 视图切换 */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">日历</h1>
-          <div className="flex shrink-0 items-center gap-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-3.5">
+          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+          <div className="flex shrink-0 items-center gap-1.5">
             <button
               onClick={() => shift(-1)}
-              className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer"
+              className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer [&_svg]:h-4 [&_svg]:w-4"
               title={view === 'month' ? '上个月' : '上一周'}
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft />
             </button>
             <button
               onClick={() => setCursor(dayjs())}
-              className="rounded-lg px-2.5 py-1 text-[12.5px] text-text-2 hover:bg-surface-2 cursor-pointer"
+              className="h-7 rounded-full px-3 text-[12.5px] text-text-2 transition-colors hover:bg-surface-2 hover:text-text cursor-pointer"
             >
               今天
             </button>
             <button
               onClick={() => shift(1)}
-              className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer"
+              className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer [&_svg]:h-4 [&_svg]:w-4"
               title={view === 'month' ? '下个月' : '下一周'}
             >
-              <ChevronRight size={16} />
+              <ChevronRight />
             </button>
           </div>
-          <span className="min-w-0 truncate text-[14px] font-medium">{title}</span>
         </div>
-        <div className="flex shrink-0 rounded-lg border border-border p-0.5">
-          {(['month', 'week'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={cn(
-                'rounded-md px-3 py-1 text-[12.5px] transition-colors cursor-pointer',
-                view === v ? 'bg-accent-soft font-medium text-accent' : 'text-text-2 hover:text-text'
-              )}
-            >
-              {v === 'month' ? '月视图' : '周视图'}
-            </button>
+        <Segmented
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'month', label: '月视图' },
+            { value: 'week', label: '周视图' }
+          ]}
+        />
+      </div>
+
+      {/* 图例：项目色 + 节点样式 */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-text-3">
+        {projects
+          .filter((p) => p.status === 'active')
+          .slice(0, 5)
+          .map((p) => (
+            <span key={p.id} className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: p.color }} />
+              {p.name}
+            </span>
           ))}
-        </div>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded-[4px] bg-accent-soft" />
+          时间节点
+        </span>
       </div>
 
       {/* 星期表头 */}
-      <div className="mt-4 grid grid-cols-7 border-b border-border pb-1.5">
+      <div className="mt-3 grid grid-cols-7 overflow-hidden rounded-t-xl border border-b-0 border-border">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="text-center text-[11.5px] font-medium text-text-3">
+          <div
+            key={w}
+            className="bg-surface py-2.5 text-center text-[11.5px] font-semibold text-text-3"
+          >
             周{w}
           </div>
         ))}
@@ -148,7 +154,7 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
 
       {/* 月视图网格 */}
       {view === 'month' ? (
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border">
+        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-b-xl border border-border bg-border">
           {monthCells.map((date) => {
             const key = date.format('YYYY-MM-DD')
             const items = itemsByDate.get(key) ?? []
@@ -157,13 +163,17 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
             return (
               <div
                 key={key}
-                className={cn('min-h-[72px] cursor-pointer bg-surface p-1.5 transition-colors hover:bg-surface-2/50 sm:min-h-[86px] xl:min-h-[104px]', cellClass(date))}
+                className={cn(
+                  'min-h-24 cursor-pointer bg-surface p-1.5 transition-colors hover:bg-surface-2/50',
+                  date.format('YYYY-MM') !== cursor.format('YYYY-MM') && 'opacity-40',
+                  key === today && 'bg-accent-soft/40'
+                )}
                 onClick={() => setDetailDate(key)}
               >
                 <div
                   className={cn(
-                    'mb-1 inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-full px-1 text-[11.5px]',
-                    key === today ? 'bg-accent font-semibold text-white' : 'text-text-2'
+                    'mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11.5px]',
+                    key === today ? 'bg-accent font-bold text-white' : 'text-text-2'
                   )}
                 >
                   {date.date()}
@@ -174,7 +184,7 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
                   ))}
                   {more > 0 && (
                     <button
-                      className="pl-0.5 text-left text-[10.5px] text-text-3 hover:text-accent"
+                      className="pl-0.5 text-left text-[11px] text-text-3 hover:text-accent cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         setDetailDate(key)
@@ -190,20 +200,24 @@ export default function CalendarPage({ focusDate }: { focusDate?: string }) {
         </div>
       ) : (
         /* 周视图 */
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border">
+        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-b-xl border border-border bg-border">
           {weekCells.map((date) => {
             const key = date.format('YYYY-MM-DD')
             const items = itemsByDate.get(key) ?? []
             return (
               <div
                 key={key}
-                className={cn('min-h-[240px] cursor-pointer bg-surface p-2 transition-colors hover:bg-surface-2/50 xl:min-h-[380px]', cellClass(date))}
+                className={cn(
+                  'min-h-60 cursor-pointer bg-surface p-2 transition-colors hover:bg-surface-2/50 xl:min-h-96',
+                  date.format('YYYY-MM') !== cursor.format('YYYY-MM') && 'opacity-40',
+                  key === today && 'bg-accent-soft/40'
+                )}
                 onClick={() => setDetailDate(key)}
               >
                 <div
                   className={cn(
                     'mb-1.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[12px]',
-                    key === today ? 'bg-accent font-semibold text-white' : 'text-text-2'
+                    key === today ? 'bg-accent font-bold text-white' : 'text-text-2'
                   )}
                 >
                   {date.date()} 日
@@ -261,7 +275,7 @@ function itemKey(item: CalendarItem): string {
   return item.kind === 'task' ? `t-${item.task.id}` : `m-${item.milestone.id}`
 }
 
-/** 格子内条目：任务用项目颜色圆点，节点用类型图标 */
+/** 格子内条目：任务用项目颜色圆点，节点用 accent-soft 胶囊 + 类型图标 */
 function CellItem({
   item,
   onOpen,
@@ -281,7 +295,7 @@ function CellItem({
           onOpen()
         }}
         className={cn(
-          'flex w-full items-center gap-1 overflow-hidden rounded px-1 py-0.5 text-left text-[10.5px] leading-tight transition-colors hover:bg-surface-2',
+          'flex w-full items-center gap-1.5 overflow-hidden rounded px-1 py-0.5 text-left text-[11px] leading-tight transition-colors hover:bg-surface-2 cursor-pointer',
           done ? 'text-text-3 line-through' : overdue ? 'text-danger' : 'text-text-2'
         )}
         title={item.task.title}
@@ -303,13 +317,13 @@ function CellItem({
         onOpen()
       }}
       className={cn(
-        'flex w-full items-center gap-1 overflow-hidden rounded bg-accent-soft/70 px-1 py-0.5 text-left text-[10.5px] leading-tight text-accent transition-colors hover:bg-accent-soft',
+        'flex w-full items-center gap-1 overflow-hidden rounded bg-accent-soft px-1 py-0.5 text-left text-[11px] leading-tight text-accent transition-colors hover:brightness-97 cursor-pointer [&_svg]:h-2.5 [&_svg]:w-2.5 [&_svg]:shrink-0',
         item.milestone.status === 'done' && 'opacity-50 line-through',
         expanded && 'py-1 text-[11.5px]'
       )}
       title={`${typeLabel(item.milestone.type)} · ${item.milestone.title}`}
     >
-      <Icon size={10} className="shrink-0" />
+      <Icon />
       <span className="truncate">{item.milestone.title}</span>
     </button>
   )

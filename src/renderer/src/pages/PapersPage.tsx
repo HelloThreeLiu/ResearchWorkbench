@@ -1,4 +1,4 @@
-// 论文投稿跟踪：按状态分组的列表，两步内完成状态变更；章节进度与日期倒计时
+// 论文投稿（V3 §5.10）：状态流转链 + 按状态分组列表，两步内完成状态变更
 import { useMemo, useState } from 'react'
 import { FilePlus2, Pencil, Send, Trash2 } from 'lucide-react'
 import type { Paper, PaperStatus } from '@shared/types'
@@ -10,7 +10,15 @@ import {
 } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
-import { Badge, Button, ConfirmDialog, EmptyState, Select } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  IconButton,
+  PageHeader,
+  Select
+} from '@/components/ui'
 import PaperEditModal from '@/components/PaperEditModal'
 import { countdownText, daysUntil } from '@/lib/date'
 
@@ -24,6 +32,9 @@ const STATUS_COLORS: Partial<Record<PaperStatus, 'yellow' | 'blue' | 'green' | '
   accepted: 'green',
   rejected: 'red'
 }
+
+/** 状态流转链（图形化，替代纯文字说明） */
+const FLOW_CHAIN: PaperStatus[] = ['idea', 'writing', 'submitted', 'reviewing', 'major_revision', 'accepted']
 
 export default function PapersPage() {
   const papers = useStore((s) => s.papers)
@@ -57,37 +68,62 @@ export default function PapersPage() {
   }
 
   return (
-    <div className="px-4 py-5 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-semibold">论文投稿</h1>
-          <p className="mt-0.5 text-[12px] text-text-3">
-            状态流转：构思 → 写作中 → 已投稿 → 审稿中 → 大修/小修 → 录用/拒稿（可回退；拒稿后改投自动累加轮次）
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => setCreateOpen(true)}>
-          <FilePlus2 size={14} /> 新建论文
-        </Button>
-      </div>
+    <div className="page page-mid">
+      <PageHeader
+        title="论文投稿"
+        sub={
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            {FLOW_CHAIN.map((s, i) => (
+              <span key={s} className="inline-flex items-center gap-1.5">
+                {i > 0 && <span className="text-[11px] text-text-3">→</span>}
+                <span
+                  className={
+                    'inline-flex h-[19px] items-center rounded-[5px] border border-border px-1.5 text-[11px] ' +
+                    (s === 'accepted'
+                      ? 'border-success/40 text-success'
+                      : s === 'major_revision'
+                        ? 'text-text-2'
+                        : 'text-text-2')
+                  }
+                >
+                  {PAPER_STATUS_LABELS[s]}
+                </span>
+              </span>
+            ))}
+            <span className="text-[11px] text-text-3">→</span>
+            <span className="inline-flex h-[19px] items-center rounded-[5px] border border-danger/40 px-1.5 text-[11px] text-danger">
+              拒稿→改投
+            </span>
+            <span className="mt-1 block text-[11.5px] text-text-3">
+              状态可回退；拒稿后改投自动累加轮次
+            </span>
+          </span>
+        }
+        actions={
+          <Button variant="primary" onClick={() => setCreateOpen(true)}>
+            <FilePlus2 /> 新建论文
+          </Button>
+        }
+      />
 
       {papers.length === 0 ? (
         <EmptyState
-          icon={<Send size={30} />}
+          icon={<Send />}
           title="还没有登记论文"
           hint="把在写/在投的论文登记进来，重要日期自动进时间节点，录用自动进成果台账。"
         />
       ) : (
-        <div className="mt-4 flex flex-col gap-5">
+        <div className="mt-5 flex flex-col gap-5">
           {PAPER_STATUS_ORDER.map((status) => {
             const list = papers.filter((p) => p.status === status)
             if (list.length === 0) return null
             return (
               <section key={status}>
-                <div className="mb-1.5 flex items-center gap-2 px-1">
+                <div className="mb-2 flex items-center gap-2 px-1">
                   <Badge color={STATUS_COLORS[status] ?? 'gray'}>
                     {PAPER_STATUS_LABELS[status]}
                   </Badge>
-                  <span className="text-[11px] text-text-3">{list.length} 篇</span>
+                  <span className="text-[11.5px] text-text-3">{list.length} 篇</span>
                 </div>
                 <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
                   {list.map((paper) => {
@@ -99,21 +135,21 @@ export default function PapersPage() {
                     return (
                       <div
                         key={paper.id}
-                        className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 transition-colors hover:bg-surface-2/40"
+                        className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4.5 py-3.5 transition-colors hover:bg-surface-2/40"
                       >
                         <button
                           className="min-w-0 flex-1 text-left"
                           onClick={() => setEditTarget(paper)}
                           title="点击编辑论文与章节清单"
                         >
-                          <div className="truncate text-[13.5px] font-medium">{paper.title}</div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-3">
+                          <div className="truncate text-sm font-medium">{paper.title}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
                             {paper.venue && <span>{paper.venue}</span>}
                             <span>· {PAPER_TYPE_LABELS[paper.type]}</span>
                             {paper.round > 0 && <span>· 第 {paper.round} 轮</span>}
                             {project && (
                               <button
-                                className="flex items-center gap-1 hover:text-accent cursor-pointer"
+                                className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   navigate({ name: 'project-detail', projectId: project.id, tab: 'overview' })
@@ -125,16 +161,17 @@ export default function PapersPage() {
                               </button>
                             )}
                             {paper.sections.length > 0 && (
-                              <span>
-                                · 章节 {doneSections}/{paper.sections.length}
-                              </span>
+                              <span>· 章节 {doneSections}/{paper.sections.length}</span>
                             )}
                             {autoMilestones > 0 && <span>· {autoMilestones} 个自动节点</span>}
                           </div>
                         </button>
 
                         {next && nextDays !== null && (
-                          <Badge color={nextDays <= 7 ? 'red' : nextDays <= 30 ? 'yellow' : 'gray'}>
+                          <Badge
+                            color={nextDays <= 7 ? 'red' : nextDays <= 30 ? 'yellow' : 'gray'}
+                            className="h-6 text-xs"
+                          >
                             {PAPER_DATE_LABELS[next.kind]} {countdownText(nextDays)}
                           </Badge>
                         )}
@@ -143,7 +180,7 @@ export default function PapersPage() {
                         <Select
                           value={paper.status}
                           onChange={(e) => updatePaper(paper.id, { status: e.target.value as PaperStatus })}
-                          className="w-28 shrink-0"
+                          className="h-7 w-26 shrink-0 text-[12.5px]"
                           title="变更状态"
                         >
                           {Object.entries(PAPER_STATUS_LABELS).map(([v, label]) => (
@@ -154,18 +191,16 @@ export default function PapersPage() {
                         </Select>
 
                         <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button size="sm" variant="ghost" onClick={() => setEditTarget(paper)} title="编辑">
-                            <Pencil size={12.5} />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:text-danger"
-                            onClick={() => setDeleteTarget(paper)}
+                          <IconButton title="编辑" onClick={() => setEditTarget(paper)}>
+                            <Pencil />
+                          </IconButton>
+                          <IconButton
                             title="删除"
+                            className="hover:bg-danger-soft hover:text-danger"
+                            onClick={() => setDeleteTarget(paper)}
                           >
-                            <Trash2 size={12.5} />
-                          </Button>
+                            <Trash2 />
+                          </IconButton>
                         </div>
                       </div>
                     )

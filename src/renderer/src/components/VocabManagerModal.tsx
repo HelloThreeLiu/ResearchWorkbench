@@ -137,7 +137,7 @@ function TagsPanel() {
             >
               #{tag.name}
               {(tagUsage.get(tag.name) ?? 0) > 0 && (
-                <span className="text-[10px] text-text-3">{tagUsage.get(tag.name)} 引用</span>
+                <span className="text-[11px] text-text-3">{tagUsage.get(tag.name)} 引用</span>
               )}
               <button
                 className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-accent cursor-pointer"
