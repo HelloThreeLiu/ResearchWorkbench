@@ -14,7 +14,7 @@ win:
   target:
     - nsis
     - zip
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  artifactName: Gezhi-Workbench-${version}-${arch}.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
