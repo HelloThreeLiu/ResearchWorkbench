@@ -7,12 +7,14 @@ import {
   Keyboard,
   Moon,
   Palette,
+  RefreshCw,
   RotateCcw,
   Save,
   SlidersHorizontal
 } from 'lucide-react'
 import { DEFAULT_REPORT_TEMPLATE, type StyleTheme, type ThemeMode } from '@shared/types'
 import { useStore } from '@/store'
+import { useUpdateStore } from '@/updateStore'
 import { Badge, Button, Select, Textarea } from '@/components/ui'
 import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
@@ -130,6 +132,11 @@ export default function SettingsPage() {
   const chooseDataDir = useStore((s) => s.chooseDataDir)
   const updateSettings = useStore((s) => s.updateSettings)
   const backupNow = useStore((s) => s.backupNow)
+
+  const currentVersion = useUpdateStore((s) => s.currentVersion)
+  const hasUpdate = useUpdateStore((s) => s.available !== null)
+  const available = useUpdateStore((s) => s.available)
+  const checkForUpdates = useUpdateStore((s) => s.openModalWithCheck)
 
   const [capturing, setCapturing] = useState(false)
   const [pendingHotkey, setPendingHotkey] = useState('')
@@ -357,20 +364,31 @@ export default function SettingsPage() {
       </SectionCard>
 
       <SectionCard icon={<span className="text-[13px]">ℹ️</span>} title="关于">
-        <div className="flex flex-col gap-1 text-[12.5px] text-text-2">
-          <span>
-            格致 · 科研工作台 <Badge className="ml-1">V2.0.0</Badge>
+        <div className="flex flex-col gap-2 text-[12.5px] text-text-2">
+          <span className="flex flex-wrap items-center gap-1.5">
+            格致 · 科研工作台
+            <Badge>V{currentVersion ?? '—'}</Badge>
+            {hasUpdate && (
+              <Badge color="red" className="cursor-pointer" >
+                新版本 V{available?.version} 可用
+              </Badge>
+            )}
           </span>
           <span className="text-[11.5px] text-text-3">
             「格物致知」—— 一台电脑上的一个应用，装下你全部的科研管理工作。
           </span>
-          <Button
-            variant="ghost"
-            className="mt-1 w-fit px-0 text-danger hover:text-danger"
-            onClick={() => window.api.quitApp()}
-          >
-            退出应用（退出前自动备份）
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => void checkForUpdates()}>
+              <RefreshCw size={12.5} /> 检查更新
+            </Button>
+            <Button
+              variant="ghost"
+              className="px-0 text-danger hover:text-danger"
+              onClick={() => window.api.quitApp()}
+            >
+              退出应用（退出前自动备份）
+            </Button>
+          </div>
         </div>
       </SectionCard>
 

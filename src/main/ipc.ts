@@ -1,12 +1,13 @@
-// 主进程 IPC：数据存取、系统交互（打开网址/文件/程序）、设置、全局快捷键
-import { ipcMain, shell, dialog } from 'electron'
+// 主进程 IPC：数据存取、系统交互（打开网址/文件/程序）、设置、全局快捷键、应用更新
+import { app, ipcMain, shell, dialog } from 'electron'
 import fs from 'node:fs'
 import {
   DEFAULT_VOCAB,
   type AllCollections,
   type AppSettings,
   type CollectionName,
-  type BootstrapResult
+  type BootstrapResult,
+  type UpdateCheckResult
 } from '@shared/types'
 import {
   backupNow,
@@ -20,6 +21,7 @@ import {
 } from './store'
 import { exportToFile, markdownToDocx } from './exporter'
 import { setQuickCaptureShortcut } from './shortcuts'
+import { checkForUpdates, quitAndInstallNow, startDownloadUpdate } from './updater'
 
 export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow | null): void {
   ipcMain.handle('store:bootstrap', (): BootstrapResult => {
@@ -217,6 +219,19 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
       return { title: null, favicon: null }
     }
   })
+
+  // ---------- 应用更新（GitHub Releases） ----------
+  ipcMain.handle('update:check', async (): Promise<UpdateCheckResult> => checkForUpdates())
+
+  ipcMain.handle('update:download', async (): Promise<void> => {
+    await startDownloadUpdate()
+  })
+
+  ipcMain.handle('update:install', (): void => {
+    quitAndInstallNow()
+  })
+
+  ipcMain.handle('update:get-version', (): string => app.getVersion())
 
   ipcMain.handle('app:quit', (): void => {
     try {

@@ -4,7 +4,9 @@ import type {
   AllCollections,
   AppSettings,
   BootstrapResult,
-  CollectionName
+  CollectionName,
+  UpdateCheckResult,
+  UpdateEvent
 } from '@shared/types'
 
 const api = {
@@ -34,11 +36,21 @@ const api = {
   fetchUrlMeta: (url: string): Promise<{ title: string | null; favicon: string | null }> =>
     ipcRenderer.invoke('url:fetch-meta', url),
   quitApp: (): Promise<void> => ipcRenderer.invoke('app:quit'),
+  // 应用更新（GitHub Releases）
+  checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('update:check'),
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('update:get-version'),
   // 主进程 → 渲染进程
   onQuickCapture: (callback: () => void): (() => void) => {
     const listener = (): void => callback()
     ipcRenderer.on('quick-capture:show', listener)
     return () => ipcRenderer.removeListener('quick-capture:show', listener)
+  },
+  onUpdateEvent: (callback: (event: UpdateEvent) => void): (() => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, event: UpdateEvent): void => callback(event)
+    ipcRenderer.on('update:event', listener)
+    return () => ipcRenderer.removeListener('update:event', listener)
   }
 }
 

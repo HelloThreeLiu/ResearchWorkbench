@@ -23,3 +23,7 @@ nsis:
 electronLanguages:
   - zh-CN
   - en-US
+publish:
+  provider: github
+  owner: HelloThreeLiu
+  repo: ResearchWorkbench

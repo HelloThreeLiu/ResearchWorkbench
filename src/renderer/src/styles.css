@@ -236,3 +236,18 @@ h3 {
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8);
 }
+
+/* 更新提示卡入场动画 */
+@keyframes update-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.update-notice {
+  animation: update-notice-in 0.25s ease-out;
+}

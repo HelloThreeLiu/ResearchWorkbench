@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useUpdateStore } from '@/updateStore'
 import Sidebar from '@/components/Sidebar'
 import QuickCapture from '@/components/QuickCapture'
+import UpdateModal from '@/components/UpdateModal'
+import UpdateNotice from '@/components/UpdateNotice'
 import Onboarding from '@/pages/Onboarding'
 import Dashboard from '@/pages/Dashboard'
 import ProjectsPage from '@/pages/ProjectsPage'
@@ -77,6 +80,15 @@ export default function App() {
     return window.api.onQuickCapture(() => setQuickCaptureOpen(true))
   }, [])
 
+  // 应用更新：订阅主进程推送（启动静默检查/下载进度），并取一次当前版本号
+  useEffect(() => {
+    const unsubscribe = window.api.onUpdateEvent((event) =>
+      useUpdateStore.getState().handleEvent(event)
+    )
+    void useUpdateStore.getState().hydrateVersion()
+    return unsubscribe
+  }, [])
+
   if (!ready) {
     return (
       <div className="flex h-full items-center justify-center bg-bg text-text-3">
@@ -109,6 +121,8 @@ export default function App() {
         {page.name === 'settings' && <SettingsPage />}
       </main>
       <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} />
+      <UpdateNotice />
+      <UpdateModal />
     </div>
   )
 }

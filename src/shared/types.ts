@@ -256,6 +256,34 @@ export interface BootstrapResult {
   meta: { lastWriteAt: string | null } // 上次数据写入时间（概览页同步状态展示）
 }
 
+// ---------- 应用更新（GitHub Releases + electron-updater） ----------
+
+/** 手动检查更新的结果（update:check IPC 返回值） */
+export interface UpdateCheckResult {
+  /** available=有新版本；unavailable=已是最新；dev=开发模式；error=检查失败 */
+  status: 'available' | 'unavailable' | 'dev' | 'error'
+  currentVersion: string
+  newVersion: string | null
+  /** 更新日志 Markdown（来自 GitHub Release 说明，拉取失败为空串，UI 兜底提示） */
+  notes: string
+  /** GitHub Release 页面链接（手动下载兜底入口） */
+  releaseUrl: string | null
+  error: string | null
+}
+
+/** 主进程 → 渲染进程的更新事件（update:event 推送） */
+export type UpdateEvent =
+  | { kind: 'available'; version: string; notes: string; releaseUrl: string | null }
+  | {
+      kind: 'progress'
+      percent: number
+      bytesPerSecond: number
+      transferred: number
+      total: number
+    }
+  | { kind: 'downloaded'; version: string }
+  | { kind: 'error'; message: string }
+
 export const COLLECTION_FILES: Record<CollectionName, string> = {
   projects: 'projects.json',
   tasks: 'tasks.json',

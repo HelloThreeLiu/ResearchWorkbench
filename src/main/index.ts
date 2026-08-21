@@ -5,6 +5,7 @@ import path from 'node:path'
 import { registerIpcHandlers } from './ipc'
 import { setQuickCaptureShortcut, unregisterAllShortcuts } from './shortcuts'
 import { dailyBackupIfNeeded, getSettings, loadSettings } from './store'
+import { initUpdater, scheduleStartupSilentCheck } from './updater'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -105,6 +106,8 @@ if (!gotSingleInstanceLock) {
     createMainWindow()
     createTray()
     registerIpcHandlers(() => mainWindow)
+    initUpdater(() => mainWindow)
+    scheduleStartupSilentCheck()
 
     const { hotkey } = getSettings()
     const ok = setQuickCaptureShortcut(hotkey, triggerQuickCapture)
@@ -123,6 +126,8 @@ if (!gotSingleInstanceLock) {
   })
 
   app.on('before-quit', () => {
+    // 标记真正退出：绕过「关闭最小化到托盘」，保证更新安装（quitAndInstall）等退出路径生效
+    isQuitting = true
     try {
       // 退出前自动备份（删除保护与每日备份之外的最后一道快照）
       const { backupNow } = require('./store') as typeof import('./store')

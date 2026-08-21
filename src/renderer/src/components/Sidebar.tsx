@@ -1,5 +1,6 @@
 import { useNav, type Page } from '@/nav'
 import { useStore } from '@/store'
+import { useUpdateStore } from '@/updateStore'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays,
@@ -35,6 +36,7 @@ export default function Sidebar() {
   const page = useNav((s) => s.page)
   const navigate = useNav((s) => s.navigate)
   const hotkey = useStore((s) => s.settings.hotkey)
+  const hasUpdate = useUpdateStore((s) => s.available !== null)
 
   return (
     <aside className="flex h-full w-48 shrink-0 flex-col border-r border-border bg-surface">
@@ -93,8 +95,9 @@ export default function Sidebar() {
       <div className="border-t border-border px-4 py-3">
         <button
           onClick={() => navigate({ name: 'settings' })}
+          title={hasUpdate ? '设置（有新版本可用）' : '设置'}
           className={cn(
-            'flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-[13px] transition-colors cursor-pointer',
+            'relative flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-[13px] transition-colors cursor-pointer',
             page.name === 'settings'
               ? 'font-medium text-accent'
               : 'text-text-2 hover:text-text'
@@ -102,6 +105,9 @@ export default function Sidebar() {
         >
           <Settings size={15.5} strokeWidth={1.8} />
           设置
+          {hasUpdate && (
+            <span className="absolute right-2 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-danger" />
+          )}
         </button>
         <div className="mt-2.5 rounded-lg bg-surface-2 px-2.5 py-2 text-[10.5px] leading-relaxed text-text-3">
           按 <kbd className="rounded border border-border bg-surface px-1 font-mono">{hotkey}</kbd>{' '}
