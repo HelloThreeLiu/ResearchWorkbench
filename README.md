@@ -9,7 +9,7 @@
 一台电脑上的一个应用，装下全部科研管理工作
 
 [![平台](https://img.shields.io/badge/platform-Windows10%2F11-blue)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
-[![版本](https://img.shields.io/badge/version-2.2.0-green)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
+[![版本](https://img.shields.io/badge/version-2.3.0-green)](https://github.com/HelloThreeLiu/ResearchWorkbench/releases)
 [![许可证](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 
 </div>
@@ -40,6 +40,13 @@
 - **成果台账** —— 论文、专利、获奖、项目（类型可自定义）时间线视图，一键复制纯文本用于填简历 / 年终总结；
 - **汇报导出** —— Markdown 与 Word docx 双格式导出，命名规范如 `周报_2026_第34周_20260821.docx`。
 
+### 界面重设计（V2.3）
+
+- **全页面布局重构** —— 13 个页面依据 [V3 设计规范](design/V3-DESIGN-SPEC.md)重排：页头 / 统计卡 / 列表卡 / 时间线全面组件化，字号收敛为 7 档体系（最小 11.5px），间距对齐 8pt 网格；
+- **侧边栏分组导航** —— 224px 分组导航（工作台 / 科研推进 / 成果与汇报）+ 活动项指示条；
+- **筛选工具条双区结构** —— 状态 Chips 流动区 + 筛选控件锚定区，下拉框宽度受控（长项目名省略号截断）、永不挤成孤行；任务截止筛选预设化（今天 / 未来 7 天 / 未来 30 天 / 已逾期 / 自定义区间）；
+- **主题感知圆角** —— 三套主题分别匹配 linear 8/12/16px、claude 10/14/16px、notion 6/10/12px 圆角体系，切换主题时控件形态随之变化。
+
 ### 其他
 
 - **应用内自动更新** —— 启动自动检查 GitHub 新版本（侧边栏红点 + 右上角提示卡提醒），更新弹窗查看版本日志，确认后下载（实时进度）并静默安装到原目录，数据不受影响；
@@ -67,7 +74,7 @@
 ## 🛠 技术栈
 
 - **Electron + React + TypeScript**（electron-vite 构建）
-- **Tailwind CSS v4** + 手写轻量组件，CSS 变量主题系统
+- **Tailwind CSS v4** + 手写轻量组件（tailwind-merge 管理类名覆盖），CSS 变量主题系统
 - **Zustand** 状态管理，**dayjs** 日期处理
 - **marked + DOMPurify** Markdown 渲染，**docx** Word 导出
 - **electron-updater** 应用内自动更新（GitHub Releases 通道）
@@ -97,7 +104,8 @@ npm run dist       # 打包 Windows 安装包（release/，NSIS + 便携 zip）
 ## 📄 文档
 
 - [PRD.md](PRD.md) —— 完整产品需求文档（功能需求、验收标准、数据模型、决策记录）
-- [design/prototypes/](design/prototypes/) —— 界面主题设计原型
+- [design/V3-DESIGN-SPEC.md](design/V3-DESIGN-SPEC.md) —— V3 界面设计规范（设计令牌 / 字号 / 布局骨架 / 组件 / 页面级规则），后续所有界面开发依据
+- [design/prototypes/](design/prototypes/) —— 界面主题与布局设计原型
 
 ## 🗓 版本历史
 
@@ -107,6 +115,7 @@ npm run dist       # 打包 Windows 安装包（release/，NSIS + 便携 zip）
 - **V2.0**：产出增强——任务看板（拖拽换状态）、论文投稿跟踪、周报月报与工作总结自动生成、成果台账、汇报导出（Markdown + Word docx）；
 - **V2.1**：三套可切换界面主题（linear / claude / notion），首次启动引导页重设计。
 - **V2.2**：应用内检测更新——启动自动检查 GitHub 新版本（红点 + 提示卡提醒），更新弹窗含版本日志，一键下载并静默安装到原目录；设置-关于新增检查更新入口、版本号动态显示。
+- **V2.3**：界面重设计——13 个页面按 V3 设计规范重构（7 档字号、8pt 网格、组件化页头 / 统计卡 / 筛选条），侧边栏分组导航，主题感知圆角，筛选工具条双区结构 + 截止筛选预设化；修复部分页面筛选下拉框占满整行的布局缺陷。
 
 ## 📜 许可证
 
