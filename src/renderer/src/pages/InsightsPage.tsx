@@ -88,6 +88,22 @@ export default function InsightsPage() {
     // 以日期串为依赖：跨天使用时重算
   }, [today])
 
+  /** 月份标签位置：月份切换且与上一标签至少隔 2 列（30px > 标签文本宽）才渲染，防止相邻跨月标签重叠 */
+  const monthLabels = useMemo(() => {
+    const labels: Array<{ wi: number; text: string }> = []
+    let lastWi = -10
+    let prevMonth = -1
+    heatWeeks.forEach((week, wi) => {
+      const m = dayjs(week[0].date).month()
+      if (m !== prevMonth && wi - lastWi >= 2) {
+        labels.push({ wi, text: `${m + 1}月` })
+        lastWi = wi
+      }
+      prevMonth = m
+    })
+    return labels
+  }, [heatWeeks])
+
   // ---------- 投稿周期 ----------
   const subs = useMemo(() => submissionStats(source, today), [source, today])
 
@@ -163,7 +179,8 @@ export default function InsightsPage() {
           </h2>
           <span className="text-[11.5px] text-text-3">近 26 周 · 计数 = 当日完成任务 + 进展日志</span>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto">
+        {/* 不用滚动容器：26 列约 405px，880px 最小窗下本就放得下；overflow-auto 会连带把另一轴变为可滚动 */}
+        <div className="flex gap-1.5">
           {/* 星期标签列 */}
           <div className="flex shrink-0 flex-col gap-[3px] pt-[18px]">
             {WEEKDAY_LABELS.map((label, i) => (
@@ -173,16 +190,15 @@ export default function InsightsPage() {
             ))}
           </div>
           <div className="min-w-0 flex-1">
-            {/* 月份标签行 */}
+            {/* 月份标签行（带防重叠间距守卫，见 monthLabels） */}
             <div className="mb-1.5 flex h-3 gap-[3px]">
-              {heatWeeks.map((week, wi) => {
-                const m = dayjs(week[0].date).month()
-                const prev = wi > 0 ? dayjs(heatWeeks[wi - 1][0].date).month() : -1
+              {heatWeeks.map((_, wi) => {
+                const label = monthLabels.find((l) => l.wi === wi)
                 return (
                   <span key={wi} className="relative w-3 shrink-0">
-                    {m !== prev && (
+                    {label && (
                       <span className="absolute left-0 top-0 whitespace-nowrap text-[11.5px] leading-3 text-text-3">
-                        {m + 1}月
+                        {label.text}
                       </span>
                     )}
                   </span>
