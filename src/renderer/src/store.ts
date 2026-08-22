@@ -7,6 +7,7 @@ import {
   type AppSettings,
   type CollectionName,
   type Idea,
+  type LogTemplate,
   type Milestone,
   type MilestoneTypeDef,
   type Paper,
@@ -22,6 +23,7 @@ import {
   type VocabFileData,
   type Achievement,
   BUILTIN_ACHIEVEMENT_TYPES,
+  BUILTIN_LOG_TEMPLATES,
   BUILTIN_MILESTONE_TYPES,
   DEFAULT_REPORT_TEMPLATE,
   PAPER_DATE_LABELS,
@@ -84,7 +86,7 @@ interface AppState {
   deleteToolGroup: (id: string) => void
   reorderToolGroups: (orderedIds: string[]) => void
 
-  // ---------- 词汇库（标签 / 节点类型） ----------
+  // ---------- 词汇库（标签 / 节点类型 / 成果类型 / 日志模板） ----------
   addTag: (name: string) => TagDef
   renameTag: (id: string, name: string) => void
   deleteTag: (id: string) => void
@@ -94,6 +96,9 @@ interface AppState {
   addAchievementType: (name: string) => MilestoneTypeDef
   renameAchievementType: (id: string, name: string) => void
   deleteAchievementType: (id: string) => void
+  addLogTemplate: (name: string) => LogTemplate
+  updateLogTemplate: (id: string, patch: Partial<Pick<LogTemplate, 'name' | 'content'>>) => void
+  deleteLogTemplate: (id: string) => void
 
   // ---------- 论文（V2） ----------
   addPaper: (input: Partial<Paper> & { title: string }) => Paper
@@ -188,7 +193,12 @@ export const useStore = create<AppState>((set, get) => ({
   ideas: [],
   logs: [],
   tools: { groups: [], items: [] },
-  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES, achievementTypes: BUILTIN_ACHIEVEMENT_TYPES },
+  vocab: {
+    tags: [],
+    milestoneTypes: BUILTIN_MILESTONE_TYPES,
+    achievementTypes: BUILTIN_ACHIEVEMENT_TYPES,
+    logTemplates: BUILTIN_LOG_TEMPLATES
+  },
   papers: [],
   achievements: [],
   reports: [],
@@ -604,6 +614,41 @@ export const useStore = create<AppState>((set, get) => ({
     )
   },
 
+  // ---------- 日志模板 ----------
+  addLogTemplate: (name) => {
+    const vocab = get().vocab
+    const trimmed = name.trim()
+    const existing = vocab.logTemplates.find((t) => t.name === trimmed)
+    if (existing) return existing
+    const tpl: LogTemplate = { id: uid(), name: trimmed, builtin: false, content: '## 记录\n\n' }
+    set({ vocab: { ...vocab, logTemplates: [...vocab.logTemplates, tpl] } })
+    schedulePersist(get, 'vocab')
+    return tpl
+  },
+  updateLogTemplate: (id, patch) => {
+    const vocab = get().vocab
+    const next = patch.name?.trim()
+    if (next === '') return
+    set({
+      vocab: {
+        ...vocab,
+        logTemplates: vocab.logTemplates.map((t) =>
+          t.id === id ? { ...t, ...(next ? { name: next } : {}), content: patch.content ?? t.content } : t
+        )
+      }
+    })
+    schedulePersist(get, 'vocab')
+    // 模板是录入时的一次性预填，无外键引用，改名/改内容无需级联
+  },
+  deleteLogTemplate: (id) => {
+    const def = get().vocab.logTemplates.find((t) => t.id === id)
+    if (!def || def.builtin) return
+    const vocab = get().vocab
+    set({ vocab: { ...vocab, logTemplates: vocab.logTemplates.filter((t) => t.id !== id) } })
+    schedulePersist(get, 'vocab')
+    // 已用该模板写过的日志内容独立存储，不受影响
+  },
+
   // ---------- 论文（V2） ----------
   addPaper: (input) => {
     const now = nowISO()
@@ -859,7 +904,12 @@ export const EMPTY_COLLECTIONS: AllCollections = {
   ideas: [],
   logs: [],
   tools: { groups: [], items: [] },
-  vocab: { tags: [], milestoneTypes: BUILTIN_MILESTONE_TYPES, achievementTypes: BUILTIN_ACHIEVEMENT_TYPES },
+  vocab: {
+    tags: [],
+    milestoneTypes: BUILTIN_MILESTONE_TYPES,
+    achievementTypes: BUILTIN_ACHIEVEMENT_TYPES,
+    logTemplates: BUILTIN_LOG_TEMPLATES
+  },
   papers: [],
   achievements: [],
   reports: []

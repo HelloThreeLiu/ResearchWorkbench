@@ -24,14 +24,16 @@ import {
   EmptyState,
   Input,
   PageHeader,
+  Select,
   Textarea
 } from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
 import TaskEditModal from '@/components/TaskEditModal'
 import MilestoneEditModal from '@/components/MilestoneEditModal'
 import ProjectEditModal from '@/components/ProjectEditModal'
+import VocabManagerModal from '@/components/VocabManagerModal'
 import { PROJECT_STATUS_LABELS } from '@shared/types'
-import { useMilestoneTypeLabel } from '@/hooks/useVocab'
+import { useLogTemplates, useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { cn } from '@/lib/utils'
 import { countdownText, daysUntil, formatDate, friendlyDate, todayStr } from '@/lib/date'
 
@@ -474,9 +476,12 @@ function LogsTab({ projectId, logs }: { projectId: string; logs: ReturnType<type
   const addLog = useStore((s) => s.addLog)
   const updateLog = useStore((s) => s.updateLog)
   const deleteLog = useStore((s) => s.deleteLog)
+  const templates = useLogTemplates()
 
   const [content, setContent] = useState('')
   const [logDate, setLogDate] = useState(todayStr())
+  const [templateId, setTemplateId] = useState('')
+  const [vocabManageOpen, setVocabManageOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
 
@@ -485,6 +490,18 @@ function LogsTab({ projectId, logs }: { projectId: string; logs: ReturnType<type
     if (!trimmed) return
     addLog({ project_id: projectId, date: logDate || todayStr(), content: trimmed })
     setContent('')
+    setTemplateId('')
+  }
+
+  const pickTemplate = (id: string): void => {
+    if (id === '__manage__') {
+      setVocabManageOpen(true)
+      return
+    }
+    setTemplateId(id)
+    const tpl = templates.find((t) => t.id === id)
+    // 预填骨架（不锁定，可自由修改）；选择动作是显式的，直接替换当前草稿
+    if (tpl) setContent(tpl.content)
   }
 
   const startEdit = (id: string, current: string): void => {
@@ -501,9 +518,9 @@ function LogsTab({ projectId, logs }: { projectId: string; logs: ReturnType<type
 
   return (
     <div>
-      {/* 记一笔：默认今天，可补记历史日期 */}
+      {/* 记一笔：默认今天，可补记历史日期；模板预填 Markdown 骨架 */}
       <div className="rounded-xl border border-border bg-surface p-4">
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-[12.5px] font-semibold text-text-2">记一笔</span>
           <input
             type="date"
@@ -511,6 +528,20 @@ function LogsTab({ projectId, logs }: { projectId: string; logs: ReturnType<type
             onChange={(e) => setLogDate(e.target.value)}
             className="h-6.5 rounded border border-border bg-surface px-1.5 text-[11.5px] text-text-2"
           />
+          <span className="text-[11.5px] text-text-3">模板</span>
+          <Select
+            value={templateId}
+            onChange={(e) => pickTemplate(e.target.value)}
+            className="h-6.5 w-auto py-0 pl-1.5 pr-5 text-[11.5px] text-text-2"
+          >
+            <option value="">空白</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+            <option value="__manage__">⚙ 管理模板…</option>
+          </Select>
           <span className="text-[11.5px] text-text-3">支持 Markdown（列表 / 代码块 / 加粗）</span>
         </div>
         <Textarea
@@ -568,6 +599,12 @@ function LogsTab({ projectId, logs }: { projectId: string; logs: ReturnType<type
           ))}
         </div>
       )}
+
+      <VocabManagerModal
+        open={vocabManageOpen}
+        initialTab="logTemplates"
+        onClose={() => setVocabManageOpen(false)}
+      />
     </div>
   )
 }

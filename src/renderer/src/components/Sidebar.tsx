@@ -5,6 +5,7 @@ import { useUpdateStore } from '@/updateStore'
 import { cn } from '@/lib/utils'
 import {
   CalendarDays,
+  ChartColumn,
   ClipboardList,
   FileText,
   Flag,
@@ -41,7 +42,8 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { page: { name: 'papers' }, label: '论文投稿', icon: FileText },
       { page: { name: 'achievements' }, label: '成果台账', icon: Trophy },
-      { page: { name: 'reports' }, label: '汇报中心', icon: ClipboardList }
+      { page: { name: 'reports' }, label: '汇报中心', icon: ClipboardList },
+      { page: { name: 'insights' }, label: '回顾', icon: ChartColumn }
     ]
   }
 ]

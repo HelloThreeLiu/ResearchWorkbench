@@ -53,6 +53,11 @@ export function useAchievementTypes(): Array<{ id: string; name: string; builtin
   return vocab.achievementTypes
 }
 
+/** 日志模板（旧数据缺 logTemplates 字段时兜底为空数组，主进程加载时已补内置模板） */
+export function useLogTemplates(): Array<{ id: string; name: string; builtin: boolean; content: string }> {
+  return useStore((s) => s.vocab.logTemplates ?? [])
+}
+
 export function useMilestoneTypeLabel(): (type: string) => string {
   const types = useMilestoneTypes()
   return (type: string): string =>

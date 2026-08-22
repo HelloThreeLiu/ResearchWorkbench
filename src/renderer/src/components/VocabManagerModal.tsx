@@ -1,20 +1,20 @@
-// 词汇库管理弹窗：标签库 / 节点类型 / 成果类型（独立弹窗，多处入口复用）
-// 内置类型可改名不可删除；重命名标签会级联更新任务/灵感中的引用
+// 词汇库管理弹窗：标签库 / 节点类型 / 成果类型 / 日志模板（独立弹窗，多处入口复用）
+// 内置类型与内置模板可改名不可删除；重命名标签会级联更新任务/灵感中的引用
 import { useMemo, useState } from 'react'
-import { Flag, Pencil, Plus, Save, Tag, Trash2, Trophy } from 'lucide-react'
+import { Flag, LayoutTemplate, Pencil, Plus, Save, Tag, Trash2, Trophy } from 'lucide-react'
 import { useStore } from '@/store'
 import { achievementTypeIcon, milestoneTypeIcon } from '@/hooks/useVocab'
-import { Badge, Button, IconButton, Input, Modal } from '@/components/ui'
+import { Badge, Button, IconButton, Input, Modal, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 interface VocabManagerModalProps {
   open: boolean
   onClose: () => void
   /** 打开后默认聚焦的区域 */
-  initialTab?: 'tags' | 'types' | 'achievementTypes'
+  initialTab?: 'tags' | 'types' | 'achievementTypes' | 'logTemplates'
 }
 
-type TabKey = 'tags' | 'types' | 'achievementTypes'
+type TabKey = 'tags' | 'types' | 'achievementTypes' | 'logTemplates'
 
 export default function VocabManagerModal({ open, onClose, initialTab = 'tags' }: VocabManagerModalProps) {
   const [tab, setTab] = useState<TabKey>(initialTab)
@@ -22,7 +22,8 @@ export default function VocabManagerModal({ open, onClose, initialTab = 'tags' }
   const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
     { key: 'tags', label: '标签库', icon: <Tag size={13} /> },
     { key: 'types', label: '节点类型', icon: <Flag size={13} /> },
-    { key: 'achievementTypes', label: '成果类型', icon: <Trophy size={13} /> }
+    { key: 'achievementTypes', label: '成果类型', icon: <Trophy size={13} /> },
+    { key: 'logTemplates', label: '日志模板', icon: <LayoutTemplate size={13} /> }
   ]
 
   return (
@@ -46,6 +47,7 @@ export default function VocabManagerModal({ open, onClose, initialTab = 'tags' }
       {tab === 'tags' && <TagsPanel />}
       {tab === 'types' && <TypesPanel kind="milestone" />}
       {tab === 'achievementTypes' && <TypesPanel kind="achievement" />}
+      {tab === 'logTemplates' && <LogTemplatesPanel />}
     </Modal>
   )
 }
@@ -297,6 +299,117 @@ function TypesPanel({ kind }: { kind: 'milestone' | 'achievement' }) {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ---------- 日志模板 ----------
+function LogTemplatesPanel() {
+  const vocab = useStore((s) => s.vocab)
+  const addLogTemplate = useStore((s) => s.addLogTemplate)
+  const updateLogTemplate = useStore((s) => s.updateLogTemplate)
+  const deleteLogTemplate = useStore((s) => s.deleteLogTemplate)
+
+  const [newName, setNewName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editContent, setEditContent] = useState('')
+
+  const templates = vocab.logTemplates ?? []
+
+  const startEdit = (id: string, name: string, content: string): void => {
+    setEditingId(id)
+    setEditName(name)
+    setEditContent(content)
+  }
+
+  const saveEdit = (): void => {
+    if (editingId && editName.trim()) {
+      updateLogTemplate(editingId, { name: editName, content: editContent })
+    }
+    setEditingId(null)
+  }
+
+  return (
+    <div>
+      <p className="text-[11.5px] leading-relaxed text-text-3">
+        进展日志新建时可选择模板，将 Markdown 骨架预填进内容区；内置模板可改名、改内容，不可删除。
+        模板仅录入时预填一次，删除模板不影响已写好的日志。
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="新模板名称，如：组会汇报 / 文献综述"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newName.trim()) {
+              addLogTemplate(newName)
+              setNewName('')
+            }
+          }}
+        />
+        <Button
+          variant="primary"
+          disabled={!newName.trim()}
+          className="shrink-0"
+          onClick={() => {
+            addLogTemplate(newName)
+            setNewName('')
+          }}
+        >
+          <Plus size={13} /> 添加
+        </Button>
+      </div>
+      <div className="mt-3 flex max-h-80 flex-col divide-y divide-border overflow-y-auto rounded-xl border border-border">
+        {templates.map((t) =>
+          editingId === t.id ? (
+            <div key={t.id} className="flex flex-col gap-2 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Input
+                  autoFocus
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-7 w-40 shrink-0"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveEdit()
+                  }}
+                />
+                <span className="flex-1" />
+                <Button size="sm" onClick={() => setEditingId(null)}>
+                  取消
+                </Button>
+                <Button size="sm" variant="primary" disabled={!editName.trim()} onClick={saveEdit}>
+                  保存
+                </Button>
+              </div>
+              <Textarea
+                rows={6}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="font-mono text-[12.5px]"
+                placeholder="模板骨架（Markdown），如：## 目的…"
+              />
+            </div>
+          ) : (
+            <div key={t.id} className="flex items-center gap-2.5 px-3 py-2">
+              <LayoutTemplate size={14} className="shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate text-[12.5px]">{t.name}</span>
+              {t.builtin && <Badge color="gray">内置</Badge>}
+              <IconButton title="编辑名称与内容" onClick={() => startEdit(t.id, t.name, t.content)}>
+                <Pencil size={12.5} />
+              </IconButton>
+              <IconButton
+                title={t.builtin ? '内置模板不可删除' : '删除模板（不影响已写好的日志）'}
+                disabled={t.builtin}
+                className={cn(t.builtin && 'opacity-30', !t.builtin && 'hover:text-danger')}
+                onClick={() => !t.builtin && deleteLogTemplate(t.id)}
+              >
+                <Trash2 size={12.5} />
+              </IconButton>
+            </div>
+          )
+        )}
       </div>
     </div>
   )

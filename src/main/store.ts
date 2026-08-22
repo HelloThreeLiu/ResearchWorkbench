@@ -110,11 +110,12 @@ export function loadAll(): AllCollections {
         result.tools = { groups: t.groups ?? [], items: t.items ?? [] }
       } else if (name === 'vocab') {
         const v = raw as VocabFileData
-        // 旧目录无 vocab.json / 旧版本缺 achievementTypes 时兜底为默认词汇库
+        // 旧目录无 vocab.json / 旧版本缺 achievementTypes、logTemplates 时兜底为默认词汇库
         result.vocab = {
           tags: v.tags ?? [],
           milestoneTypes: v.milestoneTypes ?? DEFAULT_VOCAB.milestoneTypes,
-          achievementTypes: v.achievementTypes ?? DEFAULT_VOCAB.achievementTypes
+          achievementTypes: v.achievementTypes ?? DEFAULT_VOCAB.achievementTypes,
+          logTemplates: v.logTemplates ?? DEFAULT_VOCAB.logTemplates
         }
       } else {
         // 其余集合均为数组

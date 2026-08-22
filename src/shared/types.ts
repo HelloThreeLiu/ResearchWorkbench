@@ -190,10 +190,19 @@ export interface VocabTypeDef {
 /** @deprecated 兼容别名，等价于 VocabTypeDef */
 export type MilestoneTypeDef = VocabTypeDef
 
+/** 进展日志模板：录入时一次性预填的 Markdown 骨架（无外键，日志内容独立存储） */
+export interface LogTemplate {
+  id: string // 内置模板用固定 id，自定义模板用 uid
+  name: string
+  builtin: boolean
+  content: string // Markdown 骨架
+}
+
 export interface VocabFileData {
   tags: TagDef[]
   milestoneTypes: VocabTypeDef[]
   achievementTypes: VocabTypeDef[]
+  logTemplates: LogTemplate[]
 }
 
 export interface AppSettings {
@@ -318,11 +327,62 @@ export const BUILTIN_ACHIEVEMENT_TYPES: VocabTypeDef[] = [
   { id: 'other', name: '其他', builtin: true }
 ]
 
+/** 内置日志模板（固定 id，可改名改内容、不可删除） */
+export const BUILTIN_LOG_TEMPLATES: LogTemplate[] = [
+  {
+    id: 'experiment',
+    name: '实验记录',
+    builtin: true,
+    content: `## 目的
+
+（本次实验要验证什么）
+
+## 方法与参数
+
+（环境 / 数据 / 参数配置）
+
+## 结果
+
+（现象与数据）
+
+## 下一步`
+  },
+  {
+    id: 'literature',
+    name: '文献阅读',
+    builtin: true,
+    content: `## 文献信息
+
+（标题 / 作者 / 年份 / 来源）
+
+## 核心要点
+
+## 对我的启发
+
+## 待办`
+  },
+  {
+    id: 'debugging',
+    name: '调试排错',
+    builtin: true,
+    content: `## 现象
+
+（报错信息 / 异常表现）
+
+## 假设
+
+## 验证过程
+
+## 结论`
+  }
+]
+
 /** 词汇库缺省内容（旧数据目录无 vocab.json 时兜底） */
 export const DEFAULT_VOCAB: VocabFileData = {
   tags: [],
   milestoneTypes: BUILTIN_MILESTONE_TYPES,
-  achievementTypes: BUILTIN_ACHIEVEMENT_TYPES
+  achievementTypes: BUILTIN_ACHIEVEMENT_TYPES,
+  logTemplates: BUILTIN_LOG_TEMPLATES
 }
 
 /** 内置类型展示名兜底（未经词汇库解析时使用） */

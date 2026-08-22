@@ -31,6 +31,7 @@ import {
   periodOf,
   type Period
 } from '@/lib/report'
+import { copyText } from '@/lib/clipboard'
 import { dayjs, friendlyDateTime } from '@/lib/date'
 
 type DraftState =
@@ -359,18 +360,4 @@ export default function ReportsPage() {
       />
     </div>
   )
-}
-
-async function copyText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    // file:// 下剪贴板 API 不可用时的兜底
-    const ta = document.createElement('textarea')
-    ta.value = text
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-  }
 }

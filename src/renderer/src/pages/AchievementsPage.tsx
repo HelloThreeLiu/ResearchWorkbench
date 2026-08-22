@@ -1,43 +1,37 @@
 // 成果台账：论文/专利/获奖/项目/其他（可自定义）成果的时间线视图；按类型筛选；一键复制纯文本
 import { useMemo, useState } from 'react'
-import { Copy, Pencil, Plus, Trash2, Trophy } from 'lucide-react'
+import { Copy, Plus, Trophy } from 'lucide-react'
 import type { Achievement } from '@shared/types'
 import { useStore } from '@/store'
-import { useNav } from '@/nav'
-import { achievementTypeIcon, useAchievementTypes, useAchievementTypeLabel } from '@/hooks/useVocab'
+import { useAchievementTypes } from '@/hooks/useVocab'
 import {
-  Badge,
   Button,
   Chip,
   ConfirmDialog,
   EmptyState,
   Field,
-  IconButton,
   Input,
   Modal,
   PageHeader,
   Select,
   Textarea
 } from '@/components/ui'
+import AchievementTimeline from '@/components/AchievementTimeline'
 import VocabManagerModal from '@/components/VocabManagerModal'
-import { cn } from '@/lib/utils'
 import { achievementsToPlainText } from '@/lib/report'
+import { copyText } from '@/lib/clipboard'
 import { dayjs } from '@/lib/date'
 
 export default function AchievementsPage() {
   const achievements = useStore((s) => s.achievements)
   const projects = useStore((s) => s.projects)
-  const navigate = useNav((s) => s.navigate)
   const achievementTypes = useAchievementTypes()
-  const typeLabel = useAchievementTypeLabel()
 
   const [filterType, setFilterType] = useState<string>('all')
   const [editTarget, setEditTarget] = useState<Achievement | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Achievement | null>(null)
   const [copyMsg, setCopyMsg] = useState(false)
-
-  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   const filtered = useMemo(
     () =>
@@ -48,18 +42,6 @@ export default function AchievementsPage() {
   )
 
   const typeCount = (typeId: string): number => achievements.filter((a) => a.type === typeId).length
-
-  // 按年份分组的时间线
-  const byYear = useMemo(() => {
-    const map = new Map<string, Achievement[]>()
-    for (const a of filtered) {
-      const y = dayjs(a.date).format('YYYY')
-      const list = map.get(y) ?? []
-      list.push(a)
-      map.set(y, list)
-    }
-    return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
-  }, [filtered])
 
   const doCopy = async (): Promise<void> => {
     await copyText(achievementsToPlainText(achievements, projects, useStore.getState().vocab.achievementTypes))
@@ -115,77 +97,7 @@ export default function AchievementsPage() {
           hint={achievements.length === 0 ? '论文录用会自动生成草稿项；也可以手动登记获奖、专利等。' : '换个类型看看。'}
         />
       ) : (
-        <div className="mt-5 ml-1.5 flex flex-col gap-6">
-          {byYear.map(([year, list]) => (
-            <section key={year} className="relative border-l-2 border-border pl-6">
-              <div className="absolute top-0.5 -left-[6.5px] h-3 w-3 rounded-full border-[2.5px] border-bg bg-accent" />
-              <h2 className="mb-2.5 text-[17px] font-bold">{year} 年</h2>
-              <div className="flex flex-col gap-2.5">
-                {list.map((a) => {
-                  const Icon = achievementTypeIcon(a.type)
-                  const project = a.project_id ? projectMap.get(a.project_id) : undefined
-                  return (
-                    <div
-                      key={a.id}
-                      className={cn(
-                        'group flex flex-wrap items-start gap-3.5 rounded-xl border border-border bg-surface p-4',
-                        a.is_draft && 'border-dashed opacity-90'
-                      )}
-                    >
-                      {/* 类型图标 tile */}
-                      <span className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent [&_svg]:h-4 [&_svg]:w-4 [&_svg]:stroke-2">
-                        <Icon />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[13.5px] font-semibold">{a.title}</span>
-                          {a.is_draft && <Badge color="yellow">草稿</Badge>}
-                          {a.level && <Badge color="purple">{a.level}</Badge>}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-text-3">
-                          <span>{dayjs(a.date).format('M月D日')}</span>
-                          <span>· {typeLabel(a.type)}</span>
-                          {project && (
-                            <button
-                              className="flex items-center gap-1.5 hover:text-accent cursor-pointer"
-                              onClick={() => navigate({ name: 'project-detail', projectId: project.id, tab: 'overview' })}
-                            >
-                              ·
-                              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
-                              {project.name}
-                            </button>
-                          )}
-                        </div>
-                        {a.detail && <div className="mt-1.5 text-[12.5px] text-text-2">{a.detail}</div>}
-                        {a.evidence_path && (
-                          <button
-                            className="mt-1 text-[11.5px] text-text-3 hover:text-accent cursor-pointer"
-                            onClick={() => window.api.openPath(a.evidence_path)}
-                            title="打开证明材料"
-                          >
-                            📎 {a.evidence_path}
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <IconButton title="编辑" onClick={() => setEditTarget(a)}>
-                          <Pencil />
-                        </IconButton>
-                        <IconButton
-                          title="删除"
-                          className="hover:bg-danger-soft hover:text-danger"
-                          onClick={() => setDeleteTarget(a)}
-                        >
-                          <Trash2 />
-                        </IconButton>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+        <AchievementTimeline achievements={filtered} onEdit={setEditTarget} onDelete={setDeleteTarget} />
       )}
 
       <AchievementEditModal
@@ -352,17 +264,4 @@ function AchievementEditModal({
       />
     </Modal>
   )
-}
-
-async function copyText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text)
-  } catch {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-  }
 }
