@@ -1,6 +1,6 @@
 // 回顾：本地数据只读聚合页 —— 概览统计卡 / 活动热力图 / 投稿周期 / 项目投入分布 / 年度回顾
 // 本页不产生任何新数据，全部统计来自现有集合的实时聚合（PRD V2.4 5.1）
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CheckCircle2,
   Copy,
@@ -25,6 +25,7 @@ import { dayjs, todayStr, weekStart } from '@/lib/date'
 import {
   activityByDay,
   availableYears,
+  type DayActivity,
   heatLevel,
   type InsightsSource,
   overviewStats,
@@ -68,41 +69,6 @@ export default function InsightsPage() {
 
   // ---------- 活动热力图 ----------
   const activity = useMemo(() => activityByDay(source), [source])
-  const heatWeeks = useMemo(() => {
-    const now = dayjs()
-    // weekStart 返回 YYYY-MM-DD 字符串（周一为一周起点）
-    const startMonday = dayjs(weekStart(now.subtract(HEAT_WEEKS - 1, 'week').format('YYYY-MM-DD')))
-    const weeks: Array<Array<{ date: string; inFuture: boolean; isToday: boolean }>> = []
-    for (let w = 0; w < HEAT_WEEKS; w++) {
-      const days = Array.from({ length: 7 }, (_, d) => {
-        const date = startMonday.add(w * 7 + d, 'day')
-        return {
-          date: date.format('YYYY-MM-DD'),
-          inFuture: date.isAfter(now, 'day'),
-          isToday: date.isSame(now, 'day')
-        }
-      })
-      weeks.push(days)
-    }
-    return weeks
-    // 以日期串为依赖：跨天使用时重算
-  }, [today])
-
-  /** 月份标签位置：月份切换且与上一标签至少隔 2 列（30px > 标签文本宽）才渲染，防止相邻跨月标签重叠 */
-  const monthLabels = useMemo(() => {
-    const labels: Array<{ wi: number; text: string }> = []
-    let lastWi = -10
-    let prevMonth = -1
-    heatWeeks.forEach((week, wi) => {
-      const m = dayjs(week[0].date).month()
-      if (m !== prevMonth && wi - lastWi >= 2) {
-        labels.push({ wi, text: `${m + 1}月` })
-        lastWi = wi
-      }
-      prevMonth = m
-    })
-    return labels
-  }, [heatWeeks])
 
   // ---------- 投稿周期 ----------
   const subs = useMemo(() => submissionStats(source, today), [source, today])
@@ -170,75 +136,8 @@ export default function InsightsPage() {
         />
       </div>
 
-      {/* 活动热力图 */}
-      <section className="mt-4 rounded-xl border border-border bg-surface px-4.5 py-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-            <Flame size={15} className="shrink-0 text-accent" />
-            活动热力图
-          </h2>
-          <span className="text-[11.5px] text-text-3">近 26 周 · 计数 = 当日完成任务 + 进展日志</span>
-        </div>
-        {/* 不用滚动容器：26 列约 405px，880px 最小窗下本就放得下；overflow-auto 会连带把另一轴变为可滚动 */}
-        <div className="flex gap-1.5">
-          {/* 星期标签列 */}
-          <div className="flex shrink-0 flex-col gap-[3px] pt-[18px]">
-            {WEEKDAY_LABELS.map((label, i) => (
-              <span key={i} className="flex h-3 w-3.5 items-center justify-end text-[11.5px] leading-none text-text-3">
-                {label}
-              </span>
-            ))}
-          </div>
-          <div className="min-w-0 flex-1">
-            {/* 月份标签行（带防重叠间距守卫，见 monthLabels） */}
-            <div className="mb-1.5 flex h-3 gap-[3px]">
-              {heatWeeks.map((_, wi) => {
-                const label = monthLabels.find((l) => l.wi === wi)
-                return (
-                  <span key={wi} className="relative w-3 shrink-0">
-                    {label && (
-                      <span className="absolute left-0 top-0 whitespace-nowrap text-[11.5px] leading-3 text-text-3">
-                        {label.text}
-                      </span>
-                    )}
-                  </span>
-                )
-              })}
-            </div>
-            {/* 色块网格：列 = 周，行 = 周一至周日 */}
-            <div className="flex gap-[3px]">
-              {heatWeeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col gap-[3px]">
-                  {week.map((d) => {
-                    if (d.inFuture) return <span key={d.date} className="h-3 w-3 rounded-[3px]" />
-                    const act = activity.get(d.date)
-                    const total = (act?.tasks ?? 0) + (act?.logs ?? 0)
-                    return (
-                      <span
-                        key={d.date}
-                        title={`${dayjs(d.date).format('YYYY年M月D日')}：任务 ${act?.tasks ?? 0} · 日志 ${act?.logs ?? 0}`}
-                        className={cn(
-                          'h-3 w-3 rounded-[3px]',
-                          LEVEL_CLASSES[heatLevel(total)],
-                          d.isToday && 'ring-1 ring-accent'
-                        )}
-                      />
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* 图例 */}
-        <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[11.5px] text-text-3">
-          <span>少</span>
-          {LEVEL_CLASSES.map((c) => (
-            <span key={c} className={cn('h-3 w-3 rounded-[3px]', c)} />
-          ))}
-          <span>多</span>
-        </div>
-      </section>
+      {/* 活动热力图（悬浮自定义提示卡，见 ActivityHeatmap） */}
+      <ActivityHeatmap activity={activity} />
 
       {/* 投稿周期统计 */}
       <section className="mt-4 rounded-xl border border-border bg-surface px-4.5 py-4">
@@ -437,6 +336,178 @@ export default function InsightsPage() {
         )}
       </section>
     </div>
+  )
+}
+
+/** 活动热力图（独立子组件：悬浮提示的 hover 状态只引起本组件重渲染） */
+function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
+  const today = todayStr()
+  const [tip, setTip] = useState<{
+    x: number
+    y: number
+    below: boolean
+    date: string
+    tasks: number
+    logs: number
+  } | null>(null)
+
+  const heatWeeks = useMemo(() => {
+    const now = dayjs()
+    // weekStart 返回 YYYY-MM-DD 字符串（周一为一周起点）
+    const startMonday = dayjs(weekStart(now.subtract(HEAT_WEEKS - 1, 'week').format('YYYY-MM-DD')))
+    const weeks: Array<Array<{ date: string; inFuture: boolean; isToday: boolean }>> = []
+    for (let w = 0; w < HEAT_WEEKS; w++) {
+      const days = Array.from({ length: 7 }, (_, d) => {
+        const date = startMonday.add(w * 7 + d, 'day')
+        return {
+          date: date.format('YYYY-MM-DD'),
+          inFuture: date.isAfter(now, 'day'),
+          isToday: date.isSame(now, 'day')
+        }
+      })
+      weeks.push(days)
+    }
+    return weeks
+    // 以日期串为依赖：跨天使用时重算
+  }, [today])
+
+  /** 月份标签位置：月份切换且与上一标签至少隔 2 列（30px > 标签文本宽）才渲染，防止相邻跨月标签重叠 */
+  const monthLabels = useMemo(() => {
+    const labels: Array<{ wi: number; text: string }> = []
+    let lastWi = -10
+    let prevMonth = -1
+    heatWeeks.forEach((week, wi) => {
+      const m = dayjs(week[0].date).month()
+      if (m !== prevMonth && wi - lastWi >= 2) {
+        labels.push({ wi, text: `${m + 1}月` })
+        lastWi = wi
+      }
+      prevMonth = m
+    })
+    return labels
+  }, [heatWeeks])
+
+  // 页面滚动时提示卡会脱离格子，直接隐藏（capture 捕获 main 滚动容器的滚动事件）
+  useEffect(() => {
+    const hide = (): void => setTip(null)
+    window.addEventListener('scroll', hide, true)
+    return () => window.removeEventListener('scroll', hide, true)
+  }, [])
+
+  const showTip = (e: React.MouseEvent<HTMLSpanElement>, date: string): void => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const act = activity.get(date)
+    setTip({
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      below: rect.top < 64, // 顶部空间不足时翻转到格子下方
+      date,
+      tasks: act?.tasks ?? 0,
+      logs: act?.logs ?? 0
+    })
+  }
+
+  /** 提示卡日期：当年省略年份，跨年补「YYYY年」；ddd 为 zh-cn 的「周六」 */
+  const tipDate = (date: string): string => {
+    const d = dayjs(date)
+    const year = d.year() === dayjs().year() ? '' : `${d.year()}年`
+    return `${year}${d.format('M月D日 · ddd')}`
+  }
+
+  return (
+    <section className="mt-4 rounded-xl border border-border bg-surface px-4.5 py-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+          <Flame size={15} className="shrink-0 text-accent" />
+          活动热力图
+        </h2>
+        <span className="text-[11.5px] text-text-3">近 26 周 · 计数 = 当日完成任务 + 进展日志</span>
+      </div>
+      {/* 不用滚动容器：26 列约 405px，880px 最小窗下本就放得下；overflow-auto 会连带把另一轴变为可滚动 */}
+      <div className="flex gap-1.5" onMouseLeave={() => setTip(null)}>
+        {/* 星期标签列 */}
+        <div className="flex shrink-0 flex-col gap-[3px] pt-[18px]">
+          {WEEKDAY_LABELS.map((label, i) => (
+            <span key={i} className="flex h-3 w-3.5 items-center justify-end text-[11.5px] leading-none text-text-3">
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* 月份标签行（带防重叠间距守卫，见 monthLabels） */}
+          <div className="mb-1.5 flex h-3 gap-[3px]">
+            {heatWeeks.map((_, wi) => {
+              const label = monthLabels.find((l) => l.wi === wi)
+              return (
+                <span key={wi} className="relative w-3 shrink-0">
+                  {label && (
+                    <span className="absolute left-0 top-0 whitespace-nowrap text-[11.5px] leading-3 text-text-3">
+                      {label.text}
+                    </span>
+                  )}
+                </span>
+              )
+            })}
+          </div>
+          {/* 色块网格：列 = 周，行 = 周一至周日 */}
+          <div className="flex gap-[3px]">
+            {heatWeeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-[3px]">
+                {week.map((d) => {
+                  if (d.inFuture) return <span key={d.date} className="h-3 w-3 rounded-[3px]" />
+                  const act = activity.get(d.date)
+                  const total = (act?.tasks ?? 0) + (act?.logs ?? 0)
+                  return (
+                    <span
+                      key={d.date}
+                      onMouseEnter={(e) => showTip(e, d.date)}
+                      className={cn(
+                        'h-3 w-3 cursor-default rounded-[3px] transition-colors',
+                        LEVEL_CLASSES[heatLevel(total)],
+                        d.isToday && 'ring-1 ring-accent'
+                      )}
+                    />
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* 图例 */}
+      <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[11.5px] text-text-3">
+        <span>少</span>
+        {LEVEL_CLASSES.map((c) => (
+          <span key={c} className={cn('h-3 w-3 rounded-[3px]', c)} />
+        ))}
+        <span>多</span>
+      </div>
+
+      {/* 悬浮提示卡（fixed 定位避开容器裁剪；左右夹紧防溢出屏幕） */}
+      {tip && (
+        <div
+          className="pointer-events-none fixed z-40 rounded-lg border border-border bg-surface px-3 py-2 shadow-md"
+          style={{
+            left: Math.min(Math.max(tip.x, 100), window.innerWidth - 100),
+            top: tip.below ? tip.y + 10 : tip.y - 10,
+            transform: tip.below ? 'translateX(-50%)' : 'translateX(-50%) translateY(-100%)'
+          }}
+        >
+          <div className="whitespace-nowrap text-[12.5px] font-semibold">{tipDate(tip.date)}</div>
+          <div className="mt-0.5 whitespace-nowrap text-[11.5px] tabular-nums text-text-2">
+            {tip.tasks === 0 && tip.logs === 0 ? (
+              <span className="text-text-3">当日无活动记录</span>
+            ) : (
+              <>
+                任务 <span className="font-semibold text-text">{tip.tasks}</span>
+                <span className="mx-1 text-text-3">·</span>
+                日志 <span className="font-semibold text-text">{tip.logs}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
