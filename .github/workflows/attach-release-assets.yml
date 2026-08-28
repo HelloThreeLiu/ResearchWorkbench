@@ -32,11 +32,11 @@ jobs:
         run: npm ci
 
       - name: Build and package
-        env:
-          # CI 上检出 tag 时 electron-builder 会自动尝试发布并索要 GH_TOKEN，这里禁用，
-          # 产物统一由下方 gh release upload 上传到已存在的 Release。
-          EP_PUBLISH: never
-        run: npm run dist
+        # 不用 npm run dist：其内联的 electron-builder --win 在 CI 检出 tag 时会自动
+        # 尝试发布并索要 GH_TOKEN，这里显式 --publish never 关闭，上传交给下方步骤。
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
 
       - name: Upload assets to release
         shell: bash
