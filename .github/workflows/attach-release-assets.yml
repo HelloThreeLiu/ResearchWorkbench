@@ -1,0 +1,49 @@
+name: Attach release assets
+
+# 本地网络访问 uploads.github.com 不稳定（DNS 污染），产物上传改由 Actions 云端执行：
+# 在 runner 上按 tag 检出代码 → 打包 Windows 安装包 → 上传到已存在的 Release。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要附加产物的 Release tag'
+        required: true
+        default: 'v2.5.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and package
+        run: npm run dist
+
+      - name: Upload assets to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" \
+            release/*.exe \
+            release/*.exe.blockmap \
+            release/*.zip \
+            release/latest.yml \
+            --clobber --repo "$GITHUB_REPOSITORY"
