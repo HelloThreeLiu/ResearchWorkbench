@@ -8,7 +8,16 @@ import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
 import { todayStr } from '@/lib/date'
 
-export default function QuickCapture({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function QuickCapture({
+  open,
+  prefill = '',
+  onClose
+}: {
+  open: boolean
+  /** 预填文本（文献详情「记一条灵感」带 [文献] 标题前缀唤起） */
+  prefill?: string
+  onClose: () => void
+}) {
   const [content, setContent] = useState('')
   const [projectId, setProjectId] = useState<string>('')
   const [tags, setTags] = useState<string[]>([])
@@ -21,11 +30,13 @@ export default function QuickCapture({ open, onClose }: { open: boolean; onClose
 
   useEffect(() => {
     if (open) {
-      setContent('')
+      setContent(prefill)
       setTags([])
       // 延迟聚焦保证窗口前置后立即可输入
       setTimeout(() => textareaRef.current?.focus(), 30)
     }
+    // prefill 仅在唤起时生效，避免外部 store 变化覆盖正在输入的内容
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   if (!open) return null

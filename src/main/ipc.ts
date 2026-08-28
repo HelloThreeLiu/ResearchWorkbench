@@ -7,6 +7,7 @@ import {
   type AppSettings,
   type CollectionName,
   type BootstrapResult,
+  type ParseReferencesResult,
   type UpdateCheckResult
 } from '@shared/types'
 import {
@@ -20,6 +21,7 @@ import {
   updateSettings
 } from './store'
 import { exportToFile, markdownToDocx } from './exporter'
+import { parseReferencesFile } from './importer'
 import { setQuickCaptureShortcut } from './shortcuts'
 import { checkForUpdates, quitAndInstallNow, startDownloadUpdate } from './updater'
 
@@ -41,7 +43,8 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
             vocab: DEFAULT_VOCAB,
             papers: [],
             achievements: [],
-            reports: []
+            reports: [],
+            references: []
           },
       settings,
       meta: { lastWriteAt: getLastWriteAt() }
@@ -134,13 +137,27 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     }
   )
 
-  ipcMain.handle('dialog:pick-path', async (_e, kind: 'file' | 'directory'): Promise<string | null> => {
-    const result = await dialog.showOpenDialog({
-      properties: kind === 'directory' ? ['openDirectory'] : ['openFile']
-    })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return result.filePaths[0]
-  })
+  ipcMain.handle(
+    'dialog:pick-path',
+    async (
+      _e,
+      kind: 'file' | 'directory',
+      filters?: Electron.FileFilter[]
+    ): Promise<string | null> => {
+      const result = await dialog.showOpenDialog({
+        properties: kind === 'directory' ? ['openDirectory'] : ['openFile'],
+        filters
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      return result.filePaths[0]
+    }
+  )
+
+  // 文献导入：主进程读取并解析 .bib（BibTeX）/ .json（CSL JSON），大文件不阻塞渲染层
+  ipcMain.handle(
+    'import:parse-references',
+    (_e, filePath: string): ParseReferencesResult => parseReferencesFile(filePath)
+  )
 
   // 汇报导出：md 直写 / docx 由 Markdown 转换；返回保存路径（取消返回 null）
   ipcMain.handle(

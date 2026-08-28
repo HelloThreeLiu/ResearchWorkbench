@@ -87,7 +87,8 @@ function emptyCollections(): AllCollections {
     vocab: DEFAULT_VOCAB,
     papers: [],
     achievements: [],
-    reports: []
+    reports: [],
+    references: []
   }
 }
 

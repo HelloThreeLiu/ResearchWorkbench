@@ -75,6 +75,7 @@ export function useAllTags(): string[] {
   const vocab = useStore((s) => s.vocab)
   const tasks = useStore((s) => s.tasks)
   const ideas = useStore((s) => s.ideas)
+  const references = useStore((s) => s.references)
   return useMemo(() => {
     const seen = new Set<string>()
     const result: string[] = []
@@ -87,6 +88,7 @@ export function useAllTags(): string[] {
     vocab.tags.forEach((t) => push(t.name))
     tasks.forEach((t) => t.tags.forEach(push))
     ideas.forEach((i) => i.tags.forEach(push))
+    references.forEach((r) => r.tags.forEach(push))
     return result
-  }, [vocab, tasks, ideas])
+  }, [vocab, tasks, ideas, references])
 }

@@ -8,6 +8,7 @@ export type Page =
   | { name: 'tasks' }
   | { name: 'calendar'; focusDate?: string }
   | { name: 'milestones' }
+  | { name: 'references' }
   | { name: 'ideas' }
   | { name: 'tools' }
   | { name: 'papers' }

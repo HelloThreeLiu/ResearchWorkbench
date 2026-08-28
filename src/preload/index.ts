@@ -5,6 +5,7 @@ import type {
   AppSettings,
   BootstrapResult,
   CollectionName,
+  ParseReferencesResult,
   UpdateCheckResult,
   UpdateEvent
 } from '@shared/types'
@@ -24,8 +25,10 @@ const api = {
   pathExists: (target: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', target),
   updateSettings: (patch: Partial<AppSettings>): Promise<AppSettings> =>
     ipcRenderer.invoke('settings:update', patch),
-  pickPath: (kind: 'file' | 'directory'): Promise<string | null> =>
-    ipcRenderer.invoke('dialog:pick-path', kind),
+  pickPath: (kind: 'file' | 'directory', filters?: Electron.FileFilter[]): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:pick-path', kind, filters),
+  parseReferencesFile: (filePath: string): Promise<ParseReferencesResult> =>
+    ipcRenderer.invoke('import:parse-references', filePath),
   exportReport: (args: {
     defaultFileName: string
     markdown: string

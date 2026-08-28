@@ -1,9 +1,11 @@
 // 论文新建/编辑弹窗：投稿信息 + 重要日期 + 写作章节清单（章节任务与任务系统双向联动）
+// V2.5：新增「引用文献」只读摘要区（标记在文献详情中维护，此处核对与跳转）
 import { useEffect, useRef, useState } from 'react'
-import { Link2, Pencil, Plus, Trash2, Unlink } from 'lucide-react'
+import { FileText, Link2, Pencil, Plus, Trash2, Unlink } from 'lucide-react'
 import type { Paper, PaperStatus, PaperType } from '@shared/types'
 import { PAPER_DATE_LABELS, PAPER_STATUS_LABELS, PAPER_TYPE_LABELS } from '@shared/types'
 import { useStore } from '@/store'
+import { useNav } from '@/nav'
 import { Button, CheckBox, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { countdownText, daysUntil } from '@/lib/date'
@@ -17,6 +19,8 @@ interface PaperEditModalProps {
 export default function PaperEditModal({ open, onClose, paper }: PaperEditModalProps) {
   const projects = useStore((s) => s.projects)
   const tasks = useStore((s) => s.tasks)
+  const references = useStore((s) => s.references)
+  const navigate = useNav((s) => s.navigate)
   const addPaper = useStore((s) => s.addPaper)
   const updatePaper = useStore((s) => s.updatePaper)
   const addPaperSection = useStore((s) => s.addPaperSection)
@@ -98,6 +102,11 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
 
   const currentPaper = paper // 章节清单仅编辑已有论文时可用（新建保存后再管理）
   const linkableTasks = tasks.filter((t) => t.status !== 'done' || t.project_id === (currentPaper?.project_id ?? null))
+  const citedReferences = currentPaper
+    ? currentPaper.cited_reference_ids
+        .map((id) => references.find((r) => r.id === id))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined)
+    : []
 
   return (
     <Modal open={open} onClose={onClose} title={paper ? '编辑论文' : '新建论文'} width="max-w-xl">
@@ -329,6 +338,43 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
                 <Plus size={12} /> 添加章节
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* 引用文献只读摘要区（标记在文献详情中维护，点击跳转文献页） */}
+        {currentPaper && (
+          <div className="rounded-xl border border-border p-3.5">
+            <div className="mb-2 text-[12.5px] font-medium text-text-2">
+              引用文献
+              <span className="ml-1.5 text-[11px] font-normal text-text-3">
+                {citedReferences.length > 0
+                  ? `${citedReferences.length} 篇 · 投稿前核对相关工作引用`
+                  : '在文献条目详情中标记「已引用于」本论文后在此汇总'}
+              </span>
+            </div>
+            {citedReferences.length === 0 ? (
+              <div className="py-2 text-center text-[11.5px] text-text-3">暂未标记引用文献</div>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {citedReferences.map((ref) => (
+                  <button
+                    key={ref.id}
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-2/60 cursor-pointer"
+                    title="点击跳转文献页"
+                    onClick={() => {
+                      onClose()
+                      navigate({ name: 'references' })
+                    }}
+                  >
+                    <FileText size={11.5} className="shrink-0 text-text-3" />
+                    <span className="min-w-0 flex-1 truncate text-[13px]">{ref.title}</span>
+                    {ref.year !== null && (
+                      <span className="shrink-0 text-[11.5px] text-text-3 tabular-nums">{ref.year}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

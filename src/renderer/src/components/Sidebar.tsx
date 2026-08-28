@@ -4,6 +4,7 @@ import { useStore } from '@/store'
 import { useUpdateStore } from '@/updateStore'
 import { cn } from '@/lib/utils'
 import {
+  BookOpen,
   CalendarDays,
   ChartColumn,
   ClipboardList,
@@ -33,6 +34,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { page: { name: 'tasks' }, label: '任务', icon: ListTodo },
       { page: { name: 'calendar' }, label: '日历', icon: CalendarDays },
       { page: { name: 'milestones' }, label: '时间节点', icon: Flag },
+      { page: { name: 'references' }, label: '文献', icon: BookOpen },
       { page: { name: 'ideas' }, label: '灵感', icon: Lightbulb },
       { page: { name: 'tools' }, label: '工具箱', icon: Wrench }
     ]

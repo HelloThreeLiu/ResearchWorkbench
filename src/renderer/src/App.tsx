@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useUpdateStore } from '@/updateStore'
+import { useCaptureStore } from '@/captureStore'
 import Sidebar from '@/components/Sidebar'
 import QuickCapture from '@/components/QuickCapture'
 import UpdateModal from '@/components/UpdateModal'
@@ -13,6 +14,7 @@ import ProjectDetail from '@/pages/ProjectDetail'
 import TasksPage from '@/pages/TasksPage'
 import CalendarPage from '@/pages/CalendarPage'
 import MilestonesPage from '@/pages/MilestonesPage'
+import ReferencesPage from '@/pages/ReferencesPage'
 import IdeasPage from '@/pages/IdeasPage'
 import ToolboxPage from '@/pages/ToolboxPage'
 import PapersPage from '@/pages/PapersPage'
@@ -68,7 +70,10 @@ export default function App() {
   const needsOnboarding = useStore((s) => s.needsOnboarding)
   const bootstrap = useStore((s) => s.bootstrap)
   const page = useNav((s) => s.page)
-  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
+  const quickCaptureOpen = useCaptureStore((s) => s.open)
+  const quickCapturePrefill = useCaptureStore((s) => s.prefill)
+  const showQuickCapture = useCaptureStore((s) => s.show)
+  const hideQuickCapture = useCaptureStore((s) => s.hide)
 
   useThemeEffect()
   useExternalChangePolling()
@@ -78,8 +83,8 @@ export default function App() {
   }, [bootstrap])
 
   useEffect(() => {
-    return window.api.onQuickCapture(() => setQuickCaptureOpen(true))
-  }, [])
+    return window.api.onQuickCapture(() => showQuickCapture())
+  }, [showQuickCapture])
 
   // 应用更新：订阅主进程推送（启动静默检查/下载进度），并取一次当前版本号
   useEffect(() => {
@@ -114,6 +119,7 @@ export default function App() {
         {page.name === 'tasks' && <TasksPage />}
         {page.name === 'calendar' && <CalendarPage focusDate={page.focusDate} />}
         {page.name === 'milestones' && <MilestonesPage />}
+        {page.name === 'references' && <ReferencesPage />}
         {page.name === 'ideas' && <IdeasPage />}
         {page.name === 'tools' && <ToolboxPage />}
         {page.name === 'papers' && <PapersPage />}
@@ -122,7 +128,7 @@ export default function App() {
         {page.name === 'insights' && <InsightsPage />}
         {page.name === 'settings' && <SettingsPage />}
       </main>
-      <QuickCapture open={quickCaptureOpen} onClose={() => setQuickCaptureOpen(false)} />
+      <QuickCapture open={quickCaptureOpen} prefill={quickCapturePrefill} onClose={hideQuickCapture} />
       <UpdateNotice />
       <UpdateModal />
     </div>

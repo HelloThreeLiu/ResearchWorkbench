@@ -139,6 +139,7 @@ export interface Paper {
   project_id: string | null
   collaborators: string
   note: string
+  cited_reference_ids: string[] // 已引用的文献 id 列表（投稿前核对相关工作引用，决策 D19）
   sections: PaperSection[]
   created_at: string
   updated_at: string
@@ -172,6 +173,73 @@ export interface Report {
   content: string // Markdown
   generated_at: string
   updated_at: string
+}
+
+// ---------- V2.5 实体（文献线索层） ----------
+
+/** 阅读状态固定四态，不进词汇库不可自定义（决策 D17：状态语义全局统一才有筛选价值） */
+export type ReadingStatus = 'unread' | 'reading' | 'read' | 'skipped'
+
+/** 条目类型与 BibTeX/CSL 类型一一对应（misc 含 @online/@electronic 等别名） */
+export type ReferenceEntryType =
+  | 'article'
+  | 'inproceedings'
+  | 'book'
+  | 'phdthesis'
+  | 'mastersthesis'
+  | 'techreport'
+  | 'misc'
+
+/** 文献条目：管理「文献与科研进度的关系」，不管理文献原文（PDF 交给 Zotero/系统阅读器） */
+export interface Reference {
+  id: string
+  citekey: string // BibTeX 引用键（去重与 BibTeX 复制的依据，可空）
+  entry_type: ReferenceEntryType
+  title: string
+  authors: string[] // 原样保存（「姓, 名」或「名 姓」），引用格式化时再解析
+  year: number | null
+  venue: string // 期刊/会议名（图书为出版社、学位论文为学校的兜底映射）
+  volume: string
+  issue: string
+  pages: string
+  doi: string
+  url: string
+  tags: string[]
+  status: ReadingStatus
+  project_id: string | null
+  note: string // Markdown
+  pdf_path: string | null
+  created_at: string // ISO
+  updated_at: string
+}
+
+/** 导入解析出的条目草稿（主进程返回，渲染层补 id/时间戳/状态后入库） */
+export interface ReferenceDraft {
+  citekey: string
+  entry_type: ReferenceEntryType
+  title: string
+  authors: string[]
+  year: number | null
+  venue: string
+  volume: string
+  issue: string
+  pages: string
+  doi: string
+  url: string
+  tags: string[]
+}
+
+/** 单条解析失败（含原因，绝不静默丢弃） */
+export interface ImportFailure {
+  key: string // 条目 citekey 或在文件中的序号
+  reason: string
+}
+
+/** import:parse-references IPC 返回值 */
+export interface ParseReferencesResult {
+  entries: ReferenceDraft[]
+  failures: ImportFailure[]
+  notes: string[] // 整体提示（如含 crossref 的条目按可解析字段导入）
 }
 
 /** 词汇库：用户可管理的标签集合与枚举类型集合（内置类型 builtin=true 不可删除） */
@@ -243,6 +311,7 @@ export type CollectionName =
   | 'papers'
   | 'achievements'
   | 'reports'
+  | 'references'
 
 export interface AllCollections {
   projects: Project[]
@@ -255,6 +324,7 @@ export interface AllCollections {
   papers: Paper[]
   achievements: Achievement[]
   reports: Report[]
+  references: Reference[]
 }
 
 export interface BootstrapResult {
@@ -303,7 +373,8 @@ export const COLLECTION_FILES: Record<CollectionName, string> = {
   vocab: 'vocab.json',
   papers: 'papers.json',
   achievements: 'achievements.json',
-  reports: 'reports.json'
+  reports: 'reports.json',
+  references: 'references.json'
 }
 
 export const DEFAULT_REMIND_DAYS = [7, 3, 1]
@@ -456,6 +527,25 @@ export const PAPER_DATE_LABELS: Record<keyof Paper['dates'], string> = {
   submission: '投稿',
   result: '结果通知',
   camera_ready: 'Camera-ready'
+}
+
+// ---------- V2.5 文献标签 ----------
+
+export const READING_STATUS_LABELS: Record<ReadingStatus, string> = {
+  unread: '待读',
+  reading: '在读',
+  read: '已读',
+  skipped: '略读'
+}
+
+export const REFERENCE_ENTRY_TYPE_LABELS: Record<ReferenceEntryType, string> = {
+  article: '期刊论文',
+  inproceedings: '会议论文',
+  book: '图书',
+  phdthesis: '博士论文',
+  mastersthesis: '硕士论文',
+  techreport: '技术报告',
+  misc: '其他'
 }
 
 /** 内置成果类型展示名兜底（未经词汇库解析时使用） */

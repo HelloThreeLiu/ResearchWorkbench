@@ -14,6 +14,7 @@ import {
   type PaperSection,
   type ProgressLog,
   type Project,
+  type Reference,
   type Report,
   type TagDef,
   type Task,
@@ -50,6 +51,7 @@ interface AppState {
   papers: Paper[]
   achievements: Achievement[]
   reports: Report[]
+  references: Reference[]
 
   bootstrap: () => Promise<void>
   chooseDataDir: () => Promise<boolean>
@@ -110,6 +112,16 @@ interface AppState {
   deletePaperSection: (paperId: string, sectionId: string) => void
   linkPaperSectionTask: (paperId: string, sectionId: string, taskId: string | null) => void
 
+  // ---------- 文献（V2.5） ----------
+  addReference: (input: Partial<Reference> & { title: string }) => Reference
+  updateReference: (id: string, patch: Partial<Reference>) => void
+  deleteReference: (id: string) => void
+  /** 批量导入：新增草稿 + 可选的「重复条目填充本地空缺字段」更新，单次变更合并落盘 */
+  importReferences: (
+    entries: Array<Partial<Reference> & { title: string }>,
+    fillUpdates: Array<{ id: string; patch: Partial<Reference> }>
+  ) => void
+
   // ---------- 成果台账（V2） ----------
   addAchievement: (input: Partial<Achievement> & { title: string }) => Achievement
   updateAchievement: (id: string, patch: Partial<Achievement>) => void
@@ -150,7 +162,16 @@ function schedulePersist(
 
 /** 数组集合的通用变更：updater 返回新数组后写回 state 并调度落盘 */
 function mutateArray<
-  K extends 'projects' | 'tasks' | 'milestones' | 'ideas' | 'logs' | 'papers' | 'achievements' | 'reports'
+  K extends
+    | 'projects'
+    | 'tasks'
+    | 'milestones'
+    | 'ideas'
+    | 'logs'
+    | 'papers'
+    | 'achievements'
+    | 'reports'
+    | 'references'
 >(get: () => AppState, set: (partial: Partial<AppState>) => void, name: K, updater: (arr: AppState[K]) => AppState[K]): void {
   const next = updater(get()[name])
   set({ [name]: next } as unknown as Partial<AppState>)
@@ -202,6 +223,7 @@ export const useStore = create<AppState>((set, get) => ({
   papers: [],
   achievements: [],
   reports: [],
+  references: [],
 
   bootstrap: async () => {
     const result = await window.api.bootstrap()
@@ -286,6 +308,9 @@ export const useStore = create<AppState>((set, get) => ({
     )
     mutateArray(get, set, 'papers', (arr) =>
       arr.map((p) => (p.project_id === id ? { ...p, project_id: null } : p))
+    )
+    mutateArray(get, set, 'references', (arr) =>
+      arr.map((r) => (r.project_id === id ? { ...r, project_id: null } : r))
     )
   },
 
@@ -526,13 +551,16 @@ export const useStore = create<AppState>((set, get) => ({
     if (!old || old.name === trimmed) return
     set({ vocab: { ...vocab, tags: vocab.tags.map((t) => (t.id === id ? { ...t, name: trimmed } : t)) } })
     schedulePersist(get, 'vocab')
-    // 级联：同步更新任务与灵感中引用的该标签
+    // 级联：同步更新任务、灵感与文献中引用的该标签
     const replace = (tags: string[]): string[] => tags.map((n) => (n === old.name ? trimmed : n))
     mutateArray(get, set, 'tasks', (arr) =>
       arr.map((t) => (t.tags.includes(old.name) ? { ...t, tags: replace(t.tags), updated_at: nowISO() } : t))
     )
     mutateArray(get, set, 'ideas', (arr) =>
       arr.map((i) => (i.tags.includes(old.name) ? { ...i, tags: replace(i.tags), updated_at: nowISO() } : i))
+    )
+    mutateArray(get, set, 'references', (arr) =>
+      arr.map((r) => (r.tags.includes(old.name) ? { ...r, tags: replace(r.tags), updated_at: nowISO() } : r))
     )
   },
   deleteTag: (id) => {
@@ -664,6 +692,7 @@ export const useStore = create<AppState>((set, get) => ({
       project_id: input.project_id ?? null,
       collaborators: input.collaborators ?? '',
       note: input.note ?? '',
+      cited_reference_ids: input.cited_reference_ids ?? [],
       sections: input.sections ?? [],
       created_at: now,
       updated_at: now
@@ -794,6 +823,43 @@ export const useStore = create<AppState>((set, get) => ({
     )
   },
 
+  // ---------- 文献（V2.5） ----------
+  addReference: (input) => {
+    const ref = buildReference(input, nowISO())
+    mutateArray(get, set, 'references', (arr) => [ref, ...arr])
+    return ref
+  },
+  updateReference: (id, patch) => {
+    mutateArray(get, set, 'references', (arr) =>
+      arr.map((r) => (r.id === id ? { ...r, ...patch, updated_at: nowISO() } : r))
+    )
+  },
+  deleteReference: (id) => {
+    mutateArray(get, set, 'references', (arr) => arr.filter((r) => r.id !== id))
+    // 级联：清理论文「引用文献」标记中的该条目
+    mutateArray(get, set, 'papers', (arr) =>
+      arr.map((p) =>
+        p.cited_reference_ids.includes(id)
+          ? {
+              ...p,
+              cited_reference_ids: p.cited_reference_ids.filter((x) => x !== id),
+              updated_at: nowISO()
+            }
+          : p
+      )
+    )
+  },
+  importReferences: (entries, fillUpdates) => {
+    // 同批条目共用一个时间戳：默认按创建时间倒序时保持文件内顺序（稳定排序）
+    const now = nowISO()
+    const newRefs = entries.map((e) => buildReference(e, now))
+    const fillMap = new Map(fillUpdates.map((u) => [u.id, u.patch]))
+    mutateArray(get, set, 'references', (arr) => [
+      ...newRefs,
+      ...arr.map((r) => (fillMap.has(r.id) ? { ...r, ...fillMap.get(r.id)!, updated_at: now } : r))
+    ])
+  },
+
   // ---------- 成果台账（V2） ----------
   addAchievement: (input) => {
     const now = nowISO()
@@ -839,6 +905,31 @@ export const useStore = create<AppState>((set, get) => ({
     mutateArray(get, set, 'reports', (arr) => arr.filter((r) => r.id !== id))
   }
 }))
+
+/** 由输入补全文献条目的缺省字段（新建与批量导入共用） */
+function buildReference(input: Partial<Reference> & { title: string }, now: string): Reference {
+  return {
+    id: uid(),
+    citekey: input.citekey ?? '',
+    entry_type: input.entry_type ?? 'misc',
+    title: input.title,
+    authors: input.authors ?? [],
+    year: input.year ?? null,
+    venue: input.venue ?? '',
+    volume: input.volume ?? '',
+    issue: input.issue ?? '',
+    pages: input.pages ?? '',
+    doi: input.doi ?? '',
+    url: input.url ?? '',
+    tags: input.tags ?? [],
+    status: input.status ?? 'unread',
+    project_id: input.project_id ?? null,
+    note: input.note ?? '',
+    pdf_path: input.pdf_path ?? null,
+    created_at: now,
+    updated_at: now
+  }
+}
 
 /** 论文重要日期 ↔ 时间节点自动同步（幂等）：有日期则建/改，无日期则删 */
 function syncPaperMilestones(
@@ -912,5 +1003,6 @@ export const EMPTY_COLLECTIONS: AllCollections = {
   },
   papers: [],
   achievements: [],
-  reports: []
+  reports: [],
+  references: []
 }
