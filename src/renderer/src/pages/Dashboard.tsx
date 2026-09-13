@@ -33,9 +33,12 @@ export default function Dashboard() {
   const navigate = useNav((s) => s.navigate)
 
   const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [editTaskId, setEditTaskId] = useState<string | null>(null)
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false)
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
+
+  const editTask = editTaskId ? tasks.find((t) => t.id === editTaskId) : undefined
 
   // 今日到期 + 逾期（未完成），逾期置顶
   const todayTasks = useMemo(() => {
@@ -212,6 +215,7 @@ export default function Dashboard() {
                       task={t}
                       project={t.project_id ? projectMap.get(t.project_id) : undefined}
                       onNavigateToProject={(id) => navigate({ name: 'project-detail', projectId: id, tab: 'overview' })}
+                      onEdit={() => setEditTaskId(t.id)}
                     />
                   </div>
                 )
@@ -345,7 +349,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <TaskEditModal open={taskModalOpen} onClose={() => setTaskModalOpen(false)} />
+      <TaskEditModal
+        open={taskModalOpen || editTask !== undefined}
+        task={editTask}
+        onClose={() => {
+          setTaskModalOpen(false)
+          setEditTaskId(null)
+        }}
+      />
       <MilestoneEditModal open={milestoneModalOpen} onClose={() => setMilestoneModalOpen(false)} />
     </div>
   )

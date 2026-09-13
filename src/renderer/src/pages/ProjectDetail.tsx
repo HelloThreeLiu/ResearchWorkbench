@@ -451,6 +451,7 @@ function TasksTab({ projectId, tasks }: { projectId: string; tasks: ReturnType<t
             <div key={t.id} onDoubleClick={() => setEditTaskId(t.id)}>
               <TaskRow
                 task={t}
+                onEdit={() => setEditTaskId(t.id)}
                 onDelete={() => useStore.getState().deleteTask(t.id)}
               />
             </div>

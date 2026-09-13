@@ -1,7 +1,7 @@
 // 任务行（V3 §5.6，今日概览与任务列表共用）：
 // 勾选完成、行内改截止日期/优先级、逾期/今日到期用 DueChip 语义色
 import { useState } from 'react'
-import { Flag, Trash2 } from 'lucide-react'
+import { Flag, Pencil, Trash2 } from 'lucide-react'
 import type { Project, Task } from '@shared/types'
 import { PRIORITY_LABELS } from '@shared/types'
 import { useStore } from '@/store'
@@ -25,11 +25,12 @@ interface TaskRowProps {
   task: Task
   project?: Project
   onNavigateToProject?: (projectId: string) => void
+  onEdit?: () => void
   onDelete?: () => void
   compact?: boolean
 }
 
-export default function TaskRow({ task, project, onNavigateToProject, onDelete, compact }: TaskRowProps) {
+export default function TaskRow({ task, project, onNavigateToProject, onEdit, onDelete, compact }: TaskRowProps) {
   const updateTask = useStore((s) => s.updateTask)
   const [editingDue, setEditingDue] = useState(false)
 
@@ -115,6 +116,15 @@ export default function TaskRow({ task, project, onNavigateToProject, onDelete, 
         </button>
       )}
 
+      {onEdit && (
+        <IconButton
+          title="编辑任务"
+          className="opacity-0 group-hover:opacity-100"
+          onClick={onEdit}
+        >
+          <Pencil size={13.5} />
+        </IconButton>
+      )}
       {onDelete && (
         <IconButton
           title="删除任务"

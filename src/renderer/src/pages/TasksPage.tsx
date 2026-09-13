@@ -1,6 +1,6 @@
 // 全局任务（V3 §5.5）：按项目分组，列表/看板双视图；FilterBar 双区筛选（Chips 流动 + 维度筛选锚定右侧）
 import { useMemo, useState } from 'react'
-import { Columns3, ListTodo, Plus } from 'lucide-react'
+import { Columns3, ListTodo, Pencil, Plus } from 'lucide-react'
 import dayjs from 'dayjs'
 import type { Priority, Task } from '@shared/types'
 import { TASK_STATUS_LABELS } from '@shared/types'
@@ -85,6 +85,7 @@ export default function TasksPage() {
   const allTags = useAllTags()
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [editTaskId, setEditTaskId] = useState<string | null>(null)
   const [filterProject, setFilterProject] = useState('all')
   const [filterStatus, setFilterStatus] = useState<StatusFilter>('undone')
   const [filterTag, setFilterTag] = useState('all')
@@ -119,6 +120,8 @@ export default function TasksPage() {
     filterTag !== 'all' ||
     filterDueFrom !== '' ||
     filterDueTo !== ''
+
+  const editTask = editTaskId ? tasks.find((t) => t.id === editTaskId) : undefined
 
   const countOf = (f: StatusFilter): number =>
     tasks.filter((t) =>
@@ -307,6 +310,7 @@ export default function TasksPage() {
                       <TaskRow
                         key={t.id}
                         task={t}
+                        onEdit={() => setEditTaskId(t.id)}
                         onDelete={() => useStore.getState().deleteTask(t.id)}
                       />
                     ))}
@@ -325,10 +329,18 @@ export default function TasksPage() {
           setDragTaskId={setDragTaskId}
           dragOverCol={dragOverCol}
           setDragOverCol={setDragOverCol}
+          onEditTask={(t) => setEditTaskId(t.id)}
         />
       )}
 
-      <TaskEditModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <TaskEditModal
+        open={createOpen || editTask !== undefined}
+        task={editTask}
+        onClose={() => {
+          setCreateOpen(false)
+          setEditTaskId(null)
+        }}
+      />
     </div>
   )
 }
@@ -340,7 +352,8 @@ function KanbanBoard({
   dragTaskId,
   setDragTaskId,
   dragOverCol,
-  setDragOverCol
+  setDragOverCol,
+  onEditTask
 }: {
   tasks: Task[]
   projects: Array<{ id: string; name: string; color: string }>
@@ -348,6 +361,7 @@ function KanbanBoard({
   setDragTaskId: (id: string | null) => void
   dragOverCol: Task['status'] | null
   setDragOverCol: (col: Task['status'] | null) => void
+  onEditTask: (task: Task) => void
 }) {
   const updateTask = useStore((s) => s.updateTask)
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
@@ -417,14 +431,22 @@ function KanbanBoard({
                     setDragTaskId(null)
                     setDragOverCol(null)
                   }}
+                  onDoubleClick={() => onEditTask(t)}
                   className={cn(
-                    'cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm transition-all',
+                    'group relative cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm transition-all',
                     'hover:border-accent/50 hover:shadow',
                     dragTaskId === t.id && 'opacity-40',
                     t.status === 'done' && 'opacity-80'
                   )}
                 >
-                  <div className={cn('text-[13px] leading-snug', t.status === 'done' && 'text-text-3 line-through')}>
+                  <button
+                    title="编辑任务"
+                    onClick={() => onEditTask(t)}
+                    className="absolute right-2 top-2 cursor-pointer rounded p-1 text-text-3 opacity-0 transition-opacity hover:bg-surface-2 hover:text-accent group-hover:opacity-100"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <div className={cn('pr-7 text-[13px] leading-snug', t.status === 'done' && 'text-text-3 line-through')}>
                     {t.title}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-text-3">
