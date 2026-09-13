@@ -1,6 +1,6 @@
 // 论文投稿（V3 §5.10）：状态流转链 + 按状态分组列表，两步内完成状态变更
 import { useMemo, useState } from 'react'
-import { FilePlus2, Pencil, Send, Trash2 } from 'lucide-react'
+import { ClipboardPaste, FilePlus2, Pencil, Send, Trash2 } from 'lucide-react'
 import type { Paper, PaperStatus } from '@shared/types'
 import {
   PAPER_DATE_LABELS,
@@ -20,6 +20,7 @@ import {
   Select
 } from '@/components/ui'
 import PaperEditModal from '@/components/PaperEditModal'
+import PaperQuickImportModal from '@/components/PaperQuickImportModal'
 import { countdownText, daysUntil } from '@/lib/date'
 
 const STATUS_COLORS: Partial<Record<PaperStatus, 'yellow' | 'blue' | 'green' | 'red' | 'gray' | 'purple'>> = {
@@ -45,6 +46,7 @@ export default function PapersPage() {
   const navigate = useNav((s) => s.navigate)
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [quickOpen, setQuickOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Paper | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Paper | null>(null)
 
@@ -100,9 +102,17 @@ export default function PapersPage() {
           </span>
         }
         actions={
-          <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            <FilePlus2 /> 新建论文
-          </Button>
+          <>
+            <Button
+              onClick={() => setQuickOpen(true)}
+              title="粘贴引文列表，批量记录已发表论文（无需填写投稿过程）"
+            >
+              <ClipboardPaste /> 快速记录
+            </Button>
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              <FilePlus2 /> 新建论文
+            </Button>
+          </>
         }
       />
 
@@ -110,7 +120,12 @@ export default function PapersPage() {
         <EmptyState
           icon={<Send />}
           title="还没有登记论文"
-          hint="把在写/在投的论文登记进来，重要日期自动进时间节点，录用自动进成果台账。"
+          hint="把在写/在投的论文登记进来，重要日期自动进时间节点，录用自动进成果台账；只想记录已发表的，用快速记录粘贴导入。"
+          action={
+            <Button variant="soft" onClick={() => setQuickOpen(true)}>
+              <ClipboardPaste /> 快速记录已发表
+            </Button>
+          }
         />
       ) : (
         <div className="mt-5 flex flex-col gap-5">
@@ -212,6 +227,7 @@ export default function PapersPage() {
         </div>
       )}
 
+      <PaperQuickImportModal open={quickOpen} onClose={() => setQuickOpen(false)} />
       <PaperEditModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <PaperEditModal
         key={editTarget?.id}

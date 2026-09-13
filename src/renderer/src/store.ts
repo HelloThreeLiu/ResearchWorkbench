@@ -699,6 +699,10 @@ export const useStore = create<AppState>((set, get) => ({
     }
     mutateArray(get, set, 'papers', (arr) => [...arr, paper])
     syncPaperMilestones(get, set, paper)
+    // 直接以「已录用」创建（快速导入已发表论文）同样进入成果台账草稿
+    if (paper.status === 'accepted') {
+      ensurePaperAchievementDraft(get, set, paper)
+    }
     return paper
   },
   updatePaper: (id, patch) => {
@@ -715,26 +719,7 @@ export const useStore = create<AppState>((set, get) => ({
     syncPaperMilestones(get, set, next)
     // 录用 → 自动进入成果台账草稿项
     if (patch.status === 'accepted' && prev.status !== 'accepted') {
-      const exists = get().achievements.find(
-        (a) => a.type === 'paper' && a.title === next.title && a.is_draft
-      )
-      if (!exists) {
-        const now = nowISO()
-        const achievement: Achievement = {
-          id: uid(),
-          type: 'paper',
-          title: next.title,
-          date: todayStr(),
-          level: '',
-          project_id: next.project_id,
-          detail: next.venue ? `发表于 ${next.venue}` : '',
-          evidence_path: '',
-          is_draft: true,
-          created_at: now,
-          updated_at: now
-        }
-        mutateArray(get, set, 'achievements', (arr) => [...arr, achievement])
-      }
+      ensurePaperAchievementDraft(get, set, next)
     }
   },
   deletePaper: (id) => {
@@ -929,6 +914,33 @@ function buildReference(input: Partial<Reference> & { title: string }, now: stri
     created_at: now,
     updated_at: now
   }
+}
+
+/** 录用论文 → 成果台账草稿（幂等）：同标题存在未确认的论文类草稿时跳过 */
+function ensurePaperAchievementDraft(
+  get: () => AppState,
+  set: (partial: Partial<AppState>) => void,
+  paper: Paper
+): void {
+  const exists = get().achievements.find(
+    (a) => a.type === 'paper' && a.title === paper.title && a.is_draft
+  )
+  if (exists) return
+  const now = nowISO()
+  const achievement: Achievement = {
+    id: uid(),
+    type: 'paper',
+    title: paper.title,
+    date: todayStr(),
+    level: '',
+    project_id: paper.project_id,
+    detail: paper.venue ? `发表于 ${paper.venue}` : '',
+    evidence_path: '',
+    is_draft: true,
+    created_at: now,
+    updated_at: now
+  }
+  mutateArray(get, set, 'achievements', (arr) => [...arr, achievement])
 }
 
 /** 论文重要日期 ↔ 时间节点自动同步（幂等）：有日期则建/改，无日期则删 */
