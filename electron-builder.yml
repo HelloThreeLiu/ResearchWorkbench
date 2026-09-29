@@ -1,5 +1,8 @@
 appId: com.gezhi.workbench
-productName: 格致科研工作台
+# 产物与可执行文件一律用 ASCII 名称，避免中文路径在 CI / 签名 / 更新器等环节引发字符问题；
+# 用户可见的中文显示名由 nsis.shortcutName / uninstallDisplayName 及窗口标题承担
+productName: Gezhi Workbench
+executableName: Gezhi-Workbench
 directories:
   buildResources: build
   output: release
@@ -20,6 +23,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   shortcutName: 格致科研工作台
+  uninstallDisplayName: 格致科研工作台
 electronLanguages:
   - zh-CN
   - en-US
