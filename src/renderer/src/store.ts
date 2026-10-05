@@ -7,6 +7,7 @@ import {
   type AppSettings,
   type CollectionName,
   type Idea,
+  type LoadIssue,
   type LogTemplate,
   type Milestone,
   type MilestoneTypeDef,
@@ -34,6 +35,8 @@ import {
 } from '@shared/types'
 
 const SAVE_DEBOUNCE_MS = 800
+const DATA_CONFLICT_PREFIX = 'DATA_CONFLICT:'
+const DATA_CORRUPT_PREFIX = 'DATA_CORRUPT:'
 
 interface AppState {
   ready: boolean
@@ -41,6 +44,10 @@ interface AppState {
   dataDir: string | null
   settings: AppSettings
   lastWriteAt: string | null
+  /** 数据加载问题（文件解析失败/记录结构不合法），由全局提示条展示 */
+  loadIssues: LoadIssue[]
+  /** 与其他设备的写入冲突（磁盘版本与本机修改均已备份，等待用户核对合并） */
+  syncConflicts: string[]
   projects: Project[]
   tasks: Task[]
   milestones: Milestone[]
@@ -58,6 +65,10 @@ interface AppState {
   refreshExternal: () => Promise<void>
   updateSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
   backupNow: () => Promise<{ ok: boolean; dir?: string; error?: string }>
+  /** 立即落盘全部待写集合（退出前/冲突处理时调用） */
+  flushPendingSaves: () => Promise<void>
+  clearLoadIssues: () => void
+  clearSyncConflicts: () => void
 
   addProject: (input: Partial<Project> & { name: string }) => Project
   updateProject: (id: string, patch: Partial<Project>) => void
@@ -135,9 +146,47 @@ interface AppState {
 /** 防抖落盘队列（集合级） */
 const pendingTimers = new Map<CollectionName, ReturnType<typeof setTimeout>>()
 let flushing: Promise<void> = Promise.resolve()
+/** 冲突后的重试链：flushPendingSaves 结尾会等待它，保证退出路径上重试也落盘完成 */
+let retryChain: Promise<void> = Promise.resolve()
+/** refreshExternal 进行中标记：防止冲突处理触发的重载与轮询重入 */
+let refreshInFlight = false
 
 function collectionOf(state: AppState, name: CollectionName): unknown {
   return (state as unknown as Record<string, unknown>)[name]
+}
+
+/** 落盘单个集合并统一处理失败（外部写入冲突 / 数据损坏显式提示，其余仅记日志） */
+function persistCollection(name: CollectionName, data: unknown, isConflictRetry = false): Promise<void> {
+  return window.api.saveCollection(name, data).then(
+    (r) => {
+      useStore.setState({ lastWriteAt: r.savedAt })
+    },
+    (err) => {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.startsWith(DATA_CONFLICT_PREFIX)) {
+        // 主进程已保留双方副本（conflict-*/local-*）并把基线更新为磁盘状态；
+        // 本机修改继续生效：重试一次让其落盘（只重试一次，外部连续写入时不循环）
+        const text = msg.slice(DATA_CONFLICT_PREFIX.length)
+        useStore.setState((s) => ({
+          syncConflicts: s.syncConflicts.includes(text) ? s.syncConflicts : [...s.syncConflicts, text]
+        }))
+        if (!isConflictRetry) {
+          // 重试挂到可等待的链上（flushPendingSaves 会等它），退出路径不留「只落 backups」的窗口
+          retryChain = retryChain.then(() =>
+            persistCollection(name, collectionOf(useStore.getState(), name), true)
+          )
+        }
+      } else if (msg.startsWith(DATA_CORRUPT_PREFIX)) {
+        const text = msg.slice(DATA_CORRUPT_PREFIX.length)
+        const issue: LoadIssue = { collection: name, kind: 'parse', detail: text }
+        useStore.setState((s) =>
+          s.loadIssues.some((i) => i.detail === text) ? s : { loadIssues: [...s.loadIssues, issue] }
+        )
+      } else {
+        console.error('[store] 落盘失败', name, err)
+      }
+    }
+  )
 }
 
 function schedulePersist(
@@ -149,13 +198,7 @@ function schedulePersist(
   const timer = setTimeout(() => {
     pendingTimers.delete(name)
     const data = collectionOf(get(), name)
-    flushing = flushing.then(() =>
-      window.api.saveCollection(name, data).then((r) => {
-        useStore.setState({ lastWriteAt: r.savedAt })
-      }).catch((err) => {
-        console.error('[store] 落盘失败', name, err)
-      })
-    )
+    flushing = flushing.then(() => persistCollection(name, data))
   }, SAVE_DEBOUNCE_MS)
   pendingTimers.set(name, timer)
 }
@@ -184,14 +227,10 @@ async function flushPendingSaves(): Promise<void> {
     clearTimeout(timer)
     pendingTimers.delete(name)
     const data = collectionOf(useStore.getState(), name)
-    try {
-      const r = await window.api.saveCollection(name, data)
-      useStore.setState({ lastWriteAt: r.savedAt })
-    } catch (err) {
-      console.error('[store] 落盘失败', name, err)
-    }
+    await persistCollection(name, data)
   }
   await flushing
+  await retryChain
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -208,6 +247,8 @@ export const useStore = create<AppState>((set, get) => ({
     reportTemplate: DEFAULT_REPORT_TEMPLATE
   },
   lastWriteAt: null,
+  loadIssues: [],
+  syncConflicts: [],
   projects: [],
   tasks: [],
   milestones: [],
@@ -233,6 +274,7 @@ export const useStore = create<AppState>((set, get) => ({
       dataDir: result.dataDir,
       settings: result.settings,
       lastWriteAt: result.meta.lastWriteAt,
+      loadIssues: result.issues,
       ...result.collections
     })
   },
@@ -244,6 +286,7 @@ export const useStore = create<AppState>((set, get) => ({
       needsOnboarding: false,
       dataDir: result.dataDir,
       settings: result.settings,
+      loadIssues: result.issues,
       ...result.collections
     })
     return true
@@ -251,16 +294,40 @@ export const useStore = create<AppState>((set, get) => ({
 
   refreshExternal: async () => {
     if (get().needsOnboarding) return
-    await flushPendingSaves()
-    const result = await window.api.checkExternalChanges()
-    if (result && result.changed.length > 0) {
-      set({ ...result.data })
-      console.info('[store] 已重载外部变更集合:', result.changed.join(', '))
+    if (refreshInFlight) return
+    refreshInFlight = true
+    try {
+      await flushPendingSaves()
+      const result = await window.api.checkExternalChanges()
+      if (result && result.changed.length > 0) {
+        // 只替换发生变化的集合：损坏/未变化集合的数据不覆盖内存（避免坏文件把界面数据清空）
+        const patch: Partial<AllCollections> = {}
+        for (const name of result.changed) {
+          ;(patch as unknown as Record<string, unknown>)[name] = result.data[name]
+        }
+        set({ ...(patch as unknown as Partial<AppState>) })
+        if (result.issues.length > 0) {
+          // 按 collection+kind+detail 去重合并：轮询每 30s 会重新产出同一批 issues，直接追加会堆重复行
+          set((s) => {
+            const seen = new Set(s.loadIssues.map((i) => `${i.collection}|${i.kind}|${i.detail}`))
+            const add = result.issues.filter((i) => !seen.has(`${i.collection}|${i.kind}|${i.detail}`))
+            return add.length > 0 ? { loadIssues: [...s.loadIssues, ...add] } : s
+          })
+        }
+        console.info('[store] 已重载外部变更集合:', result.changed.join(', '))
+      }
+    } finally {
+      refreshInFlight = false
     }
   },
 
   updateSettings: async (patch) => {
     const next = await window.api.updateSettings(patch)
+    // 类型守卫：手改坏的 settings.json 可能让 hotkey 为 null/数字（主进程 loadSettings 不校验类型）
+    if (typeof next.hotkey === 'string' && next.hotkey.startsWith('__CONFLICT__:')) {
+      // 热键冲突哨兵只用于让调用方展示错误，不写进 UI 状态（否则 kbd/提示会显示内部标记）
+      return next
+    }
     set({ settings: next })
     return next
   },
@@ -274,6 +341,11 @@ export const useStore = create<AppState>((set, get) => ({
     }
     return result
   },
+
+  flushPendingSaves,
+
+  clearLoadIssues: () => set({ loadIssues: [] }),
+  clearSyncConflicts: () => set({ syncConflicts: [] }),
 
   // ---------- 项目 ----------
   addProject: (input) => {
@@ -597,13 +669,11 @@ export const useStore = create<AppState>((set, get) => ({
   deleteMilestoneType: (id) => {
     const def = get().vocab.milestoneTypes.find((t) => t.id === id)
     if (!def || def.builtin) return
+    // 与管理弹窗的约束保持一致：仍被节点引用的类型不删除（避免新增入口绕过 UI 限制）
+    if (get().milestones.some((m) => m.type === id)) return
     const vocab = get().vocab
     set({ vocab: { ...vocab, milestoneTypes: vocab.milestoneTypes.filter((t) => t.id !== id) } })
     schedulePersist(get, 'vocab')
-    // 引用该类型的节点回退为「其他」
-    mutateArray(get, set, 'milestones', (arr) =>
-      arr.map((m) => (m.type === id ? { ...m, type: 'other', updated_at: nowISO() } : m))
-    )
   },
   addAchievementType: (name) => {
     const vocab = get().vocab
@@ -633,13 +703,11 @@ export const useStore = create<AppState>((set, get) => ({
   deleteAchievementType: (id) => {
     const def = get().vocab.achievementTypes.find((t) => t.id === id)
     if (!def || def.builtin) return
+    // 与管理弹窗的约束保持一致：仍被成果引用的类型不删除
+    if (get().achievements.some((a) => a.type === id)) return
     const vocab = get().vocab
     set({ vocab: { ...vocab, achievementTypes: vocab.achievementTypes.filter((t) => t.id !== id) } })
     schedulePersist(get, 'vocab')
-    // 引用该类型的成果回退为「其他」
-    mutateArray(get, set, 'achievements', (arr) =>
-      arr.map((a) => (a.type === id ? { ...a, type: 'other', updated_at: nowISO() } : a))
-    )
   },
 
   // ---------- 日志模板 ----------
@@ -686,6 +754,7 @@ export const useStore = create<AppState>((set, get) => ({
       venue: input.venue ?? '',
       type: input.type ?? 'conference',
       status: input.status ?? 'idea',
+      year: input.year ?? null,
       round: input.round ?? 0,
       dates: input.dates ?? { draft: null, submission: null, result: null, camera_ready: null },
       repo_url: input.repo_url ?? '',
@@ -916,15 +985,13 @@ function buildReference(input: Partial<Reference> & { title: string }, now: stri
   }
 }
 
-/** 录用论文 → 成果台账草稿（幂等）：同标题存在未确认的论文类草稿时跳过 */
+/** 录用论文 → 成果台账草稿（幂等）：已存在同标题的论文类成果（含正式条目）时跳过，避免一正一副重复 */
 function ensurePaperAchievementDraft(
   get: () => AppState,
   set: (partial: Partial<AppState>) => void,
   paper: Paper
 ): void {
-  const exists = get().achievements.find(
-    (a) => a.type === 'paper' && a.title === paper.title && a.is_draft
-  )
+  const exists = get().achievements.find((a) => a.type === 'paper' && a.title === paper.title)
   if (exists) return
   const now = nowISO()
   const achievement: Achievement = {

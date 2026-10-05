@@ -1,9 +1,10 @@
 // 格致 · 科研工作台 —— 主进程入口
 // 窗口/托盘/全局快捷键生命周期管理；关闭默认最小化到托盘（可在设置修改）
-import { app, BrowserWindow, Menu, Tray, nativeImage, dialog } from 'electron'
+import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, shell } from 'electron'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { registerIpcHandlers } from './ipc'
-import { setQuickCaptureShortcut, unregisterAllShortcuts } from './shortcuts'
+import { isValidAccelerator, setQuickCaptureShortcut, unregisterAllShortcuts } from './shortcuts'
 import { dailyBackupIfNeeded, getSettings, loadSettings } from './store'
 import { initUpdater, scheduleStartupSilentCheck } from './updater'
 
@@ -32,8 +33,58 @@ function createMainWindow(): void {
     title: '格致 · 科研工作台',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false
+      // preload 只使用 contextBridge/ipcRenderer，无需放开沙箱；
+      // 锁死三件套，防止窗口被导航到外部页面后 preload 带着 Node 能力重跑
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false
     }
+  })
+
+  // 只允许应用自身来源的导航：dev 下为 vite 服务；打包后精确到本应用 renderer 目录
+  // （不能放开整个 file: 协议——Markdown 里的 `//evil.com/x.html` 会以 file:// 为基址解析成
+  //   file://evil.com/...，在 Windows 上触发 SMB 外联并替换窗口内容）
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  const rendererDirFs = path.join(__dirname, '../renderer') + path.sep
+  const isAllowedUrl = (raw: string): boolean => {
+    if (devUrl && (raw === devUrl || raw.startsWith(`${devUrl}/`))) return true
+    // 先规范化再做路径包含判定：不依赖「调用方传入的一定是 Chromium 已规范化的 URL」这条隐含前提，
+    // `renderer/../../evil.html` 这类穿越写法在路径语义下会被拒绝
+    let u: URL
+    try {
+      u = new URL(raw)
+    } catch {
+      return false
+    }
+    if (u.protocol !== 'file:') return false
+    let fsPath: string
+    try {
+      fsPath = fileURLToPath(u)
+    } catch {
+      return false
+    }
+    const rel = path.relative(rendererDirFs, fsPath)
+    return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel)
+  }
+
+  // 外部链接一律交给系统浏览器，绝不在应用窗口内开新窗/新页
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  // 阻止渲染层导航离开应用（Markdown 日志里的外链点击是主要入口）
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (isAllowedUrl(url)) return
+    e.preventDefault()
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+  })
+  // 子帧导航（History API / iframe 等）再兜一层；并禁止 <webview> 标签
+  mainWindow.webContents.on('will-frame-navigate', (e) => {
+    if (!isAllowedUrl(e.url)) e.preventDefault()
+  })
+  mainWindow.webContents.on('will-attach-webview', (e) => {
+    e.preventDefault()
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -71,11 +122,28 @@ function showMainWindow(): void {
 
 function triggerQuickCapture(): void {
   showMainWindow()
-  mainWindow?.webContents.send('quick-capture:show')
+  const win = mainWindow
+  if (!win) return
+  // 窗口刚重建时渲染层尚未注册监听：等加载完成再发，避免事件丢失
+  const send = (): void => win.webContents.send('quick-capture:show')
+  if (win.webContents.isLoading()) win.webContents.once('did-finish-load', send)
+  else send()
+}
+
+/** 托盘图标按短边等比缩放到 16px，避免非正方形原图被拉伸变形 */
+function buildTrayIcon(): Electron.NativeImage {
+  const img = nativeImage.createFromPath(resolveIconPath())
+  const { width, height } = img.getSize()
+  if (!width || !height) return img.resize({ width: 16, height: 16 })
+  const scale = Math.min(16 / width, 16 / height)
+  return img.resize({
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale))
+  })
 }
 
 function createTray(): void {
-  const icon = nativeImage.createFromPath(resolveIconPath()).resize({ width: 16, height: 16 })
+  const icon = buildTrayIcon()
   tray = new Tray(icon)
   tray.setToolTip('格致 · 科研工作台')
   tray.setContextMenu(
@@ -110,12 +178,20 @@ if (!gotSingleInstanceLock) {
     scheduleStartupSilentCheck()
 
     const { hotkey } = getSettings()
-    const ok = setQuickCaptureShortcut(hotkey, triggerQuickCapture)
-    if (!ok) {
+    // 不信任落盘配置：格式非法（如旧版本存入的单字母键）直接拒绝注册
+    if (!isValidAccelerator(hotkey)) {
       dialog.showErrorBox(
-        '快捷键注册失败',
-        `全局速记快捷键「${hotkey}」可能被其他软件占用，请前往 设置 → 快捷键 修改。`
+        '快捷键配置无效',
+        `已保存的速记快捷键「${hotkey}」格式无效，已跳过注册。请前往 设置 → 快捷键 重新设置。`
       )
+    } else {
+      const ok = setQuickCaptureShortcut(hotkey, triggerQuickCapture)
+      if (!ok) {
+        dialog.showErrorBox(
+          '快捷键注册失败',
+          `全局速记快捷键「${hotkey}」可能被其他软件占用，请前往 设置 → 快捷键 修改。`
+        )
+      }
     }
 
     dailyBackupIfNeeded()

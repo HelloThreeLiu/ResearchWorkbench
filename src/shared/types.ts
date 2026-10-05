@@ -128,6 +128,7 @@ export interface Paper {
   venue: string // 目标期刊/会议
   type: PaperType
   status: PaperStatus
+  year: number | null // 发表年份（快速导入已发表论文时录入；投稿中的论文可空）
   round: number // 当前轮次（投稿后每轮 +1）
   dates: {
     draft: string | null // 初稿
@@ -327,12 +328,28 @@ export interface AllCollections {
   references: Reference[]
 }
 
+/** 数据加载问题（文件解析失败 / 记录结构不合法），由渲染层以醒目提示条展示 */
+export interface LoadIssue {
+  collection: CollectionName
+  kind: 'parse' | 'shape'
+  detail: string
+}
+
+/** store:check-external IPC 返回值 */
+export interface ExternalChangesResult {
+  changed: CollectionName[]
+  data: AllCollections
+  issues: LoadIssue[]
+}
+
 export interface BootstrapResult {
   needsOnboarding: boolean
   dataDir: string | null
   collections: AllCollections
   settings: AppSettings
   meta: { lastWriteAt: string | null } // 上次数据写入时间（概览页同步状态展示）
+  /** 加载数据时发现的问题（解析失败/结构不合法），正常为空数组 */
+  issues: LoadIssue[]
 }
 
 // ---------- 应用更新（GitHub Releases + electron-updater） ----------

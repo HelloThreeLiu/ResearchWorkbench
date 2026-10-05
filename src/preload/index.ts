@@ -1,10 +1,10 @@
 // Preload：通过 contextBridge 暴露类型安全的 window.api
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
-  AllCollections,
   AppSettings,
   BootstrapResult,
   CollectionName,
+  ExternalChangesResult,
   ParseReferencesResult,
   UpdateCheckResult,
   UpdateEvent
@@ -15,14 +15,18 @@ const api = {
   chooseDataDir: (): Promise<BootstrapResult | null> => ipcRenderer.invoke('store:choose-dir'),
   saveCollection: (name: CollectionName, data: unknown): Promise<{ savedAt: string }> =>
     ipcRenderer.invoke('store:save', name, data),
-  checkExternalChanges: (): Promise<{ changed: CollectionName[]; data: AllCollections } | null> =>
+  checkExternalChanges: (): Promise<ExternalChangesResult | null> =>
     ipcRenderer.invoke('store:check-external'),
   backupNow: (): Promise<{ ok: boolean; dir?: string; error?: string }> =>
     ipcRenderer.invoke('store:backup'),
   openDataDir: (): Promise<boolean> => ipcRenderer.invoke('store:open-data-dir'),
+  /** 打开 backups/ 目录（冲突与历史快照的留底位置；路径拼接在主进程完成） */
+  openBackupDir: (): Promise<boolean> => ipcRenderer.invoke('store:open-backup-dir'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openPath: (target: string): Promise<string> => ipcRenderer.invoke('shell:open-path', target),
   pathExists: (target: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', target),
+  /** 批量存在性检测（一次 IPC，主进程异步并发执行） */
+  pathExistsMany: (targets: string[]): Promise<boolean[]> => ipcRenderer.invoke('fs:exists-many', targets),
   updateSettings: (patch: Partial<AppSettings>): Promise<AppSettings> =>
     ipcRenderer.invoke('settings:update', patch),
   pickPath: (kind: 'file' | 'directory', filters?: Electron.FileFilter[]): Promise<string | null> =>
@@ -36,9 +40,14 @@ const api = {
     title: string
   }): Promise<{ ok: boolean; path?: string; error?: string }> =>
     ipcRenderer.invoke('export:report', args),
-  fetchUrlMeta: (url: string): Promise<{ title: string | null; favicon: string | null }> =>
+  fetchUrlMeta: (url: string): Promise<{ title: string | null }> =>
     ipcRenderer.invoke('url:fetch-meta', url),
+  /** 站点图标代理：主进程取回 favicon，返回 data: URL（CSP 下渲染层不能直连外站图片） */
+  fetchFavicon: (url: string): Promise<string | null> => ipcRenderer.invoke('url:fetch-favicon', url),
+  /** 请求退出（主进程会先等渲染层确认落盘，2s 兜底超时） */
   quitApp: (): Promise<void> => ipcRenderer.invoke('app:quit'),
+  /** 渲染层落盘完成后放行退出 */
+  confirmQuit: (): Promise<void> => ipcRenderer.invoke('app:confirm-quit'),
   // 应用更新（GitHub Releases）
   checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('update:check'),
   downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
@@ -54,6 +63,12 @@ const api = {
     const listener = (_e: Electron.IpcRendererEvent, event: UpdateEvent): void => callback(event)
     ipcRenderer.on('update:event', listener)
     return () => ipcRenderer.removeListener('update:event', listener)
+  },
+  /** 主进程请求退出前触发（渲染层应 flush 未落盘编辑后调用 confirmQuit） */
+  onQuitRequested: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('app:quit-requested', listener)
+    return () => ipcRenderer.removeListener('app:quit-requested', listener)
   }
 }
 
