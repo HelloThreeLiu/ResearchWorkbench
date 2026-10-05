@@ -1,0 +1,43 @@
+name: CI
+
+# 推送/PR 时自动跑验证门禁：类型检查 → 单测 → 构建 → 生产依赖审计。
+# 把五轮审查以来「有人在跑」的验证习惯固化成制度（终审跟进项 #1）。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    # 产物是 Windows 应用，但 typecheck / test / build 均跨平台；ubuntu runner 更快更省
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # 测试用 Node 内置 test runner 直接跑 .ts（类型剥离），需要 ≥ 22.18；与本地 24.x 对齐
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        # --ignore-scripts：项目无原生依赖，跳过 electron 二进制下载与 install-app-deps，
+        # CI 只做 typecheck/test/build，不需要 Electron 运行时
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit production dependencies
+        # 生产依赖当前为 0 漏洞；该步骤发现回归即红灯（devDependencies 漏洞属构建期，另行排期）
+        run: npm audit --omit=dev --registry=https://registry.npmjs.org/
