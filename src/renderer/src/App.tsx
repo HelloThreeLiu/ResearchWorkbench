@@ -7,6 +7,8 @@ import Sidebar from '@/components/Sidebar'
 import QuickCapture from '@/components/QuickCapture'
 import UpdateModal from '@/components/UpdateModal'
 import UpdateNotice from '@/components/UpdateNotice'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import DataHealthBanner from '@/components/DataHealthBanner'
 import Onboarding from '@/pages/Onboarding'
 import Dashboard from '@/pages/Dashboard'
 import ProjectsPage from '@/pages/ProjectsPage'
@@ -95,6 +97,29 @@ export default function App() {
     return unsubscribe
   }, [])
 
+  // 退出前落盘：窗口销毁前尽力发起未落盘写入；主进程主动退出时先 flush 再放行
+  useEffect(() => {
+    const flush = (): void => {
+      void useStore.getState().flushPendingSaves()
+    }
+    window.addEventListener('beforeunload', flush)
+    window.addEventListener('pagehide', flush)
+    const unsubscribe = window.api.onQuitRequested(() => {
+      void (async () => {
+        try {
+          await useStore.getState().flushPendingSaves()
+        } finally {
+          await window.api.confirmQuit()
+        }
+      })()
+    })
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      window.removeEventListener('pagehide', flush)
+      unsubscribe()
+    }
+  }, [])
+
   if (!ready) {
     return (
       <div className="flex h-full items-center justify-center bg-bg text-text-3">
@@ -104,14 +129,20 @@ export default function App() {
   }
 
   if (needsOnboarding) {
-    return <Onboarding />
+    return (
+      <ErrorBoundary>
+        <Onboarding />
+      </ErrorBoundary>
+    )
   }
 
   return (
     <div className="flex h-full overflow-hidden">
       <Sidebar />
       <main className="min-w-0 flex-1 overflow-y-auto">
-        {page.name === 'dashboard' && <Dashboard />}
+        <DataHealthBanner />
+        <ErrorBoundary>
+          {page.name === 'dashboard' && <Dashboard />}
         {page.name === 'projects' && <ProjectsPage />}
         {page.name === 'project-detail' && (
           <ProjectDetail projectId={page.projectId} initialTab={page.tab} />
@@ -127,6 +158,7 @@ export default function App() {
         {page.name === 'reports' && <ReportsPage />}
         {page.name === 'insights' && <InsightsPage />}
         {page.name === 'settings' && <SettingsPage />}
+        </ErrorBoundary>
       </main>
       <QuickCapture open={quickCaptureOpen} prefill={quickCapturePrefill} onClose={hideQuickCapture} />
       <UpdateNotice />

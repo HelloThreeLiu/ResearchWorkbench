@@ -2,6 +2,7 @@
 // 供侧边栏红点、右上角提示卡、更新弹窗三处共享（仅会话级状态，不落盘）
 import { create } from 'zustand'
 import type { UpdateEvent } from '@shared/types'
+import { useStore } from '@/store'
 
 /** 更新弹窗所处阶段（状态机） */
 export type UpdateStage =
@@ -128,6 +129,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
 
   installNow: async () => {
     try {
+      // 安装会立即退出应用（不经 app:quit 握手）：先落盘防抖中的编辑，堵住最后一个丢数据出口
+      await useStore.getState().flushPendingSaves()
       await window.api.installUpdate()
     } catch (err) {
       set({ stage: 'error', errorMessage: err instanceof Error ? err.message : String(err) })
