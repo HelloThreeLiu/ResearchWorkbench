@@ -166,13 +166,16 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children, width = 'max-w-lg', dismissable = true }: ModalProps) {
   const instanceIdRef = useRef<symbol>(Symbol('modal'))
+  // 调用方普遍传内联箭头函数：放进 ref 让 keydown 监听只在 open/dismissable 变化时重挂
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
     const id = instanceIdRef.current
     modalStack.push(id)
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && dismissable && modalStack[modalStack.length - 1] === id) onClose()
+      if (e.key === 'Escape' && dismissable && modalStack[modalStack.length - 1] === id) onCloseRef.current()
     }
     window.addEventListener('keydown', handler)
     return () => {
@@ -180,7 +183,7 @@ export function Modal({ open, onClose, title, children, width = 'max-w-lg', dism
       if (idx >= 0) modalStack.splice(idx, 1)
       window.removeEventListener('keydown', handler)
     }
-  }, [open, onClose, dismissable])
+  }, [open, dismissable])
 
   if (!open) return null
   return (

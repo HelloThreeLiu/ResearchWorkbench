@@ -56,6 +56,10 @@ export default function Onboarding() {
             （如 <code className="rounded bg-surface-2 px-1 py-px font-mono text-[11.5px]">…\Nutstore\1\格致科研工作台</code>
             ），数据将自动同步到你的其他电脑；也可以选择任意本地目录，之后可在设置中更改。
           </p>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-3">
+            请知悉：数据为明文保存，backups/ 历史快照（含已删除内容）也会随网盘同步到云端；
+            涉及敏感内容时请按需调整网盘保留策略，并避免在两台设备上同时编辑（同时编辑产生的冲突会保留双方副本，需手动合并）。
+          </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button variant="primary" className="h-9.5 px-5 text-[13.5px]" onClick={() => chooseDataDir()}>
               <FolderOpen size={15} />

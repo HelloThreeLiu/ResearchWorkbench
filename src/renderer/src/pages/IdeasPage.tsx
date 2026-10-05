@@ -37,6 +37,7 @@ const STATUS_BADGE: Record<IdeaStatus, 'yellow' | 'blue' | 'green'> = {
 
 export default function IdeasPage() {
   const ideas = useStore((s) => s.ideas)
+  const hotkey = useStore((s) => s.settings.hotkey)
   const projects = useStore((s) => s.projects)
   const addTask = useStore((s) => s.addTask)
   const updateIdea = useStore((s) => s.updateIdea)
@@ -92,7 +93,7 @@ export default function IdeasPage() {
         title="灵感"
         sub={
           <>
-            读论文、开会、走路时冒出的想法，按 <kbd className="kbd">{useStore.getState().settings.hotkey}</kbd> 随手记，定期整理
+            读论文、开会、走路时冒出的想法，按 <kbd className="kbd">{hotkey}</kbd> 随手记，定期整理
           </>
         }
       />

@@ -285,6 +285,8 @@ function CellItem({
   onOpen: () => void
   expanded?: boolean
 }) {
+  // Hook 必须无条件调用（提前 return 的任务分支之前），避免条件 Hook 隐患
+  const typeLabel = useMilestoneTypeLabel()
   if (item.kind === 'task') {
     const done = item.task.status === 'done'
     const overdue = !done && item.task.due_date !== null && daysUntil(item.task.due_date) < 0
@@ -309,7 +311,6 @@ function CellItem({
     )
   }
   const Icon = milestoneTypeIcon(item.milestone.type)
-  const typeLabel = useMilestoneTypeLabel()
   return (
     <button
       onClick={(e) => {

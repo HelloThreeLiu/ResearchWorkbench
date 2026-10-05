@@ -40,31 +40,60 @@ const TYPE_ICONS: Record<ToolType, typeof Globe> = {
   app: Monitor
 }
 
-/** 网址收藏图标：直连站点 favicon，失败回退默认图标（V3：36px 图标 tile 内居中） */
+/** favicon 代理缓存（origin → data URL）：CSP 收紧后渲染层不能直连外站图片，统一由主进程取回 */
+const faviconCache = new Map<string, string | null>()
+/** 同 origin 的在途请求合并：避免 N 个收藏项在缓存未填充时并发请求同一 favicon */
+const faviconInflight = new Map<string, Promise<string | null>>()
+
+function originOf(target: string): string | null {
+  try {
+    return new URL(target).origin
+  } catch {
+    return null
+  }
+}
+
+/** 网址收藏图标：主进程代理取 favicon（data: URL），失败回退默认图标（V3：36px 图标 tile 内居中） */
 function ToolIcon({ item }: { item: ToolBookmark }) {
-  const [failed, setFailed] = useState(false)
   const Icon = TYPE_ICONS[item.type]
-  if (item.type === 'url' && !failed) {
-    let fav: string | null = null
-    try {
-      fav = new URL('/favicon.ico', item.target).toString()
-    } catch {
-      fav = null
-    }
-    if (fav) {
-      return (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
-          <img
-            src={fav}
-            alt=""
-            width={20}
-            height={20}
-            className="rounded-sm"
-            onError={() => setFailed(true)}
-          />
-        </span>
+  const origin = item.type === 'url' ? originOf(item.target) : null
+  const [fav, setFav] = useState<string | null>(origin ? (faviconCache.get(origin) ?? null) : null)
+
+  useEffect(() => {
+    if (!origin || faviconCache.has(origin)) return
+    let p = faviconInflight.get(origin)
+    if (!p) {
+      p = window.api.fetchFavicon(item.target).then(
+        (data) => {
+          faviconCache.set(origin, data)
+          faviconInflight.delete(origin)
+          return data
+        },
+        () => {
+          // 失败同样清理在途表并缓存 null：否则被拒 Promise 被永久保留，
+          // 之后每次挂载都复用它（图标永不出）且反复产生未处理拒绝
+          faviconInflight.delete(origin)
+          faviconCache.set(origin, null)
+          return null
+        }
       )
+      faviconInflight.set(origin, p)
     }
+    let cancelled = false
+    void p.then((data) => {
+      if (!cancelled) setFav(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [origin, item.target])
+
+  if (item.type === 'url' && fav) {
+    return (
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+        <img src={fav} alt="" width={20} height={20} className="rounded-sm" />
+      </span>
+    )
   }
   return (
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
@@ -99,16 +128,25 @@ export default function ToolboxPage() {
 
   const checkValidity = useCallback(async (): Promise<void> => {
     const localItems = tools.items.filter((i) => i.type !== 'url')
-    const entries = await Promise.all(
-      localItems.map(async (i) => [i.id, await window.api.pathExists(i.target)] as const)
-    )
-    setValidity(Object.fromEntries(entries))
+    if (localItems.length === 0) {
+      setValidity({})
+      return
+    }
+    // 一次 IPC 批量检测（主进程异步并发），避免每分钟 N 次往返 + N 次同步 accessSync 阻塞主进程
+    const exists = await window.api.pathExistsMany(localItems.map((i) => i.target))
+    setValidity(Object.fromEntries(localItems.map((i, idx) => [i.id, exists[idx]])))
   }, [tools.items])
 
   useEffect(() => {
-    checkValidity()
-    validityTimer.current = setInterval(checkValidity, 60_000)
+    void checkValidity()
+    // 轮询降频到 5 分钟 + 窗口聚焦时立即检测（编辑保存/手动刷新另有入口）
+    const onFocus = (): void => {
+      void checkValidity()
+    }
+    window.addEventListener('focus', onFocus)
+    validityTimer.current = setInterval(() => void checkValidity(), 300_000)
     return () => {
+      window.removeEventListener('focus', onFocus)
       if (validityTimer.current) clearInterval(validityTimer.current)
     }
   }, [checkValidity])

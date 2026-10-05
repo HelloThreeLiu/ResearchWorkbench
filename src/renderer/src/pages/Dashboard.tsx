@@ -22,6 +22,7 @@ import { countdownText, daysUntil, dayjs, friendlyDateTime } from '@/lib/date'
 
 export default function Dashboard() {
   const tasks = useStore((s) => s.tasks)
+  const hotkey = useStore((s) => s.settings.hotkey)
   const milestones = useStore((s) => s.milestones)
   const ideas = useStore((s) => s.ideas)
   const projects = useStore((s) => s.projects)
@@ -318,7 +319,7 @@ export default function Dashboard() {
             </div>
             {recentIdeas.length === 0 ? (
               <div className="py-4 text-center text-[12.5px] text-text-3">
-                暂无未整理灵感 · 按 {useStore.getState().settings.hotkey} 随手记
+                暂无未整理灵感 · 按 {hotkey} 随手记
               </div>
             ) : (
               <div className="flex flex-col gap-2">

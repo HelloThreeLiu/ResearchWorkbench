@@ -1,5 +1,5 @@
 // 成果台账：论文/专利/获奖/项目/其他（可自定义）成果的时间线视图；按类型筛选；一键复制纯文本
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Plus, Trophy } from 'lucide-react'
 import type { Achievement } from '@shared/types'
 import { useStore } from '@/store'
@@ -148,19 +148,20 @@ function AchievementEditModal({
   const [evidencePath, setEvidencePath] = useState('')
   const [vocabManageOpen, setVocabManageOpen] = useState(false)
 
-  // 每次打开时按目标初始化
-  const [lastOpen, setLastOpen] = useState(false)
-  if (open && !lastOpen) {
-    setLastOpen(true)
-    setType(achievement?.type ?? 'paper')
-    setTitle(achievement?.title ?? '')
-    setDate(achievement?.date ?? dayjs().format('YYYY-MM-DD'))
-    setLevel(achievement?.level ?? '')
-    setProjectId(achievement?.project_id ?? '')
-    setDetail(achievement?.detail ?? '')
-    setEvidencePath(achievement?.evidence_path ?? '')
-  }
-  if (!open && lastOpen) setLastOpen(false)
+  // 每次打开时按目标初始化（useEffect + ref，与其他弹窗统一；渲染期 setState 会在未关闭切换编辑对象时保留旧数据）
+  const defaultsRef = useRef(achievement)
+  defaultsRef.current = achievement
+  useEffect(() => {
+    if (!open) return
+    const a = defaultsRef.current
+    setType(a?.type ?? 'paper')
+    setTitle(a?.title ?? '')
+    setDate(a?.date ?? dayjs().format('YYYY-MM-DD'))
+    setLevel(a?.level ?? '')
+    setProjectId(a?.project_id ?? '')
+    setDetail(a?.detail ?? '')
+    setEvidencePath(a?.evidence_path ?? '')
+  }, [open])
 
   const submit = (): void => {
     const trimmed = title.trim()

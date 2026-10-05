@@ -14,6 +14,7 @@ import {
   Trash2
 } from 'lucide-react'
 import type { Report, ReportKind } from '@shared/types'
+import { uid } from '@shared/types'
 import { useStore } from '@/store'
 import {
   Badge,
@@ -73,7 +74,7 @@ export default function ReportsPage() {
     if (draft.mode === 'new') {
       const now = new Date().toISOString()
       saveReport({
-        id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+        id: uid(),
         kind: draft.kind,
         title: draft.title.trim() || '未命名报告',
         period_start: draft.period.start,

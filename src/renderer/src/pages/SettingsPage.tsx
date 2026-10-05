@@ -90,7 +90,7 @@ function ReportTemplateEditor() {
   )
 }
 
-/** 把键盘事件转为 Electron accelerator 文案（支持字母/数字/F1-F12 + 修饰键） */
+/** 把键盘事件转为 Electron accelerator 文案（字母/数字必须带修饰键，F1-F12 可单独使用） */
 function eventToAccelerator(e: React.KeyboardEvent): string | null {
   const key = e.key
   const mods: string[] = []
@@ -99,9 +99,10 @@ function eventToAccelerator(e: React.KeyboardEvent): string | null {
   if (e.shiftKey) mods.push('Shift')
   if (e.metaKey) mods.push('Super')
   let main: string | null = null
-  if (/^[a-zA-Z]$/.test(key)) main = key.toUpperCase()
+  if (/^F([1-9]|1[0-2])$/.test(key)) main = key
+  else if (mods.length === 0) return null // 单字母/数字不允许：会跨应用抢占输入，与界面提示一致
+  else if (/^[a-zA-Z]$/.test(key)) main = key.toUpperCase()
   else if (/^[0-9]$/.test(key)) main = key
-  else if (/^F([1-9]|1[0-2])$/.test(key)) main = key
   else return null // 不支持的键（组合键中间状态）
   return [...mods, main].join('+')
 }
@@ -148,7 +149,7 @@ export default function SettingsPage() {
   const saveHotkey = async (): Promise<void> => {
     if (!pendingHotkey) return
     const result = await updateSettings({ hotkey: pendingHotkey })
-    if (result.hotkey.startsWith('__CONFLICT__:')) {
+    if (typeof result.hotkey === 'string' && result.hotkey.startsWith('__CONFLICT__:')) {
       setHotkeyMsg({ ok: false, text: `快捷键「${pendingHotkey}」注册失败：可能被其他软件占用，请换一组组合键` })
     } else {
       setHotkeyMsg({ ok: true, text: `已更新为 ${result.hotkey}，即刻生效` })
@@ -174,8 +175,11 @@ export default function SettingsPage() {
         <SectionCard icon={<FolderOpen />} title="数据目录">
           <div className="text-[12.5px] break-all text-text-2">{dataDir ?? '未配置'}</div>
           <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-3">
-            数据以明文 JSON 存储在该目录，网盘（如坚果云）会自动同步。可直接复制整个目录完成迁移或冷备份；
+            数据以明文 JSON 存储在该目录，网盘（如坚果云）会自动同步；可直接复制整个目录完成迁移或冷备份；
             更换目录后将加载新目录中的数据。
+            <br />
+            注意：数据为明文保存，backups/ 中的历史快照（含已删除内容）也会一并同步到网盘；
+            涉及敏感或未发表内容时，请按需在网盘侧调整保留策略，并避免在两台设备上同时编辑。
           </p>
           <div className="mt-3 flex gap-2">
             <Button onClick={() => chooseDataDir()}>更改数据目录…</Button>
