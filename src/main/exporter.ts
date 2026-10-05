@@ -10,12 +10,23 @@ import {
   TextRun
 } from 'docx'
 
+/**
+ * 行内 **加粗** 解析为（文本, 是否加粗）序列（纯函数，供测试直接断言）。
+ * split 带捕获组的契约：偶数下标=普通段、奇数下标=捕获段；空串是维持该契约的占位符，
+ * 必须先按下标判定加粗、再过滤空串（先过滤会让奇偶性整体错位，加粗错到相邻文字上）。
+ */
+export function parseInlineBold(text: string): Array<{ text: string; bold: boolean }> {
+  return text
+    .split(/\*\*(.+?)\*\*/g)
+    .map((part, i) => ({ text: part, bold: i % 2 === 1 }))
+    .filter(({ text }) => text !== '')
+}
+
 /** 行内 **加粗** 解析为 TextRun 数组 */
 function inlineRuns(text: string, base: { size?: number } = {}): TextRun[] {
-  const parts = text.split(/\*\*(.+?)\*\*/g)
-  return parts
-    .filter((p) => p !== '')
-    .map((p, i) => new TextRun({ text: p, bold: i % 2 === 1, size: base.size }))
+  return parseInlineBold(text).map(
+    ({ text, bold }) => new TextRun({ text, bold, size: base.size })
+  )
 }
 
 function mdToParagraphs(md: string): Paragraph[] {
@@ -67,8 +78,10 @@ export async function exportToFile(
   if (!target) return null
   let file = target
   const ext = `.${format}`
-  if (path.extname(file).toLowerCase() !== ext) {
-    file = file + ext
+  // 用户在保存对话框里自带了别的扩展名（如 周报.md）→ 整体替换为目标扩展名，而不是叠成 .md.docx
+  const currentExt = path.extname(file)
+  if (currentExt.toLowerCase() !== ext) {
+    file = currentExt ? `${file.slice(0, -currentExt.length)}${ext}` : `${file}${ext}`
   }
   if (Buffer.isBuffer(data)) {
     fs.writeFileSync(file, data)

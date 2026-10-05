@@ -33,6 +33,7 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
   const [venue, setVenue] = useState('')
   const [type, setType] = useState<PaperType>('conference')
   const [status, setStatus] = useState<PaperStatus>('idea')
+  const [year, setYear] = useState('')
   const [round, setRound] = useState(0)
   const [dates, setDates] = useState<Paper['dates']>({
     draft: null,
@@ -61,6 +62,7 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
     setVenue(p?.venue ?? '')
     setType(p?.type ?? 'conference')
     setStatus(p?.status ?? 'idea')
+    setYear(p?.year !== null && p?.year !== undefined ? String(p.year) : '')
     setRound(p?.round ?? 0)
     setDates(p?.dates ?? { draft: null, submission: null, result: null, camera_ready: null })
     setRepoUrl(p?.repo_url ?? '')
@@ -80,11 +82,13 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
   const submit = (): void => {
     const trimmed = title.trim()
     if (!trimmed) return
+    const parsedYear = Number.parseInt(year.trim(), 10)
     const payload = {
       title: trimmed,
       venue: venue.trim(),
       type,
       status,
+      year: Number.isInteger(parsedYear) && parsedYear >= 1900 && parsedYear <= 2100 ? parsedYear : null,
       round,
       dates,
       repo_url: repoUrl.trim(),
@@ -119,6 +123,9 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
             placeholder="论文标题"
           />
         </Field>
+        <Field label="目标期刊/会议">
+          <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="如 CVPR 2027" />
+        </Field>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Field label="类型">
             <Select value={type} onChange={(e) => setType(e.target.value as PaperType)}>
@@ -129,9 +136,6 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
               ))}
             </Select>
           </Field>
-          <Field label="目标期刊/会议">
-            <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="如 CVPR 2027" />
-          </Field>
           <Field label="状态">
             <Select value={status} onChange={(e) => setStatus(e.target.value as PaperStatus)}>
               {Object.entries(PAPER_STATUS_LABELS).map(([v, label]) => (
@@ -140,6 +144,16 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
                 </option>
               ))}
             </Select>
+          </Field>
+          <Field label="发表年份">
+            <Input
+              type="number"
+              min={1900}
+              max={2100}
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              placeholder="如 2025"
+            />
           </Field>
           <Field label="当前轮次">
             <Input

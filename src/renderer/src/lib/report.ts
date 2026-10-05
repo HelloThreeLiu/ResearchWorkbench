@@ -192,6 +192,15 @@ export interface GeneratedReport {
   period: Period
 }
 
+/**
+ * 模板占位符渲染：函数式替换 + 一次正则覆盖所有出现位置。
+ * 不能用字符串形式的 replace('{{X}}', v)：v 里的 $&/$`/$'/$$ 会被当作替换模式插回匹配文本，
+ * 且只替换首个占位符（模板里写两次 {{WORK}} 时第二个会留在成品里）。
+ */
+export function fillTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? '')
+}
+
 /** 生成报告草稿（模板占位符渲染） */
 export function generateReport(
   kind: ReportKind,
@@ -210,26 +219,28 @@ export function generateReport(
     work += `\n\n### 灵感摘录\n${ideas}`
   }
 
-  let plan = kind === 'summary' ? '（工作总结不含下期计划）' : buildPlanSection(source, period)
+  const plan = kind === 'summary' ? '（工作总结不含下期计划）' : buildPlanSection(source, period)
 
-  let content = template
+  let content: string
   if (kind === 'summary') {
     // 工作总结：附加统计与成果
     const extras = buildSummaryExtras(source, period)
-    content = template
-      .replace('{{TITLE}}', '工作总结')
-      .replace('{{PERIOD}}', periodText)
-      .replace('{{WORK}}', `${extras.stats}\n\n${work}\n\n### 成果\n${extras.achievements}`)
-      .replace('{{PLAN}}', plan)
-      .replace('{{THOUGHTS}}', '')
+    content = fillTemplate(template, {
+      TITLE: '工作总结',
+      PERIOD: periodText,
+      WORK: `${extras.stats}\n\n${work}\n\n### 成果\n${extras.achievements}`,
+      PLAN: plan,
+      THOUGHTS: ''
+    })
   } else {
     const title = kind === 'weekly' ? '周报' : '月报'
-    content = template
-      .replace('{{TITLE}}', title)
-      .replace('{{PERIOD}}', periodText)
-      .replace('{{WORK}}', work)
-      .replace('{{PLAN}}', plan)
-      .replace('{{THOUGHTS}}', '')
+    content = fillTemplate(template, {
+      TITLE: title,
+      PERIOD: periodText,
+      WORK: work,
+      PLAN: plan,
+      THOUGHTS: ''
+    })
   }
 
   const title =

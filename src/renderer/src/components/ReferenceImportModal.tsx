@@ -73,7 +73,7 @@ export default function ReferenceImportModal({ open, onClose }: { open: boolean;
     setParsing(false)
   }
 
-  // 去重比对：DOI → citekey → 标题+年份（索引化，2000 条量级瞬时完成）
+  // 去重比对：DOI → citekey → 标题+年份（索引化，2000 条量级瞬时完成）；同一批次内的重复同样计入跳过
   const preview: ImportPreview = useMemo(() => {
     if (!result) return { adds: [], updates: [], skips: 0 }
     const byDoi = new Map<string, Reference>()
@@ -86,8 +86,19 @@ export default function ReferenceImportModal({ open, onClose }: { open: boolean;
     }
     const adds: ReferenceDraft[] = []
     const updates: ImportPreview['updates'] = []
+    const batchSeen = new Set<string>() // 本批次内已见过的条目（同一键先出现的生效）
     let skips = 0
     for (const d of result.entries) {
+      const batchKey = d.doi
+        ? `doi:${d.doi}`
+        : d.citekey
+          ? `ck:${d.citekey}`
+          : `ty:${normalizeTitle(d.title)}|${d.year}`
+      if (batchSeen.has(batchKey)) {
+        skips++
+        continue
+      }
+      batchSeen.add(batchKey)
       const local =
         (d.doi ? byDoi.get(d.doi) : undefined) ??
         (d.citekey ? byCitekey.get(d.citekey) : undefined) ??

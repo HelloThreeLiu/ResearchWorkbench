@@ -128,11 +128,14 @@ export function formatGB7714(ref: Reference): string {
   return s
 }
 
+/** BibTeX 字段值转义：裸 { } 会破坏字段包裹语法（如标题里的 {GPU}），须写成 \{ \} */
+const escapeBibValue = (v: string): string => v.replace(/[{}]/g, (c) => `\\${c}`)
+
 /** BibTeX（单条）：由存储字段重新序列化，citekey 原样保留（无 citekey 时按「姓+年」生成） */
 export function formatBibTeX(ref: Reference): string {
   const lines: string[] = []
   const push = (key: string, value: string): void => {
-    if (value) lines.push(`  ${key} = {${value}}`)
+    if (value) lines.push(`  ${key} = {${escapeBibValue(value)}}`)
   }
   push('title', ref.title)
   if (ref.authors.length > 0) push('author', ref.authors.join(' and '))
@@ -143,8 +146,10 @@ export function formatBibTeX(ref: Reference): string {
   push('pages', ref.pages)
   push('doi', ref.doi)
   push('url', ref.url)
-  const key = ref.citekey || fallbackCitekey(ref)
-  return `@${ref.entry_type}{${key},\n${lines.join(',\n')}\n}`
+  // citekey 做字符白名单，避免手工数据里的特殊字符产出非法条目头
+  const rawKey = ref.citekey || fallbackCitekey(ref)
+  const key = rawKey.replace(/[^A-Za-z0-9_:.\-]/g, '')
+  return `@${ref.entry_type}{${key || 'ref'},\n${lines.join(',\n')}\n}`
 }
 
 /** citekey 缺省时按「首作者姓 + 年份」生成（小写、去非字母数字） */

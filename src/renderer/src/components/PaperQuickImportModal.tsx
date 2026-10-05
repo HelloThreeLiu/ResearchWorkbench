@@ -87,11 +87,15 @@ export default function PaperQuickImportModal({ open, onClose }: { open: boolean
   const doImport = (): void => {
     let added = 0
     for (const r of importable) {
+      // 年份列真正落库：非法值（非 1900–2100 的四位数字）按空处理，不再静默丢弃
+      const y = Number.parseInt(r.year, 10)
+      const year = Number.isInteger(y) && y >= 1900 && y <= 2100 ? y : null
       addPaper({
         title: r.title.trim(),
         venue: r.venue.trim(),
         type: r.type,
         status: 'accepted',
+        year,
         note: r.raw
       })
       added++

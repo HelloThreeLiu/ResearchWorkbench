@@ -87,6 +87,8 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
   const submit = (): void => {
     const trimmed = title.trim()
     if (!trimmed) return
+    // 年份范围校验：乱码/超范围一律按空处理，避免 NaN 或异常值落库
+    const parsedYear = Number.parseInt(year.trim(), 10)
     const payload = {
       title: trimmed,
       entry_type: entryType,
@@ -94,7 +96,10 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
         .split('\n')
         .map((a) => a.trim())
         .filter((a) => a !== ''),
-      year: year.trim() ? parseInt(year, 10) : null,
+      year:
+        Number.isInteger(parsedYear) && parsedYear >= 1500 && parsedYear <= new Date().getFullYear() + 1
+          ? parsedYear
+          : null,
       venue: venue.trim(),
       volume: volume.trim(),
       issue: issue.trim(),
@@ -169,6 +174,7 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
           <Field label="年份">
             <Input
               type="number"
+              min={1500}
               value={year}
               onChange={(e) => setYear(e.target.value)}
               placeholder="如 2024"

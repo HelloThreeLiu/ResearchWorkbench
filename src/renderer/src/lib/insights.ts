@@ -122,7 +122,10 @@ export function submissionStats(source: InsightsSource, today: string): Submissi
     const sub = p.dates.submission
     const res = p.dates.result
     if (sub && res) {
-      completed.push({ paper: p, days: dayjs(res).diff(dayjs(sub), 'day') })
+      const days = dayjs(res).diff(dayjs(sub), 'day')
+      // 日期顺序异常（结果早于投稿，多为手滑/年份录错）不计入，避免负天数拉低均值
+      if (days >= 0) completed.push({ paper: p, days })
+      else excluded += 1
     } else if (sub && !res && PENDING_STATUSES.includes(p.status)) {
       pending.push({ paper: p, waitedDays: dayjs(today).diff(dayjs(sub), 'day'), slowerThanVenueAvg: false })
     } else {
