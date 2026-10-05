@@ -21,6 +21,7 @@ import {
   type VocabFileData
 } from '@shared/types'
 import { seedToolData } from './seed'
+import { vocabShapeValid } from './vocabShape'
 
 const COLLECTION_NAMES = Object.keys(COLLECTION_FILES) as CollectionName[]
 const BACKUP_KEEP = 30
@@ -183,12 +184,7 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
         }
       } else if (name === 'vocab') {
         const v = isPlainObject(raw) ? raw : {}
-        const fieldsOk =
-          Array.isArray(v.tags) &&
-          Array.isArray(v.milestoneTypes) &&
-          Array.isArray(v.achievementTypes) &&
-          Array.isArray(v.logTemplates)
-        if (!isPlainObject(raw) || !fieldsOk) {
+        if (!vocabShapeValid(raw)) {
           issues.push({
             collection: name,
             kind: 'shape',
@@ -196,6 +192,7 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
           })
         }
         // 旧目录无 vocab.json / 旧版本缺 achievementTypes、logTemplates 时兜底为默认词汇库
+        // （缺字段属旧版文件的预期形态，不算结构不合法，不告警——判定见 vocabShape.ts）
         result.vocab = {
           tags: Array.isArray(v.tags) ? (v.tags as VocabFileData['tags']) : [],
           milestoneTypes: Array.isArray(v.milestoneTypes) ? v.milestoneTypes : DEFAULT_VOCAB.milestoneTypes,
