@@ -39,5 +39,6 @@ jobs:
         run: npm run build
 
       - name: Audit production dependencies
-        # 生产依赖当前为 0 漏洞；该步骤发现回归即红灯（devDependencies 漏洞属构建期，另行排期）
+        # 生产依赖当前为 0 漏洞；该步骤发现回归即红灯
+        # （devDependencies 漏洞已随 Electron 44 / electron-builder 26 升级专项清零，此后由本地与升级专项回归覆盖）
         run: npm audit --omit=dev --registry=https://registry.npmjs.org/
