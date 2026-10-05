@@ -2,8 +2,8 @@
 // 窗口/托盘/全局快捷键生命周期管理；关闭默认最小化到托盘（可在设置修改）
 import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, shell } from 'electron'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { registerIpcHandlers } from './ipc'
+import { createIsAllowedUrl } from './navGuard'
 import { isValidAccelerator, setQuickCaptureShortcut, unregisterAllShortcuts } from './shortcuts'
 import { dailyBackupIfNeeded, getSettings, loadSettings } from './store'
 import { initUpdater, scheduleStartupSilentCheck } from './updater'
@@ -44,28 +44,10 @@ function createMainWindow(): void {
   // 只允许应用自身来源的导航：dev 下为 vite 服务；打包后精确到本应用 renderer 目录
   // （不能放开整个 file: 协议——Markdown 里的 `//evil.com/x.html` 会以 file:// 为基址解析成
   //   file://evil.com/...，在 Windows 上触发 SMB 外联并替换窗口内容）
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-  const rendererDirFs = path.join(__dirname, '../renderer') + path.sep
-  const isAllowedUrl = (raw: string): boolean => {
-    if (devUrl && (raw === devUrl || raw.startsWith(`${devUrl}/`))) return true
-    // 先规范化再做路径包含判定：不依赖「调用方传入的一定是 Chromium 已规范化的 URL」这条隐含前提，
-    // `renderer/../../evil.html` 这类穿越写法在路径语义下会被拒绝
-    let u: URL
-    try {
-      u = new URL(raw)
-    } catch {
-      return false
-    }
-    if (u.protocol !== 'file:') return false
-    let fsPath: string
-    try {
-      fsPath = fileURLToPath(u)
-    } catch {
-      return false
-    }
-    const rel = path.relative(rendererDirFs, fsPath)
-    return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel)
-  }
+  const isAllowedUrl = createIsAllowedUrl(
+    path.join(__dirname, '../renderer') + path.sep,
+    process.env['ELECTRON_RENDERER_URL']
+  )
 
   // 外部链接一律交给系统浏览器，绝不在应用窗口内开新窗/新页
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
