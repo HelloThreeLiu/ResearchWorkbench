@@ -120,7 +120,7 @@ export default function UpdateModal() {
             <span>{formatBytes(progress?.bytesPerSecond ?? 0)}/s</span>
           </div>
           <p className="text-[11.5px] text-text-3">
-            下载期间可以继续使用应用；关闭此窗口不会取消下载，完成后下次退出时会自动安装。
+            下载期间可以继续使用应用；关闭此窗口不会取消下载，完成后可在更新弹窗中重启安装。
           </p>
         </div>
       )}
@@ -130,12 +130,12 @@ export default function UpdateModal() {
           <div className="flex items-center gap-2.5">
             <CheckCircle2 size={17} className="text-success" />
             <span className="text-[13.5px]">
-              V{available?.version ?? ''} 已下载完成，重启后自动安装。
+              V{available?.version ?? ''} 已下载完成，可随时重启安装。
             </span>
           </div>
           <div className="flex justify-end gap-2">
             <Button size="sm" onClick={closeModal}>
-              稍后安装（下次退出时自动装）
+              稍后再说
             </Button>
             <Button size="sm" variant="primary" onClick={() => void installNow()}>
               <RotateCcw size={12.5} /> 立即重启安装

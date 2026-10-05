@@ -1,6 +1,6 @@
 // 应用更新：GitHub Releases + electron-updater
-// 流程：启动后静默检查 → 推送渲染层（红点+提示卡）→ 弹窗确认 → 下载（进度推送）→ 重启静默安装
-// （NSIS 静默安装沿用注册表中记录的原安装目录覆盖，用户数据在 userData 不受影响）
+// 流程：启动后静默检查 → 推送渲染层（红点+提示卡）→ 弹窗确认 → 下载（进度推送）→ 用户显式点击后重启安装
+// （无发布者签名校验前不做「退出时静默安装」；安装仍沿用注册表记录的原目录覆盖，用户数据不受影响）
 import { app, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateCheckResult, UpdateEvent } from '@shared/types'
@@ -22,9 +22,12 @@ function sendEvent(event: UpdateEvent): void {
 
 export function initUpdater(windowGetter: () => BrowserWindow | null): void {
   getMainWindow = windowGetter
-  // 不自动下载：由用户在更新弹窗中确认后显式触发；已下载完成的更新在应用退出时自动安装（“稍后”路径）
+  // 不自动下载：由用户在更新弹窗中确认后显式触发；
+  // 不在退出时静默安装：项目未配置代码签名与 publisherName，electron-updater 不会校验
+  // Authenticode 签名（仅同源 sha512），静默安装等于把「自动落地的远程代码」开到最大；
+  // 安装只在用户显式点击「立即重启安装」（quitAndInstall）时发生
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.logger = null
 
   autoUpdater.on('download-progress', (progress) => {
