@@ -24,10 +24,16 @@ import { seedToolData } from './seed'
 
 const COLLECTION_NAMES = Object.keys(COLLECTION_FILES) as CollectionName[]
 const BACKUP_KEEP = 30
-/** 每个集合保留的冲突副本份数（conflict-* 与 local-* 各自计）；backups/ 在网盘目录里，不能无界增长 */
+/** 每个集合保留的冲突副本份数（conflict- 与 local- 各自计）；backups/ 在网盘目录里，不能无界增长 */
 const CONFLICT_KEEP_PER_COLLECTION = 5
 /** 数据文件大小上限（防异常超大文件拖垮解析） */
 const MAX_COLLECTION_BYTES = 64 * 1024 * 1024
+/**
+ * 数据格式版本（schema.json）：当前所有集合均为「无迁移步骤的版本 1」。
+ * 先落字段的目的：此后任何破坏性字段变更都必须在此递增版本号并补 migrate(vFrom, data)，
+ * 避免「读取时容错 + 写回时补齐」式的人工兜底（终审跟进项 #7 的最小落点）。
+ */
+const SCHEMA_VERSION = 1
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json')
 const metaPath = () => path.join(app.getPath('userData'), 'store-meta.json')
@@ -149,6 +155,7 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
   const result = emptyCollections()
   const issues: LoadIssue[] = []
   if (!settings.dataDir) return { data: result, issues }
+  ensureSchemaVersion()
   for (const name of COLLECTION_NAMES) {
     const file = dataFile(name)
     try {
@@ -243,6 +250,36 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
 /** 兼容入口：只要数据不要问题清单 */
 export function loadAll(): AllCollections {
   return loadAllWithIssues().data
+}
+
+/**
+ * 确保数据目录里存在 schema.json 并记录当前数据格式版本。
+ * - 缺失/损坏/非数字 → 重写为当前版本（无数据可迁移，属正常首次落字段）；
+ * - 版本号大于当前 → 说明数据来自更新版本的应用，仅告警不降级（当前无迁移步骤可回退）。
+ */
+function ensureSchemaVersion(): void {
+  if (!settings.dataDir) return
+  const file = path.join(settings.dataDir, 'schema.json')
+  try {
+    if (fs.existsSync(file)) {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as { version?: unknown }
+      if (typeof parsed.version === 'number') {
+        if (parsed.version > SCHEMA_VERSION) {
+          console.warn(
+            `[store] 数据目录的 schema 版本 ${parsed.version} 高于应用支持的 ${SCHEMA_VERSION}，可能来自更新版本的应用`
+          )
+        }
+        return
+      }
+    }
+  } catch {
+    /* 解析失败则重写 */
+  }
+  try {
+    fs.writeFileSync(file, JSON.stringify({ version: SCHEMA_VERSION }, null, 2), 'utf-8')
+  } catch (err) {
+    console.error('[store] 写入 schema.json 失败', err)
+  }
 }
 
 /** 写入成功后返回写出的序列化文本（调用方可复用作内容哈希，避免大集合重复序列化） */
