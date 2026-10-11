@@ -4,9 +4,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   FORGET_GUARD_MS,
+  ensureAfterStart,
   formatDuration,
   formatTimerDisplay,
   isResidualSession,
+  localDateOf,
   overForgetGuard,
   residualDefaultEnd,
   sessionDurationMs,
@@ -64,12 +66,31 @@ test('>4h 忘记停止防护（PRD 5.5.4）：恰好 4h 不提醒，超过即提
   assert.equal(overForgetGuard(FORGET_GUARD_MS + 1), true)
 })
 
-test('sessionsInPeriod：按开始日期过滤，两端含界', () => {
+test('结束默认值兜底：至少开始+1 秒（秒级输入框可保存），正常值原样保留', () => {
+  const start = '2026-10-11T15:57:05.000Z'
+  // 同一秒内结束：抬到 +1s，截断到秒后起止仍可分辨
+  const sameSec = '2026-10-11T15:57:05.800Z'
+  assert.equal(ensureAfterStart(sameSec, start), '2026-10-11T15:57:06.000Z')
+  const later = '2026-10-11T16:30:00.000Z'
+  assert.equal(ensureAfterStart(later, start), later)
+})
+
+test('localDateOf：ISO → 本地日期（直接 slice 取的是 UTC 日期，本地 0-8 点的记录会落错天）', () => {
+  // 本地正午/零点后 30 秒在任何时区都不会跨天，用例时区无关
+  for (const d of ['2026-01-01', '2026-07-15', '2026-12-31']) {
+    assert.equal(localDateOf(new Date(`${d}T12:00:00`).toISOString()), d)
+    assert.equal(localDateOf(new Date(`${d}T00:00:30`).toISOString()), d)
+  }
+})
+
+test('sessionsInPeriod：按开始时间的本地日期过滤，两端含界', () => {
+  // 用本地正午构造时间戳（任何时区下正午不跨天），保证用例时区无关
+  const at = (date: string): string => new Date(`${date}T12:00:00`).toISOString()
   const list = [
-    session({ id: 'a', started_at: '2026-10-04T23:00:00Z' }),
-    session({ id: 'b', started_at: '2026-10-05T01:00:00Z' }),
-    session({ id: 'c', started_at: '2026-10-11T01:00:00Z' }),
-    session({ id: 'd', started_at: '2026-10-12T01:00:00Z' })
+    session({ id: 'a', started_at: at('2026-10-04') }),
+    session({ id: 'b', started_at: at('2026-10-05') }),
+    session({ id: 'c', started_at: at('2026-10-11') }),
+    session({ id: 'd', started_at: at('2026-10-12') })
   ]
   const picked = sessionsInPeriod(list, { start: '2026-10-05', end: '2026-10-11' })
   assert.deepEqual(picked.map((s) => s.id), ['b', 'c'])

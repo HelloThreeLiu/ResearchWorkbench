@@ -12,6 +12,7 @@ import type {
   WritingSession
 } from '@shared/types'
 import { achievementsToPlainText } from './report'
+import { localDateOf } from './writing'
 import { dayjs } from './date'
 
 export interface InsightsSource {
@@ -74,7 +75,8 @@ export function activityByDay(source: InsightsSource): Map<string, DayActivity> 
     if (t.completed_at) get(t.completed_at.slice(0, 10)).tasks += 1
   }
   for (const l of source.logs) get(l.date).logs += 1
-  for (const s of source.sessions) get(s.started_at.slice(0, 10)).sessions += 1
+  // session 用本地日期归档（ISO 直接 slice 是 UTC 日期，本地 0-8 点的写作会落错天）
+  for (const s of source.sessions) get(localDateOf(s.started_at)).sessions += 1
   return map
 }
 

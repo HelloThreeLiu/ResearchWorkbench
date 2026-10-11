@@ -53,16 +53,32 @@ export function overForgetGuard(ms: number): boolean {
   return ms > FORGET_GUARD_MS
 }
 
+/** 收尾默认结束时间：至少开始+1 秒（起止输入框为秒级精度，极短 session 的默认值也要能直接保存） */
+export function ensureAfterStart(endIso: string, startIso: string): string {
+  const end = Date.parse(endIso)
+  const start = Date.parse(startIso)
+  if (Number.isNaN(end) || Number.isNaN(start)) return endIso
+  return new Date(Math.max(end, start + 1000)).toISOString()
+}
+
 /** 报告聚合周期（与 report.ts 的 Period 结构兼容，此处本地声明避免引入其运行时依赖链） */
 interface PeriodLike {
   start: string // YYYY-MM-DD（含）
   end: string // YYYY-MM-DD（含）
 }
 
-/** 周期（YYYY-MM-DD，含两端）内的 session（按开始日期的日期部分过滤，与 report.inPeriod 同口径） */
+/** ISO 时间戳 → 本地日期 YYYY-MM-DD（不能直接 slice(0,10)：那是 UTC 日期，本地 0-8 点的记录会落错天） */
+export function localDateOf(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10)
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** 周期（YYYY-MM-DD，含两端）内的 session（按开始时间的本地日期过滤，与周报周期同口径） */
 export function sessionsInPeriod(sessions: WritingSession[], period: PeriodLike): WritingSession[] {
   return sessions.filter((s) => {
-    const day = s.started_at.slice(0, 10)
+    const day = localDateOf(s.started_at)
     return day >= period.start && day <= period.end
   })
 }

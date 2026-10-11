@@ -4,13 +4,19 @@ import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import type { Paper } from '@shared/types'
 import { dayjs } from '@/lib/date'
-import { formatDuration, overForgetGuard, residualDefaultEnd, sessionDurationMs } from '@/lib/writing'
+import {
+  ensureAfterStart,
+  formatDuration,
+  overForgetGuard,
+  residualDefaultEnd,
+  sessionDurationMs
+} from '@/lib/writing'
 import { useStore } from '@/store'
 import { useTimerStore } from '@/timerStore'
 import { Button, ConfirmDialog, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 
-/** ISO → datetime-local 输入值（本地时区） */
-const toInput = (iso: string): string => dayjs(iso).format('YYYY-MM-DDTHH:mm')
+/** ISO → datetime-local 输入值（本地时区，秒级精度：极短 session 起止才可分辨） */
+const toInput = (iso: string): string => dayjs(iso).format('YYYY-MM-DDTHH:mm:ss')
 /** datetime-local 输入值 → ISO（dayjs 按本地时区解析） */
 const fromInput = (v: string): string => dayjs(v).toISOString()
 
@@ -42,7 +48,9 @@ export default function WritingSessionModal() {
     if (!s) return
     const started = s.started_at
     setStartInput(toInput(started))
-    setEndInput(toInput(target.mode === 'backfill' ? residualDefaultEnd(started) : new Date().toISOString()))
+    const endDefault =
+      target.mode === 'backfill' ? residualDefaultEnd(started) : new Date().toISOString()
+    setEndInput(toInput(ensureAfterStart(endDefault, started)))
     setWords(s.words === null ? '' : String(s.words))
     setProjectId(s.project_id ?? '')
     setPaperId(s.paper_id ?? '')
@@ -108,10 +116,10 @@ export default function WritingSessionModal() {
           )}
           <div className="flex gap-3">
             <Field label="开始时间">
-              <Input type="datetime-local" value={startInput} onChange={(e) => setStartInput(e.target.value)} />
+              <Input type="datetime-local" step={1} value={startInput} onChange={(e) => setStartInput(e.target.value)} />
             </Field>
             <Field label="结束时间">
-              <Input type="datetime-local" value={endInput} onChange={(e) => setEndInput(e.target.value)} />
+              <Input type="datetime-local" step={1} value={endInput} onChange={(e) => setEndInput(e.target.value)} />
             </Field>
           </div>
           {!timeValid && startInput !== '' && endInput !== '' && (
