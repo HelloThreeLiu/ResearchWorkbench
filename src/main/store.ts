@@ -134,14 +134,25 @@ function validRecord(x: unknown, strFields: string[], arrFields: string[] = []):
   return strFields.every((k) => isStr(x[k])) && arrFields.every((k) => Array.isArray(x[k]))
 }
 
+/**
+ * 旧版本数据的缺省字段回填（只补缺省，不改其余内容）：
+ * papers.cited_reference_ids 为 V2.5 新增字段——旧记录缺省时补空数组；
+ * 校验器不得把它列为必填，否则 V2.4 老数据升级时全部论文会被当作不合法记录跳过。
+ */
+function normalizeRecord(name: CollectionName, rec: unknown): unknown {
+  if (name === 'papers' && isPlainObject(rec) && !Array.isArray(rec.cited_reference_ids)) {
+    return { ...rec, cited_reference_ids: [] }
+  }
+  return rec
+}
+
 const VALIDATORS: Partial<Record<CollectionName, (x: unknown) => boolean>> = {
   projects: (x) => validRecord(x, ['id', 'name', 'created_at', 'updated_at']),
   tasks: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags']),
   milestones: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at'], ['remind_days']),
   ideas: (x) => validRecord(x, ['id', 'content', 'created_at', 'updated_at'], ['tags']),
   logs: (x) => validRecord(x, ['id', 'project_id', 'date', 'content', 'created_at', 'updated_at']),
-  papers: (x) =>
-    validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['sections', 'cited_reference_ids']),
+  papers: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['sections']),
   achievements: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at']),
   reports: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at']),
   references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors'])
@@ -213,7 +224,7 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
               detail: `${arr.length - good.length} 条记录结构不合法，已跳过（原文件未改动）`
             })
           }
-          ;(result as unknown as Record<string, unknown>)[name] = good
+          ;(result as unknown as Record<string, unknown>)[name] = good.map((r) => normalizeRecord(name, r))
         } else {
           ;(result as unknown as Record<string, unknown>)[name] = raw
         }
