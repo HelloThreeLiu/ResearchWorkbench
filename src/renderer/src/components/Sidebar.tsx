@@ -3,6 +3,7 @@ import { useNav, type Page } from '@/nav'
 import { useStore } from '@/store'
 import { useUpdateStore } from '@/updateStore'
 import { cn } from '@/lib/utils'
+import WritingTimerButton from '@/components/WritingTimerButton'
 import {
   BookOpen,
   CalendarDays,
@@ -108,8 +109,9 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* 底部：设置 + 速记提示 */}
+      {/* 底部：写作计时 + 设置 + 速记提示 */}
       <div className="border-t border-border px-3 pt-2.5 pb-3">
+        <WritingTimerButton />
         <button
           onClick={() => navigate({ name: 'settings' })}
           title={hasUpdate ? '设置（有新版本可用）' : '设置'}

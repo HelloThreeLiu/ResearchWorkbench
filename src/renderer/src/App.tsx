@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
+import { nowISO } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useUpdateStore } from '@/updateStore'
 import { useCaptureStore } from '@/captureStore'
+import { useTimerStore } from '@/timerStore'
 import Sidebar from '@/components/Sidebar'
 import QuickCapture from '@/components/QuickCapture'
+import WritingSessionModal from '@/components/WritingSessionModal'
 import UpdateModal from '@/components/UpdateModal'
 import UpdateNotice from '@/components/UpdateNotice'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -85,6 +88,16 @@ export default function App() {
     bootstrap()
   }, [bootstrap])
 
+  // 写作 session 残留检测（PRD 5.5.3/8.3）：启动或外部同步后存在「有开始无结束」的记录
+  // 且并非当前正在计时 → 弹补记窗口（跨设备场景下另一台设备写入的残留同样触发）
+  const sessions = useStore((s) => s.sessions)
+  useEffect(() => {
+    if (!ready) return
+    if (useTimerStore.getState().activeSessionId !== null) return
+    const residual = sessions.find((s) => s.ended_at === null)
+    if (residual) useTimerStore.getState().openFinish(residual.id, 'backfill')
+  }, [ready, sessions])
+
   useEffect(() => {
     return window.api.onQuickCapture(() => showQuickCapture())
   }, [showQuickCapture])
@@ -98,9 +111,21 @@ export default function App() {
     return unsubscribe
   }, [])
 
-  // 退出前落盘：窗口销毁前尽力发起未落盘写入；主进程主动退出时先 flush 再放行
+  // 退出前落盘：窗口销毁前尽力发起未落盘写入；主进程主动退出时先 flush 再放行。
+  // 写作计时退出收尾（PRD 5.5.5）：退出时计时中的 session 以退出时刻自动结束并保存
   useEffect(() => {
+    const finalizeActiveSession = (): void => {
+      const { activeSessionId, stop } = useTimerStore.getState()
+      if (activeSessionId === null) return
+      const s = useStore.getState().sessions.find((x) => x.id === activeSessionId)
+      useStore.getState().updateWritingSession(activeSessionId, {
+        ended_at: nowISO(),
+        note: s && s.note.trim() !== '' ? `${s.note.trim()}；应用退出自动结束` : '应用退出自动结束'
+      })
+      stop()
+    }
     const flush = (): void => {
+      finalizeActiveSession()
       void useStore.getState().flushPendingSaves()
     }
     window.addEventListener('beforeunload', flush)
@@ -108,6 +133,7 @@ export default function App() {
     const unsubscribe = window.api.onQuitRequested(() => {
       void (async () => {
         try {
+          finalizeActiveSession()
           await useStore.getState().flushPendingSaves()
         } finally {
           await window.api.confirmQuit()
@@ -163,6 +189,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
       <QuickCapture open={quickCaptureOpen} prefill={quickCapturePrefill} onClose={hideQuickCapture} />
+      <WritingSessionModal />
       <UpdateNotice />
       <UpdateModal />
     </div>
