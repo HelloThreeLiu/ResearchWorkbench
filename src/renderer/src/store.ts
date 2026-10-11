@@ -455,6 +455,19 @@ export const useStore = create<AppState>((set, get) => ({
           }
         })
       )
+      // 会议行动项单向同步（决策 D12）：任务完成 → 行动项自动打勾；行动项手动勾选不回写任务。
+      // 完成态无变化的普通编辑不写会议（避免无关任务改名也 bump 会议 updated_at）
+      const taskDone = updated.status === 'done'
+      mutateArray(get, set, 'meetings', (meetings) =>
+        meetings.map((m) => {
+          if (!m.action_items.some((a) => a.task_id === id && a.done !== taskDone)) return m
+          return {
+            ...m,
+            updated_at: nowISO(),
+            action_items: m.action_items.map((a) => (a.task_id === id ? { ...a, done: taskDone } : a))
+          }
+        })
+      )
     }
   },
   deleteTask: (id) => {

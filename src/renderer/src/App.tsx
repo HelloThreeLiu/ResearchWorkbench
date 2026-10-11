@@ -18,6 +18,7 @@ import CalendarPage from '@/pages/CalendarPage'
 import MilestonesPage from '@/pages/MilestonesPage'
 import ReferencesPage from '@/pages/ReferencesPage'
 import IdeasPage from '@/pages/IdeasPage'
+import MeetingsPage from '@/pages/MeetingsPage'
 import ToolboxPage from '@/pages/ToolboxPage'
 import PapersPage from '@/pages/PapersPage'
 import AchievementsPage from '@/pages/AchievementsPage'
@@ -152,6 +153,7 @@ export default function App() {
         {page.name === 'milestones' && <MilestonesPage />}
         {page.name === 'references' && <ReferencesPage />}
         {page.name === 'ideas' && <IdeasPage />}
+        {page.name === 'meetings' && <MeetingsPage />}
         {page.name === 'tools' && <ToolboxPage />}
         {page.name === 'papers' && <PapersPage />}
         {page.name === 'achievements' && <AchievementsPage />}
