@@ -1,6 +1,8 @@
-// 写作度量纯函数（PRD 5.5）：时长派生、格式化、残留判定
-// 零运行时依赖（类型全部 import type，由 Node 类型剥离擦除）——供 node:test 直接回归（tests/writing.test.ts）
-import type { WritingSession } from '@shared/types'
+// 写作度量与周报新块 纯函数（PRD 5.5 / 5.6）：时长派生、格式化、残留判定、周月聚合、
+// {{MEETINGS}}/{{WRITING}} 块构建、模板占位符渲染
+// 零运行时依赖（类型全部 import type，由 Node 类型剥离擦除）——供 node:test 直接回归
+// （tests/writing.test.ts / tests/report.test.ts）
+import type { Meeting, Paper, WritingSession } from '@shared/types'
 
 /** 忘记停止防护阈值：时长超过 4 小时黄字提醒（PRD 5.5.4），残留补记默认结束=开始+4h（PRD 5.5.3） */
 export const FORGET_GUARD_MS = 4 * 60 * 60 * 1000
@@ -51,11 +53,14 @@ export function overForgetGuard(ms: number): boolean {
   return ms > FORGET_GUARD_MS
 }
 
+/** 报告聚合周期（与 report.ts 的 Period 结构兼容，此处本地声明避免引入其运行时依赖链） */
+interface PeriodLike {
+  start: string // YYYY-MM-DD（含）
+  end: string // YYYY-MM-DD（含）
+}
+
 /** 周期（YYYY-MM-DD，含两端）内的 session（按开始日期的日期部分过滤，与 report.inPeriod 同口径） */
-export function sessionsInPeriod(
-  sessions: WritingSession[],
-  period: { start: string; end: string }
-): WritingSession[] {
+export function sessionsInPeriod(sessions: WritingSession[], period: PeriodLike): WritingSession[] {
   return sessions.filter((s) => {
     const day = s.started_at.slice(0, 10)
     return day >= period.start && day <= period.end
@@ -91,4 +96,59 @@ export function writingByPaper(
     map.set(key, agg)
   }
   return [...map.entries()].map(([paperId, agg]) => ({ paperId, ...agg }))
+}
+
+// ---------- 周报新块（V2.6 5.6） ----------
+
+/** M月D日（YYYY-MM-DD → 纯字符串解析，保持本模块零依赖可被 node:test 加载） */
+function md(dateStr: string): string {
+  const [, m, d] = dateStr.split('-')
+  if (!m || !d) return dateStr
+  return `${Number(m)}月${Number(d)}日`
+}
+
+/**
+ * 模板占位符渲染：函数式替换 + 一次正则覆盖所有出现位置。
+ * 不能用字符串形式的 replace('{{X}}', v)：v 里的 $&/$`/$'/$$ 会被当作替换模式插回匹配文本，
+ * 且只替换首个占位符（模板里写两次 {{WORK}} 时第二个会留在成品里）。
+ */
+export function fillTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? '')
+}
+
+/** {{MEETINGS}}：周期内会议（日期倒序）+ 各会议行动项及完成状态；周期内无会议返回空串（块整体消失） */
+export function buildMeetingsSection(meetings: Meeting[], period: PeriodLike): string {
+  const inRange = meetings
+    .filter((m) => m.date >= period.start && m.date <= period.end)
+    .sort((a, b) => b.date.localeCompare(a.date))
+  if (inRange.length === 0) return ''
+  const lines: string[] = ['### 会议纪要']
+  for (const m of inRange) {
+    const total = m.action_items.length
+    const done = m.action_items.filter((a) => a.done).length
+    const head =
+      total > 0 ? `**${md(m.date)} ${m.title}**（行动项 ${done}/${total} 已完成）` : `**${md(m.date)} ${m.title}**`
+    lines.push(head)
+    for (const a of m.action_items) {
+      lines.push(`- ${a.text}${a.done ? '（已完成）' : '（未完成）'}`)
+    }
+  }
+  return lines.join('\n')
+}
+
+/** {{WRITING}}：周期内总次数/总时长/总字数 + 按论文分组明细（无论文归「未关联论文」）；无记录返回空串 */
+export function buildWritingSection(sessions: WritingSession[], papers: Paper[], period: PeriodLike): string {
+  const list = sessionsInPeriod(sessions, period)
+  if (list.length === 0) return ''
+  const totals = writingPeriodStats(list)
+  const lines: string[] = [
+    '### 写作投入',
+    `本期写作 **${totals.count} 次 · ${formatDuration(totals.durationMs)} · ${totals.words} 字**`
+  ]
+  const paperName = new Map(papers.map((p) => [p.id, p.title]))
+  for (const g of writingByPaper(list)) {
+    const name = g.paperId !== null ? (paperName.get(g.paperId) ?? '未关联论文') : '未关联论文'
+    lines.push(`- ${name}：${formatDuration(g.durationMs)} / ${g.words} 字`)
+  }
+  return lines.join('\n')
 }

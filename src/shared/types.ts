@@ -320,8 +320,31 @@ export interface AppSettings {
   reportTemplate: string // 周报/月报 Markdown 模板（占位符方式）
 }
 
-/** 默认报告模板：占位符 {{TITLE}} {{PERIOD}} {{WORK}} {{PLAN}} {{THOUGHTS}} */
+/**
+ * 默认报告模板：占位符 {{TITLE}} {{PERIOD}} {{WORK}} {{PLAN}} {{THOUGHTS}} {{MEETINGS}} {{WRITING}}。
+ * 按 D21 在「一、本期工作」内追加会议子块与写作块；占位符可选——自定义模板不含则该块不出现（PRD 5.6.2）。
+ */
 export const DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
+
+## 一、本期工作
+
+{{WORK}}
+
+{{MEETINGS}}
+
+{{WRITING}}
+
+## 二、下期计划
+
+{{PLAN}}
+
+## 三、问题与思考
+
+{{THOUGHTS}}
+`
+
+/** V2.6 之前的默认模板：用于识别「从未自定义过模板」的旧用户，升级时自动换用新默认 */
+export const LEGACY_DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
 
 ## 一、本期工作
 
@@ -335,6 +358,11 @@ export const DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
 
 {{THOUGHTS}}
 `
+
+/** 模板兼容解析（PRD 5.6.3 旧用户自定义模板不变）：与旧默认逐字符相等视为未自定义 → 换用新默认；自定义过则原样保留 */
+export function resolveReportTemplate(tpl: string): string {
+  return tpl === LEGACY_DEFAULT_REPORT_TEMPLATE ? DEFAULT_REPORT_TEMPLATE : tpl
+}
 
 // 数据集合名 → 文件名（projects.json / tasks.json / ...）
 export type CollectionName =

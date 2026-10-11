@@ -18,7 +18,8 @@ import {
   type CollectionName,
   type LoadIssue,
   type ToolFileData,
-  type VocabFileData
+  type VocabFileData,
+  resolveReportTemplate
 } from '@shared/types'
 import { seedToolData } from './seed'
 import { vocabShapeValid } from './vocabShape'
@@ -77,6 +78,10 @@ export function loadSettings(): void {
       settings = { ...settings, ...parsed }
       if (typeof settings.dataDir === 'string' && settings.dataDir.trim() === '') {
         settings.dataDir = null
+      }
+      // 报告模板兼容（PRD 5.6.3）：旧默认模板视为未自定义换用新默认，自定义过的原样保留
+      if (typeof settings.reportTemplate === 'string') {
+        settings.reportTemplate = resolveReportTemplate(settings.reportTemplate)
       }
     }
   } catch (err) {
