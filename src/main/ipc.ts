@@ -7,7 +7,6 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   COLLECTION_FILES,
-  DEFAULT_VOCAB,
   type AppSettings,
   type CollectionName,
   type BootstrapResult,
@@ -19,6 +18,7 @@ import {
   backupNow,
   checkExternalChanges,
   chooseDataDir,
+  emptyCollections,
   getSettings,
   getLastWriteAt,
   loadAllWithIssues,
@@ -79,21 +79,7 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     return {
       needsOnboarding: !settings.dataDir,
       dataDir: settings.dataDir,
-      collections: settings.dataDir
-        ? data
-        : {
-            projects: [],
-            tasks: [],
-            milestones: [],
-            ideas: [],
-            logs: [],
-            tools: { groups: [], items: [] },
-            vocab: DEFAULT_VOCAB,
-            papers: [],
-            achievements: [],
-            reports: [],
-            references: []
-          },
+      collections: settings.dataDir ? data : emptyCollections(),
       settings,
       meta: { lastWriteAt: getLastWriteAt() },
       issues

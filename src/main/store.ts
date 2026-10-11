@@ -95,7 +95,8 @@ function dataFile(name: CollectionName): string {
   return path.join(settings.dataDir!, COLLECTION_FILES[name])
 }
 
-function emptyCollections(): AllCollections {
+/** 空集合（未选数据目录 / bootstrap 兜底共用，导出避免 ipc 侧再维护一份漂移副本） */
+export function emptyCollections(): AllCollections {
   return {
     projects: [],
     tasks: [],
@@ -107,7 +108,9 @@ function emptyCollections(): AllCollections {
     papers: [],
     achievements: [],
     reports: [],
-    references: []
+    references: [],
+    meetings: [],
+    sessions: []
   }
 }
 
@@ -155,7 +158,9 @@ const VALIDATORS: Partial<Record<CollectionName, (x: unknown) => boolean>> = {
   papers: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['sections']),
   achievements: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at']),
   reports: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at']),
-  references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors'])
+  references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors']),
+  meetings: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at'], ['action_items']),
+  sessions: (x) => validRecord(x, ['id', 'started_at', 'created_at', 'updated_at'])
 }
 
 /**
