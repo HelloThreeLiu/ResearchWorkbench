@@ -98,6 +98,11 @@ npm run build            # electron-vite build
 npm audit --omit=dev     # 生产依赖漏洞必须为 0，出现即红灯
 ```
 
+> 涉及 `package.json` / `package-lock.json` 的变更，须额外用较新的 npm 复现 `npm ci` 的严格校验
+> （CI 的 Node 捆绑的 npm 通常比本地新、校验更严）：`npx -y npm@latest ci --ignore-scripts --dry-run`。
+> 先例：lock 缺 bundled 子包条目，本地 npm 11.6 通过而 CI npm 11.19 拒绝，门禁红灯带病运行五天才被发现——
+> **push 后要看一眼 CI 结果**，红灯当天修。
+
 **专项门禁矩阵**（按改动内容追加）：
 
 | 改动内容 | 额外必过项 |
