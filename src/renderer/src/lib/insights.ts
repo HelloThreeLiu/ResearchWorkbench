@@ -8,7 +8,8 @@ import type {
   ProgressLog,
   Project,
   Task,
-  VocabTypeDef
+  VocabTypeDef,
+  WritingSession
 } from '@shared/types'
 import { achievementsToPlainText } from './report'
 import { dayjs } from './date'
@@ -21,6 +22,7 @@ export interface InsightsSource {
   logs: ProgressLog[]
   papers: Paper[]
   achievements: Achievement[]
+  sessions: WritingSession[] // V2.6 写作口径
 }
 
 // ---------- 概览统计卡 ----------
@@ -54,7 +56,7 @@ export interface DayActivity {
   date: string // YYYY-MM-DD
   tasks: number // 当日完成任务数
   logs: number // 当日进展日志条数
-  // V2.6 起增加写作口径：sessions（当日写作 session 数），届时热力图增加「全部 / 仅写作」切换
+  sessions: number // 当日写作 session 数（V2.6 写作口径）
 }
 
 /** 按日聚合活动计数（键为 YYYY-MM-DD） */
@@ -63,7 +65,7 @@ export function activityByDay(source: InsightsSource): Map<string, DayActivity> 
   const get = (date: string): DayActivity => {
     let d = map.get(date)
     if (!d) {
-      d = { date, tasks: 0, logs: 0 }
+      d = { date, tasks: 0, logs: 0, sessions: 0 }
       map.set(date, d)
     }
     return d
@@ -72,6 +74,7 @@ export function activityByDay(source: InsightsSource): Map<string, DayActivity> 
     if (t.completed_at) get(t.completed_at.slice(0, 10)).tasks += 1
   }
   for (const l of source.logs) get(l.date).logs += 1
+  for (const s of source.sessions) get(s.started_at.slice(0, 10)).sessions += 1
   return map
 }
 
