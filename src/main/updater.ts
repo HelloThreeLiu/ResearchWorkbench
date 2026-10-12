@@ -1,15 +1,22 @@
-// 应用更新：GitHub Releases + electron-updater
-// 流程：启动后静默检查 → 推送渲染层（红点+提示卡）→ 弹窗确认 → 下载（进度推送）→ 用户显式点击后重启安装
+// 应用更新：CNB 国内镜像 + GitHub Releases 双源（electron-updater）
+// 流程：启动后静默检查（镜像优先、失败回退 GitHub）→ 推送渲染层（红点+提示卡）→ 弹窗确认
+// → 下载（进度推送，沿用检查命中的源，失败不跨源重试、由弹窗镜像直链兜底）→ 用户显式点击后重启安装
 // （无发布者签名校验前不做「退出时静默安装」；安装仍沿用注册表记录的原目录覆盖，用户数据不受影响）
 import { app, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateCheckResult, UpdateEvent } from '@shared/types'
+import {
+  CNB_FEED_URL,
+  GITHUB_OWNER,
+  GITHUB_REPO,
+  RELEASES_PAGE,
+  buildMirrorDownloadUrl
+} from './updateFeed'
 
-const GITHUB_OWNER = 'HelloThreeLiu'
-const GITHUB_REPO = 'ResearchWorkbench'
-const RELEASES_PAGE = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
 const STARTUP_CHECK_DELAY_MS = 5000
 const GITHUB_API_TIMEOUT_MS = 8000
+// CNB 检查护栏：electron-updater 无请求级超时 API，DNS 污染/挂死场景下靠 race 及时降级
+const CNB_CHECK_TIMEOUT_MS = 10000
 
 let getMainWindow: () => BrowserWindow | null = () => null
 /** 下载是否进行中：仅此阶段向渲染层推送 error 事件（检查失败走 IPC 返回值/静默） */
@@ -18,6 +25,21 @@ let downloading = false
 function sendEvent(event: UpdateEvent): void {
   const win = getMainWindow()
   if (win && !win.isDestroyed()) win.webContents.send('update:event', event)
+}
+
+/** race 护栏超时后原 promise 被丢弃不再消费，晚到的成功/失败均不影响后续流程 */
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`CNB feed check timeout after ${ms}ms`)), ms)
+      })
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export function initUpdater(windowGetter: () => BrowserWindow | null): void {
@@ -75,17 +97,36 @@ async function fetchReleaseNotes(): Promise<{ notes: string; url: string } | nul
   }
 }
 
+type FeedCheckOutcome = {
+  source: 'cnb' | 'github'
+  result: Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>
+}
+
+/**
+ * 双源检查：先 CNB 镜像 generic feed（超时/网络错/404 即失败），再回退 GitHub 原生源。
+ * 下载阶段沿用最后一次 setFeedURL 的源——命中哪个源检查，下载就走哪个源，不做跨源重试。
+ */
+async function checkFeedWithFallback(): Promise<FeedCheckOutcome> {
+  autoUpdater.setFeedURL({ provider: 'generic', url: CNB_FEED_URL })
+  try {
+    return { source: 'cnb', result: await withTimeout(autoUpdater.checkForUpdates(), CNB_CHECK_TIMEOUT_MS) }
+  } catch {
+    autoUpdater.setFeedURL({ provider: 'github', owner: GITHUB_OWNER, repo: GITHUB_REPO })
+    return { source: 'github', result: await autoUpdater.checkForUpdates() }
+  }
+}
+
 /** 检查更新（仅打包环境可用；dev 模式返回 dev 状态） */
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const currentVersion = app.getVersion()
   if (!app.isPackaged) {
-    return { status: 'dev', currentVersion, newVersion: null, notes: '', releaseUrl: null, error: null }
+    return { status: 'dev', currentVersion, newVersion: null, notes: '', releaseUrl: null, mirrorUrl: null, error: null }
   }
   try {
-    const result = await autoUpdater.checkForUpdates()
+    const { source, result } = await checkFeedWithFallback()
     const newVersion = result?.updateInfo?.version ?? null
     if (!newVersion || newVersion === currentVersion) {
-      return { status: 'unavailable', currentVersion, newVersion: null, notes: '', releaseUrl: null, error: null }
+      return { status: 'unavailable', currentVersion, newVersion: null, notes: '', releaseUrl: null, mirrorUrl: null, error: null }
     }
     const release = await fetchReleaseNotes()
     return {
@@ -94,6 +135,8 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       newVersion,
       notes: release?.notes ?? '',
       releaseUrl: release?.url ?? RELEASES_PAGE,
+      // 镜像源检查命中 = 该版本已同步镜像仓库，直链必然存在；GitHub 源命中则不给（镜像未必有该版本）
+      mirrorUrl: source === 'cnb' ? buildMirrorDownloadUrl(newVersion) : null,
       error: null
     }
   } catch (err) {
@@ -103,6 +146,7 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       newVersion: null,
       notes: '',
       releaseUrl: RELEASES_PAGE,
+      mirrorUrl: null,
       error: err instanceof Error ? err.message : String(err)
     }
   }
@@ -119,7 +163,8 @@ export function scheduleStartupSilentCheck(): void {
             kind: 'available',
             version: result.newVersion!,
             notes: result.notes,
-            releaseUrl: result.releaseUrl
+            releaseUrl: result.releaseUrl,
+            mirrorUrl: result.mirrorUrl
           })
         }
       })
@@ -129,7 +174,7 @@ export function scheduleStartupSilentCheck(): void {
   }, STARTUP_CHECK_DELAY_MS)
 }
 
-/** 下载更新（进度与完成经 update:event 推送；错误经 error 事件推送后由渲染层提示重试） */
+/** 下载更新（进度与完成经 update:event 推送；错误经 error 事件推送后由渲染层提示重试或手动下载） */
 export async function startDownloadUpdate(): Promise<void> {
   if (!app.isPackaged) return
   downloading = true

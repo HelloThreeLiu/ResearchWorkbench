@@ -198,8 +198,9 @@ npm audit --omit=dev     # 生产依赖漏洞必须为 0，出现即红灯
 - [ ] `npm run dist` 打包并**实机安装**：旧版本数据文件正常加载、核心功能冒烟（项目 / 任务 / 导出 / 设置）；
 - [ ] 提交 `chore(release): vX.Y.Z` → 打 tag `vX.Y.Z` → `git push && git push --tags`；
 - [ ] 创建 GitHub Release，正文为该版本完整日志；
-- [ ] 产物上传：本地网络不稳时用 **Actions「Attach release assets」**（填 tag 触发，云端构建并上传 `exe / exe.blockmap / zip / latest.yml`）；
+- [ ] 产物上传：本地网络不稳时用 **Actions「Attach release assets」**（填 tag 触发，云端构建并上传 `exe / exe.blockmap / zip / latest.yml`，随后自动同步 CNB 国内镜像，同步自检失败即红灯）；
 - [ ] 发布后验证：从 Release 下载安装；旧版本应用内「检查更新」能看到新版本并完成静默更新；
+- [ ] CNB 镜像验证：抽查 `https://cnb.cool/HelloThreeLiu/researchworkbench-release/-/releases/latest/download/latest.yml` 匿名可访问且指向新版本（应用内检查更新应命中 CNB 源，弹窗含「国内高速下载」入口）；
 - [ ] 更新 [PRD-V2.4-V2.6.md](PRD-V2.4-V2.6.md) 交付状态标注。
 
 **回滚预案**：Release 资产可覆盖重传（`gh release upload --clobber`）；发现重大缺陷 → 立即发 patch 版本并让 `latest.yml` 指向修正版；数据结构出问题 → 停止推广新版本，优先保用户数据可回退加载。

@@ -420,7 +420,7 @@ export interface BootstrapResult {
   issues: LoadIssue[]
 }
 
-// ---------- 应用更新（GitHub Releases + electron-updater） ----------
+// ---------- 应用更新（CNB 国内镜像 + GitHub Releases 双源，electron-updater） ----------
 
 /** 手动检查更新的结果（update:check IPC 返回值） */
 export interface UpdateCheckResult {
@@ -432,12 +432,20 @@ export interface UpdateCheckResult {
   notes: string
   /** GitHub Release 页面链接（手动下载兜底入口） */
   releaseUrl: string | null
+  /** CNB 国内镜像安装包直链（仅镜像源检查命中时有值；弹窗「国内高速下载」入口） */
+  mirrorUrl: string | null
   error: string | null
 }
 
 /** 主进程 → 渲染进程的更新事件（update:event 推送） */
 export type UpdateEvent =
-  | { kind: 'available'; version: string; notes: string; releaseUrl: string | null }
+  | {
+      kind: 'available'
+      version: string
+      notes: string
+      releaseUrl: string | null
+      mirrorUrl: string | null
+    }
   | {
       kind: 'progress'
       percent: number
