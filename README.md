@@ -69,7 +69,7 @@
 
 ### 其他
 
-- **应用内自动更新** —— 启动自动检查 GitHub 新版本（侧边栏红点 + 右上角提示卡提醒），更新弹窗查看版本日志，确认后下载（实时进度）并静默安装到原目录，数据不受影响；
+- **应用内自动更新（国内加速）** —— 启动自动检查新版本（侧边栏红点 + 右上角提示卡提醒），更新弹窗查看版本日志，确认后下载（实时进度）并静默安装到原目录，数据不受影响；下载优先走 [CNB 国内镜像](https://cnb.cool/HelloThreeLiu/researchworkbench-release)，失败自动回退 GitHub，弹窗同时提供镜像手动下载入口；
 - **词汇库管理** —— 标签库（联想选择 + 级联重命名）、自定义节点类型与成果类型，独立 `vocab.json` 存储；
 - **三套界面主题 × 明暗模式** —— linear（精密高效，默认）/ claude（学术编辑）/ notion（暖中性极简），3 × 2 共 6 套配色，全应用换肤。
 
@@ -81,6 +81,8 @@
 | --- | --- |
 | `Gezhi-Workbench-x.y.z-x64.exe` | NSIS 安装包（推荐），支持自定义安装目录、创建桌面快捷方式、**应用内自动更新** |
 | `Gezhi-Workbench-x.y.z-x64.zip` | 便携版，解压即用，**不支持自动更新**（新版本需手动下载覆盖） |
+
+**国内下载慢？** 安装包已同步 [CNB 镜像仓库](https://cnb.cool/HelloThreeLiu/researchworkbench-release)，在镜像 Release 页直接下载 `Gezhi-Workbench-x.y.z-x64.exe` 即可，与 GitHub 版本内容一致。
 
 **首次启动**会引导选择数据目录（建议选择网盘同步目录，如坚果云 `…\Nutstore\1\格致科研工作台`），目录为空时自动初始化。
 
@@ -97,7 +99,7 @@
 - **Tailwind CSS v4** + 手写轻量组件（tailwind-merge 管理类名覆盖），CSS 变量主题系统
 - **Zustand** 状态管理，**dayjs** 日期处理
 - **marked + DOMPurify** Markdown 渲染，**docx** Word 导出
-- **electron-updater** 应用内自动更新（GitHub Releases 通道）
+- **electron-updater** 应用内自动更新（CNB 国内镜像优先 + GitHub Releases 兜底双源）
 
 ## 🚀 从源码构建
 
