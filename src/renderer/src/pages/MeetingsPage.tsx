@@ -1,7 +1,7 @@
 // 会议纪要页（V2.6 5.4）：按日期倒序时间线；卡片=日期/标题/参与人/项目色条/行动项进度
 // 定位（PRD）：带行动项的结构化会谈记录——与进展日志的分工：日志=项目流水，会议=会谈产出（核心价值在行动项落实）
 import { useMemo, useState } from 'react'
-import { NotebookPen, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Meeting } from '@shared/types'
 import { friendlyDate } from '@/lib/date'
 import { useStore } from '@/store'

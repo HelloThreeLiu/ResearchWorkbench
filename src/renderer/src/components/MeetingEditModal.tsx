@@ -58,10 +58,12 @@ export default function MeetingEditModal({ open, onClose, meeting }: Props) {
     setItems((arr) => [...arr, { key: `d${Date.now()}`, text: '', done: false, task_id: null }])
   }
 
-  /** 行动项一键转任务（PRD 5.4.3）：预填标题=行动项文本、项目=会议关联项目，成功后回填 task_id */
+  /** 行动项一键转任务（PRD 5.4.3）：预填标题=行动项文本、项目=会议关联项目，成功后回填 task_id；
+   *  悬空 task_id（关联任务已删除）允许重转并覆盖回链 */
   const convertToTask = async (key: string): Promise<void> => {
     const item = items.find((it) => it.key === key)
-    if (!item || item.task_id || item.text.trim() === '') return
+    if (!item || item.text.trim() === '') return
+    if (item.task_id && tasks.some((t) => t.id === item.task_id)) return
     const task = addTask({ title: item.text.trim(), project_id: projectId || null })
     const next = items.map((it) => (it.key === key ? { ...it, task_id: task.id } : it))
     setItems(next)

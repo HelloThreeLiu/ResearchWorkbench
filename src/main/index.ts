@@ -2,7 +2,7 @@
 // 窗口/托盘/全局快捷键生命周期管理；关闭默认最小化到托盘（可在设置修改）
 import { app, BrowserWindow, Menu, Tray, nativeImage, dialog, shell } from 'electron'
 import path from 'node:path'
-import { registerIpcHandlers } from './ipc'
+import { registerIpcHandlers, requestAppQuit } from './ipc'
 import { createIsAllowedUrl } from './navGuard'
 import { isValidAccelerator, setQuickCaptureShortcut, unregisterAllShortcuts } from './shortcuts'
 import { dailyBackupIfNeeded, getSettings, loadSettings } from './store'
@@ -136,8 +136,9 @@ function createTray(): void {
       {
         label: '退出',
         click: () => {
-          isQuitting = true
-          app.quit()
+          // 走退出握手（与设置页退出一致）：先让渲染层落盘防抖编辑与写作计时收尾，再真正退出；
+          // 不先置 isQuitting——握手窗口期内关闭主窗口若被标记为退出会直接销毁渲染层，反而丢收尾
+          requestAppQuit(() => mainWindow)
         }
       }
     ])

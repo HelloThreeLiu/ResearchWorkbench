@@ -95,7 +95,10 @@ export default function App() {
     if (!ready) return
     if (useTimerStore.getState().activeSessionId !== null) return
     const residual = sessions.find((s) => s.ended_at === null)
-    if (residual) useTimerStore.getState().openFinish(residual.id, 'backfill')
+    if (!residual) return
+    // 补记弹窗已打开时外部同步触发本 effect 重跑：不重置用户正在填写的表单
+    if (useTimerStore.getState().finishTarget?.sessionId === residual.id) return
+    useTimerStore.getState().openFinish(residual.id, 'backfill')
   }, [ready, sessions])
 
   useEffect(() => {

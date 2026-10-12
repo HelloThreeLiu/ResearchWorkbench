@@ -164,7 +164,8 @@ const VALIDATORS: Partial<Record<CollectionName, (x: unknown) => boolean>> = {
   achievements: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at']),
   reports: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at']),
   references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors']),
-  meetings: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at'], ['action_items']),
+  meetings: (x) =>
+    validRecord(x, ['id', 'title', 'date', 'attendees', 'content', 'created_at', 'updated_at'], ['action_items']),
   sessions: (x) => validRecord(x, ['id', 'started_at', 'created_at', 'updated_at'])
 }
 

@@ -72,10 +72,13 @@ export default function WritingSessionModal() {
 
   const save = (): void => {
     if (!timeValid) return
+    // Number('1e999') = Infinity：非有限值按未录入处理，避免界面显示「Infinity 字」而落盘变 null 的不一致
+    const wordsNum = Number(words)
     updateWritingSession(target.sessionId, {
       started_at: startIso,
       ended_at: endIso,
-      words: words.trim() === '' || Number.isNaN(Number(words)) ? null : Math.max(0, Math.round(Number(words))),
+      words:
+        words.trim() === '' || !Number.isFinite(wordsNum) ? null : Math.max(0, Math.round(wordsNum)),
       project_id: projectId || null,
       paper_id: paperId || null,
       section: section.trim(),
