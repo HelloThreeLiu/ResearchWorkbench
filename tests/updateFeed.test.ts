@@ -1,7 +1,12 @@
 // CNB 镜像直链构造回归测试：版本号严格校验（latest.yml 属网络输入，防路径注入）与 URL 模板
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { CNB_FEED_URL, CNB_REPO_PATH, buildMirrorDownloadUrl } from '../src/main/updateFeed.ts'
+import {
+  CNB_FEED_URL,
+  CNB_REPO_PATH,
+  buildMirrorDownloadUrl,
+  isVersionNewer
+} from '../src/main/updateFeed.ts'
 
 test('合法 semver 版本号拼出镜像直链', () => {
   assert.equal(
@@ -36,4 +41,27 @@ test('非严格 semver 一律拒绝（防网络输入注入 URL 路径）', () =
 test('feed 固定地址形态防误改（latest 跳转依赖 make_latest 标记）', () => {
   assert.ok(CNB_FEED_URL.startsWith('https://cnb.cool/'))
   assert.ok(CNB_FEED_URL.endsWith('/-/releases/latest/download/latest.yml'))
+})
+
+test('版本比较：仅更高版本为真（防镜像滞后时的降级推送）', () => {
+  assert.equal(isVersionNewer('2.7.0', '2.7.0'), false) // 相等
+  assert.equal(isVersionNewer('2.7.0', '2.7.1'), false) // 候选更低（打包 2.7.1 遇镜像 2.7.0 的实况）
+  assert.equal(isVersionNewer('2.7.1', '2.7.0'), true)
+  assert.equal(isVersionNewer('2.8.0', '2.7.9'), true)
+  assert.equal(isVersionNewer('3.0.0', '2.99.99'), true)
+  assert.equal(isVersionNewer('2.10.0', '2.9.0'), true) // 非字典序：10 > 9
+  assert.equal(isVersionNewer('10.0.0', '9.0.0'), true)
+})
+
+test('版本比较：非法输入保守返回 false', () => {
+  for (const [a, b] of [
+    ['v2.8.0', '2.7.0'],
+    ['2.8.0', 'v2.7.0'],
+    ['', '2.7.0'],
+    ['2.8.0-beta.1', '2.7.0'],
+    ['2.8', '2.7.0'],
+    ['x.y.z', '2.7.0']
+  ]) {
+    assert.equal(isVersionNewer(a, b), false, `应拒绝: ${a} vs ${b}`)
+  }
 })

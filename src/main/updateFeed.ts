@@ -21,3 +21,21 @@ export function buildMirrorDownloadUrl(version: string): string | null {
   if (!/^\d+\.\d+\.\d+$/.test(version)) return null
   return `https://cnb.cool/${CNB_REPO_PATH}/-/releases/download/v${version}/${ARTIFACT_TEMPLATE(version)}`
 }
+
+/**
+ * 严格比较 X.Y.Z 版本号：candidate 是否高于 current。任一格式非法返回 false（保守视为无可更新）。
+ * 双源场景下镜像可能滞后于已装版本（如开发机装了未发布版），仅判「不等」会把降级当更新推送。
+ */
+export function isVersionNewer(candidate: string, current: string): boolean {
+  const pattern = /^\d+\.\d+\.\d+$/
+  if (!pattern.test(candidate) || !pattern.test(current)) return false
+  const parse = (v: string): [number, number, number] => {
+    const [a, b, c] = v.split('.').map((n) => Number.parseInt(n, 10))
+    return [a, b, c]
+  }
+  const [ca, cb, cc] = parse(candidate)
+  const [pa, pb, pc] = parse(current)
+  if (ca !== pa) return ca > pa
+  if (cb !== pb) return cb > pb
+  return cc > pc
+}

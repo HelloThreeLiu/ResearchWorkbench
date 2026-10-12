@@ -10,7 +10,8 @@ import {
   GITHUB_OWNER,
   GITHUB_REPO,
   RELEASES_PAGE,
-  buildMirrorDownloadUrl
+  buildMirrorDownloadUrl,
+  isVersionNewer
 } from './updateFeed'
 
 const STARTUP_CHECK_DELAY_MS = 5000
@@ -125,7 +126,9 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
   try {
     const { source, result } = await checkFeedWithFallback()
     const newVersion = result?.updateInfo?.version ?? null
-    if (!newVersion || newVersion === currentVersion) {
+    // 仅「更高版本」才视为可更新：镜像滞后（或本机为未发布版本）时，feed 版本可能不高于当前，
+    // 只判不等会把降级当更新推送
+    if (!newVersion || !isVersionNewer(newVersion, currentVersion)) {
       return { status: 'unavailable', currentVersion, newVersion: null, notes: '', releaseUrl: null, mirrorUrl: null, error: null }
     }
     const release = await fetchReleaseNotes()
