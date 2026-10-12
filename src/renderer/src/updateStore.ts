@@ -18,6 +18,8 @@ interface UpdateInfo {
   version: string
   notes: string
   releaseUrl: string | null
+  /** CNB 国内镜像安装包直链（镜像源检查命中时有值；手动下载兜底入口） */
+  mirrorUrl: string | null
 }
 
 interface UpdateState {
@@ -64,7 +66,12 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
         // 启动静默检查首次发现新版本：亮红点并弹提示卡；本会话已知晓则不重复打扰
         if (!get().available) {
           set({
-            available: { version: event.version, notes: event.notes, releaseUrl: event.releaseUrl },
+            available: {
+              version: event.version,
+              notes: event.notes,
+              releaseUrl: event.releaseUrl,
+              mirrorUrl: event.mirrorUrl
+            },
             noticeVisible: true
           })
         }
@@ -102,7 +109,8 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
           available: {
             version: result.newVersion,
             notes: result.notes,
-            releaseUrl: result.releaseUrl
+            releaseUrl: result.releaseUrl,
+            mirrorUrl: result.mirrorUrl
           },
           noticeVisible: false
         })

@@ -35,6 +35,10 @@ export default function UpdateModal() {
     if (available?.releaseUrl) void window.api.openExternal(available.releaseUrl)
   }
 
+  const openMirrorDownload = (): void => {
+    if (available?.mirrorUrl) void window.api.openExternal(available.mirrorUrl)
+  }
+
   return (
     <Modal open={modalOpen} onClose={closeModal} title="软件更新" width="max-w-lg">
       {stage === 'checking' && (
@@ -90,6 +94,16 @@ export default function UpdateModal() {
           <p className="text-[11.5px] leading-relaxed text-text-3">
             确认更新后将下载安装包，完成后重启即自动安装到原有目录（数据不受影响，退出前会自动备份）。
           </p>
+          {available.mirrorUrl && (
+            <button
+              type="button"
+              onClick={openMirrorDownload}
+              className="flex w-fit items-center gap-1 text-[11.5px] text-accent hover:underline"
+            >
+              <Download size={12} />
+              网络不佳？点此从国内镜像手动下载安装包，双击安装即可（数据同样不受影响）
+            </button>
+          )}
           <div className="flex justify-end gap-2">
             {available.releaseUrl && (
               <Button size="sm" onClick={openReleasePage}>
@@ -156,6 +170,11 @@ export default function UpdateModal() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
+            {available?.mirrorUrl && (
+              <Button size="sm" onClick={openMirrorDownload}>
+                <Download size={12.5} /> 国内高速下载
+              </Button>
+            )}
             {available?.releaseUrl && (
               <Button size="sm" onClick={openReleasePage}>
                 <ExternalLink size={12.5} /> 前往 Release 页手动下载
