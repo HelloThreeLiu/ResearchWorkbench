@@ -18,7 +18,8 @@ import {
   type CollectionName,
   type LoadIssue,
   type ToolFileData,
-  type VocabFileData
+  type VocabFileData,
+  resolveReportTemplate
 } from '@shared/types'
 import { seedToolData } from './seed'
 import { vocabShapeValid } from './vocabShape'
@@ -78,6 +79,10 @@ export function loadSettings(): void {
       if (typeof settings.dataDir === 'string' && settings.dataDir.trim() === '') {
         settings.dataDir = null
       }
+      // 报告模板兼容（PRD 5.6.3）：旧默认模板视为未自定义换用新默认，自定义过的原样保留
+      if (typeof settings.reportTemplate === 'string') {
+        settings.reportTemplate = resolveReportTemplate(settings.reportTemplate)
+      }
     }
   } catch (err) {
     console.error('[store] 读取设置失败，使用默认设置', err)
@@ -95,7 +100,8 @@ function dataFile(name: CollectionName): string {
   return path.join(settings.dataDir!, COLLECTION_FILES[name])
 }
 
-function emptyCollections(): AllCollections {
+/** 空集合（未选数据目录 / bootstrap 兜底共用，导出避免 ipc 侧再维护一份漂移副本） */
+export function emptyCollections(): AllCollections {
   return {
     projects: [],
     tasks: [],
@@ -107,7 +113,9 @@ function emptyCollections(): AllCollections {
     papers: [],
     achievements: [],
     reports: [],
-    references: []
+    references: [],
+    meetings: [],
+    sessions: []
   }
 }
 
@@ -134,17 +142,31 @@ function validRecord(x: unknown, strFields: string[], arrFields: string[] = []):
   return strFields.every((k) => isStr(x[k])) && arrFields.every((k) => Array.isArray(x[k]))
 }
 
+/**
+ * 旧版本数据的缺省字段回填（只补缺省，不改其余内容）：
+ * papers.cited_reference_ids 为 V2.5 新增字段——旧记录缺省时补空数组；
+ * 校验器不得把它列为必填，否则 V2.4 老数据升级时全部论文会被当作不合法记录跳过。
+ */
+function normalizeRecord(name: CollectionName, rec: unknown): unknown {
+  if (name === 'papers' && isPlainObject(rec) && !Array.isArray(rec.cited_reference_ids)) {
+    return { ...rec, cited_reference_ids: [] }
+  }
+  return rec
+}
+
 const VALIDATORS: Partial<Record<CollectionName, (x: unknown) => boolean>> = {
   projects: (x) => validRecord(x, ['id', 'name', 'created_at', 'updated_at']),
   tasks: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags']),
   milestones: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at'], ['remind_days']),
   ideas: (x) => validRecord(x, ['id', 'content', 'created_at', 'updated_at'], ['tags']),
   logs: (x) => validRecord(x, ['id', 'project_id', 'date', 'content', 'created_at', 'updated_at']),
-  papers: (x) =>
-    validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['sections', 'cited_reference_ids']),
+  papers: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['sections']),
   achievements: (x) => validRecord(x, ['id', 'title', 'date', 'created_at', 'updated_at']),
   reports: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at']),
-  references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors'])
+  references: (x) => validRecord(x, ['id', 'title', 'created_at', 'updated_at'], ['tags', 'authors']),
+  meetings: (x) =>
+    validRecord(x, ['id', 'title', 'date', 'attendees', 'content', 'created_at', 'updated_at'], ['action_items']),
+  sessions: (x) => validRecord(x, ['id', 'started_at', 'created_at', 'updated_at'])
 }
 
 /**
@@ -213,7 +235,7 @@ export function loadAllWithIssues(): { data: AllCollections; issues: LoadIssue[]
               detail: `${arr.length - good.length} 条记录结构不合法，已跳过（原文件未改动）`
             })
           }
-          ;(result as unknown as Record<string, unknown>)[name] = good
+          ;(result as unknown as Record<string, unknown>)[name] = good.map((r) => normalizeRecord(name, r))
         } else {
           ;(result as unknown as Record<string, unknown>)[name] = raw
         }

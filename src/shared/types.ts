@@ -243,6 +243,42 @@ export interface ParseReferencesResult {
   notes: string[] // 整体提示（如含 crossref 的条目按可解析字段导入）
 }
 
+/** ---------- 会议纪要与写作度量（V2.6） ---------- */
+
+/** 会议行动项：可一键转任务并单向回写完成态（任务 → 行动项，决策 D12） */
+export interface MeetingActionItem {
+  text: string
+  done: boolean
+  task_id: string | null // 转任务成功后回填；任务删除后保留悬空 id（跳转入口按任务存在性渲染）
+}
+
+/** 导师会议纪要：带行动项的结构化会谈记录（与进展日志分工：日志=项目过程流水，会议=人与人的会谈产出） */
+export interface Meeting {
+  id: string
+  date: string // YYYY-MM-DD
+  title: string
+  attendees: string // 自由文本
+  project_id: string | null // 可空表示跨项目
+  content: string // 讨论纪要 Markdown
+  action_items: MeetingActionItem[]
+  created_at: string
+  updated_at: string
+}
+
+/** 写作 Session：一次手动起止的写作记录（时长由起止时间派生，不落盘） */
+export interface WritingSession {
+  id: string
+  started_at: string // ISO
+  ended_at: string | null // null = 进行中（异常残留检测的判定依据，见 PRD 5.5.3）
+  project_id: string | null
+  paper_id: string | null
+  section: string // 章节自由文本（如「3.2 实验设计」），可空
+  words: number | null // 手录字数，可空
+  note: string
+  created_at: string
+  updated_at: string
+}
+
 /** 词汇库：用户可管理的标签集合与枚举类型集合（内置类型 builtin=true 不可删除） */
 export interface TagDef {
   id: string
@@ -284,8 +320,31 @@ export interface AppSettings {
   reportTemplate: string // 周报/月报 Markdown 模板（占位符方式）
 }
 
-/** 默认报告模板：占位符 {{TITLE}} {{PERIOD}} {{WORK}} {{PLAN}} {{THOUGHTS}} */
+/**
+ * 默认报告模板：占位符 {{TITLE}} {{PERIOD}} {{WORK}} {{PLAN}} {{THOUGHTS}} {{MEETINGS}} {{WRITING}}。
+ * 按 D21 在「一、本期工作」内追加会议子块与写作块；占位符可选——自定义模板不含则该块不出现（PRD 5.6.2）。
+ */
 export const DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
+
+## 一、本期工作
+
+{{WORK}}
+
+{{MEETINGS}}
+
+{{WRITING}}
+
+## 二、下期计划
+
+{{PLAN}}
+
+## 三、问题与思考
+
+{{THOUGHTS}}
+`
+
+/** V2.6 之前的默认模板：用于识别「从未自定义过模板」的旧用户，升级时自动换用新默认 */
+export const LEGACY_DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
 
 ## 一、本期工作
 
@@ -300,6 +359,11 @@ export const DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
 {{THOUGHTS}}
 `
 
+/** 模板兼容解析（PRD 5.6.3 旧用户自定义模板不变）：与旧默认逐字符相等视为未自定义 → 换用新默认；自定义过则原样保留 */
+export function resolveReportTemplate(tpl: string): string {
+  return tpl === LEGACY_DEFAULT_REPORT_TEMPLATE ? DEFAULT_REPORT_TEMPLATE : tpl
+}
+
 // 数据集合名 → 文件名（projects.json / tasks.json / ...）
 export type CollectionName =
   | 'projects'
@@ -313,6 +377,8 @@ export type CollectionName =
   | 'achievements'
   | 'reports'
   | 'references'
+  | 'meetings'
+  | 'sessions'
 
 export interface AllCollections {
   projects: Project[]
@@ -326,6 +392,8 @@ export interface AllCollections {
   achievements: Achievement[]
   reports: Report[]
   references: Reference[]
+  meetings: Meeting[]
+  sessions: WritingSession[]
 }
 
 /** 数据加载问题（文件解析失败 / 记录结构不合法），由渲染层以醒目提示条展示 */
@@ -391,7 +459,9 @@ export const COLLECTION_FILES: Record<CollectionName, string> = {
   papers: 'papers.json',
   achievements: 'achievements.json',
   reports: 'reports.json',
-  references: 'references.json'
+  references: 'references.json',
+  meetings: 'meetings.json',
+  sessions: 'sessions.json'
 }
 
 export const DEFAULT_REMIND_DAYS = [7, 3, 1]

@@ -7,7 +7,6 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   COLLECTION_FILES,
-  DEFAULT_VOCAB,
   type AppSettings,
   type CollectionName,
   type BootstrapResult,
@@ -19,6 +18,7 @@ import {
   backupNow,
   checkExternalChanges,
   chooseDataDir,
+  emptyCollections,
   getSettings,
   getLastWriteAt,
   loadAllWithIssues,
@@ -79,21 +79,7 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     return {
       needsOnboarding: !settings.dataDir,
       dataDir: settings.dataDir,
-      collections: settings.dataDir
-        ? data
-        : {
-            projects: [],
-            tasks: [],
-            milestones: [],
-            ideas: [],
-            logs: [],
-            tools: { groups: [], items: [] },
-            vocab: DEFAULT_VOCAB,
-            papers: [],
-            achievements: [],
-            reports: [],
-            references: []
-          },
+      collections: settings.dataDir ? data : emptyCollections(),
       settings,
       meta: { lastWriteAt: getLastWriteAt() },
       issues
@@ -339,26 +325,36 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
 
   handle('update:get-version', (): string => app.getVersion())
 
-  // ---------- 退出握手：先让渲染层落盘防抖中的编辑，再真正退出 ----------
-  let quitConfirmed = false
-  function doQuit(): void {
-    // 退出前备份由 index.ts 的 before-quit 统一执行（此时渲染层数据已落盘）
-    app.quit()
-  }
-
+  // ---------- 退出握手：先让渲染层落盘防抖中的编辑（含写作计时收尾），再真正退出 ----------
   handle('app:quit', (): void => {
-    const win = getMainWindow()
-    if (!win || win.isDestroyed() || quitConfirmed) return doQuit()
-    win.webContents.send('app:quit-requested') // 渲染层 flush 完成后回调 app:confirm-quit
-    setTimeout(() => {
-      if (!quitConfirmed) doQuit() // 兜底：渲染层 2s 内无回应也退出
-    }, 2000)
+    requestAppQuit(getMainWindow)
   })
 
   handle('app:confirm-quit', (): void => {
     quitConfirmed = true
-    doQuit()
+    app.quit()
   })
+}
+
+/** 退出握手状态（app:quit 与托盘退出共用） */
+let quitConfirmed = false
+
+/**
+ * 请求退出：通知渲染层 flush（含写作 session 退出收尾）→ 收到回执或 2s 兜底后 app.quit()。
+ * 托盘「退出」也走此握手而非直接 app.quit()——否则渲染层只剩 pagehide 里不等落地的
+ * void flush，多集合待写时计时中的 session 收尾会丢失（审查 N-1）。
+ */
+export function requestAppQuit(getMainWindow: () => Electron.BrowserWindow | null): void {
+  const win = getMainWindow()
+  if (!win || win.isDestroyed() || quitConfirmed) {
+    // 退出前备份由 index.ts 的 before-quit 统一执行（此时渲染层数据已落盘）
+    app.quit()
+    return
+  }
+  win.webContents.send('app:quit-requested') // 渲染层 flush 完成后回调 app:confirm-quit
+  setTimeout(() => {
+    if (!quitConfirmed) app.quit() // 兜底：渲染层 2s 内无回应也退出
+  }, 2000)
 }
 
 function decodeEntities(s: string): string {

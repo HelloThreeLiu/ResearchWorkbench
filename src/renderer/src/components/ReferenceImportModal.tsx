@@ -41,7 +41,7 @@ export default function ReferenceImportModal({ open, onClose }: { open: boolean;
   const [result, setResult] = useState<ParseReferencesResult | null>(null)
   const [fillEmpty, setFillEmpty] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [doneCounts, setDoneCounts] = useState<{ added: number; updated: number } | null>(null)
+  const [doneCounts, setDoneCounts] = useState<{ added: number; updated: number; skipped: number } | null>(null)
 
   // 打开时重置状态
   const reset = (): void => {
@@ -119,7 +119,11 @@ export default function ReferenceImportModal({ open, onClose }: { open: boolean;
   const doImport = (): void => {
     setImporting(true)
     importReferences(preview.adds, fillEmpty ? preview.updates : [])
-    setDoneCounts({ added: preview.adds.length, updated: fillEmpty ? preview.updates.length : 0 })
+    setDoneCounts({
+      added: preview.adds.length,
+      updated: fillEmpty ? preview.updates.length : 0,
+      skipped: preview.skips
+    })
     setImporting(false)
   }
 
@@ -135,6 +139,11 @@ export default function ReferenceImportModal({ open, onClose }: { open: boolean;
             {doneCounts.updated > 0 && (
               <>
                 {' '}· 更新 <span className="font-semibold tabular-nums text-accent">{doneCounts.updated}</span> 条
+              </>
+            )}
+            {doneCounts.skipped > 0 && (
+              <>
+                {' '}· 跳过 <span className="font-semibold tabular-nums">{doneCounts.skipped}</span> 条（重复）
               </>
             )}
             {result && result.failures.length > 0 && (

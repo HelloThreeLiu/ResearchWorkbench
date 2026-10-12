@@ -1,6 +1,6 @@
 // 回顾：本地数据只读聚合页 —— 概览统计卡 / 活动热力图 / 投稿周期 / 项目投入分布 / 年度回顾
 // 本页不产生任何新数据，全部统计来自现有集合的实时聚合（PRD V2.4 5.1）
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   CheckCircle2,
   Copy,
@@ -10,6 +10,7 @@ import {
   History,
   Hourglass,
   Lightbulb,
+  PenLine,
   TrendingUp,
   Trophy
 } from 'lucide-react'
@@ -18,10 +19,11 @@ import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useAchievementTypes } from '@/hooks/useVocab'
 import AchievementTimeline from '@/components/AchievementTimeline'
-import { Badge, Button, EmptyState, PageHeader, Select, StatCard } from '@/components/ui'
+import { Badge, Button, EmptyState, PageHeader, Segmented, Select, StatCard } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { copyText } from '@/lib/clipboard'
-import { dayjs, todayStr, weekStart } from '@/lib/date'
+import { dayjs, friendlyDateTime, todayStr, weekStart } from '@/lib/date'
+import { formatDuration, sessionDurationMs, sessionsInPeriod, writingPeriodStats } from '@/lib/writing'
 import {
   activityByDay,
   availableYears,
@@ -53,6 +55,7 @@ export default function InsightsPage() {
   const logs = useStore((s) => s.logs)
   const papers = useStore((s) => s.papers)
   const achievements = useStore((s) => s.achievements)
+  const sessions = useStore((s) => s.sessions)
   const achievementTypes = useAchievementTypes()
 
   const today = todayStr()
@@ -60,8 +63,8 @@ export default function InsightsPage() {
   const [copyMsg, setCopyMsg] = useState(false)
 
   const source: InsightsSource = useMemo(
-    () => ({ projects, tasks, milestones, ideas, logs, papers, achievements }),
-    [projects, tasks, milestones, ideas, logs, papers, achievements]
+    () => ({ projects, tasks, milestones, ideas, logs, papers, achievements, sessions }),
+    [projects, tasks, milestones, ideas, logs, papers, achievements, sessions]
   )
 
   // ---------- 概览统计卡 ----------
@@ -69,6 +72,21 @@ export default function InsightsPage() {
 
   // ---------- 活动热力图 ----------
   const activity = useMemo(() => activityByDay(source), [source])
+
+  // ---------- 写作投入（V2.6 5.5.6：按周/月统计总时长与总字数 + 记录列表） ----------
+  const [writingPeriod, setWritingPeriod] = useState<'week' | 'month'>('week')
+  const writingRange = useMemo(() => {
+    if (writingPeriod === 'week') return { start: weekStart(today), end: today }
+    return { start: dayjs().startOf('month').format('YYYY-MM-DD'), end: today }
+  }, [writingPeriod, today])
+  const writingList = useMemo(
+    () =>
+      sessionsInPeriod(source.sessions, writingRange).sort((a, b) => b.started_at.localeCompare(a.started_at)),
+    [source.sessions, writingRange]
+  )
+  const writingStats = useMemo(() => writingPeriodStats(writingList), [writingList])
+  const paperById = useMemo(() => new Map(papers.map((p) => [p.id, p])), [papers])
+  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
   // ---------- 投稿周期 ----------
   const subs = useMemo(() => submissionStats(source, today), [source, today])
@@ -138,6 +156,60 @@ export default function InsightsPage() {
 
       {/* 活动热力图（悬浮自定义提示卡，见 ActivityHeatmap） */}
       <ActivityHeatmap activity={activity} />
+
+      {/* 写作投入（V2.6：写作 session 记录在回顾页呈现） */}
+      <section className="mt-4 rounded-xl border border-border bg-surface px-4.5 py-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+            <PenLine size={15} className="shrink-0 text-accent" />
+            写作投入
+          </h2>
+          <Segmented
+            value={writingPeriod}
+            onChange={setWritingPeriod}
+            options={[
+              { value: 'week', label: '本周' },
+              { value: 'month', label: '本月' }
+            ]}
+          />
+        </div>
+        {writingStats.count === 0 ? (
+          <p className="py-3 text-[12.5px] text-text-3">
+            {writingPeriod === 'week' ? '本周' : '本月'}还没有写作记录——点侧边栏底部「写作计时」随手开始。
+          </p>
+        ) : (
+          <>
+            <div className="flex divide-x divide-border">
+              <Metric label="写作次数" value={writingStats.count} />
+              <Metric label="总时长" value={formatDuration(writingStats.durationMs)} />
+              <Metric label="总字数" value={writingStats.words} />
+            </div>
+            <div className="mt-3 flex flex-col divide-y divide-border">
+              {writingList.map((s) => {
+                const paper = s.paper_id ? paperById.get(s.paper_id) : undefined
+                const project = s.project_id ? projectById.get(s.project_id) : undefined
+                return (
+                  <div key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                    <span className="w-30 shrink-0 text-[11.5px] tabular-nums text-text-3">
+                      {friendlyDateTime(s.started_at)}
+                    </span>
+                    <span className="w-20 shrink-0 text-[12.5px] font-semibold tabular-nums">
+                      {formatDuration(sessionDurationMs(s.started_at, s.ended_at))}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-text-2">
+                      {paper?.title ?? project?.name ?? '未关联'}
+                      {s.section !== '' && <span className="text-text-3"> · {s.section}</span>}
+                    </span>
+                    {s.words !== null && (
+                      <span className="shrink-0 text-[12.5px] tabular-nums text-text-3">{s.words} 字</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </section>
 
       {/* 投稿周期统计 */}
       <section className="mt-4 rounded-xl border border-border bg-surface px-4.5 py-4">
@@ -342,6 +414,8 @@ export default function InsightsPage() {
 /** 活动热力图（独立子组件：悬浮提示的 hover 状态只引起本组件重渲染） */
 function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
   const today = todayStr()
+  // 口径切换器（PRD 5.1.2 V2.6 扩展）：全部 = 任务 + 日志 + 写作；仅写作 = 写作 session 计数
+  const [mode, setMode] = useState<'all' | 'writing'>('all')
   const [tip, setTip] = useState<{
     x: number
     y: number
@@ -349,6 +423,7 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
     date: string
     tasks: number
     logs: number
+    sessions: number
   } | null>(null)
 
   const heatWeeks = useMemo(() => {
@@ -403,7 +478,8 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
       below: rect.top < 64, // 顶部空间不足时翻转到格子下方
       date,
       tasks: act?.tasks ?? 0,
-      logs: act?.logs ?? 0
+      logs: act?.logs ?? 0,
+      sessions: act?.sessions ?? 0
     })
   }
 
@@ -421,7 +497,14 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
           <Flame size={15} className="shrink-0 text-accent" />
           活动热力图
         </h2>
-        <span className="text-[11.5px] text-text-3">近 26 周 · 计数 = 当日完成任务 + 进展日志</span>
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'all', label: '全部' },
+            { value: 'writing', label: '仅写作' }
+          ]}
+        />
       </div>
       {/* 不用滚动容器：26 列约 405px，880px 最小窗下本就放得下；overflow-auto 会连带把另一轴变为可滚动 */}
       <div className="flex gap-1.5" onMouseLeave={() => setTip(null)}>
@@ -456,7 +539,10 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
                 {week.map((d) => {
                   if (d.inFuture) return <span key={d.date} className="h-3 w-3 rounded-[3px]" />
                   const act = activity.get(d.date)
-                  const total = (act?.tasks ?? 0) + (act?.logs ?? 0)
+                  const total =
+                    mode === 'writing'
+                      ? (act?.sessions ?? 0)
+                      : (act?.tasks ?? 0) + (act?.logs ?? 0) + (act?.sessions ?? 0)
                   return (
                     <span
                       key={d.date}
@@ -474,13 +560,16 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
           </div>
         </div>
       </div>
-      {/* 图例 */}
-      <div className="mt-2.5 flex items-center justify-end gap-1.5 text-[11.5px] text-text-3">
-        <span>少</span>
-        {LEVEL_CLASSES.map((c) => (
-          <span key={c} className={cn('h-3 w-3 rounded-[3px]', c)} />
-        ))}
-        <span>多</span>
+      {/* 图例（左口径说明，右色阶） */}
+      <div className="mt-2.5 flex items-center justify-between gap-2 text-[11.5px] text-text-3">
+        <span>近 26 周 · {mode === 'all' ? '计数 = 任务 + 日志 + 写作' : '计数 = 写作 session'}</span>
+        <span className="flex items-center gap-1.5">
+          <span>少</span>
+          {LEVEL_CLASSES.map((c) => (
+            <span key={c} className={cn('h-3 w-3 rounded-[3px]', c)} />
+          ))}
+          <span>多</span>
+        </span>
       </div>
 
       {/* 悬浮提示卡（fixed 定位避开容器裁剪；左右夹紧防溢出屏幕） */}
@@ -495,13 +584,15 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
         >
           <div className="whitespace-nowrap text-[12.5px] font-semibold">{tipDate(tip.date)}</div>
           <div className="mt-0.5 whitespace-nowrap text-[11.5px] tabular-nums text-text-2">
-            {tip.tasks === 0 && tip.logs === 0 ? (
+            {tip.tasks === 0 && tip.logs === 0 && tip.sessions === 0 ? (
               <span className="text-text-3">当日无活动记录</span>
             ) : (
               <>
                 任务 <span className="font-semibold text-text">{tip.tasks}</span>
                 <span className="mx-1 text-text-3">·</span>
                 日志 <span className="font-semibold text-text">{tip.logs}</span>
+                <span className="mx-1 text-text-3">·</span>
+                写作 <span className="font-semibold text-text">{tip.sessions}</span> 次
               </>
             )}
           </div>
@@ -511,8 +602,8 @@ function ActivityHeatmap({ activity }: { activity: Map<string, DayActivity> }) {
   )
 }
 
-/** 年度回顾指标（Dashboard 底部 Metric 同款） */
-function Metric({ label, value }: { label: string; value: number }) {
+/** 年度回顾指标（Dashboard 底部 Metric 同款）；value 支持 ReactNode（写作投入的时长文案） */
+function Metric({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex-1 px-4 first:pl-0 last:pr-0">
       <div className="text-[17px] font-bold tabular-nums">{value}</div>

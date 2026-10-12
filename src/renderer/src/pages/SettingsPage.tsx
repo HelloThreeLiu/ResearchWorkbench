@@ -363,6 +363,9 @@ export default function SettingsPage() {
             <code className="mx-1 rounded bg-surface-2 px-1">{'{{WORK}}'}</code>
             <code className="mx-1 rounded bg-surface-2 px-1">{'{{PLAN}}'}</code>
             <code className="mx-1 rounded bg-surface-2 px-1">{'{{THOUGHTS}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{MEETINGS}}'}</code>
+            <code className="mx-1 rounded bg-surface-2 px-1">{'{{WRITING}}'}</code>
+            （周期内会议纪要与行动项 / 写作时长字数明细，为空时该块不出现）
           </p>
           <ReportTemplateEditor />
         </SectionCard>

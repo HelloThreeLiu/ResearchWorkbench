@@ -53,6 +53,8 @@ export default function ReportsPage() {
   const milestones = useStore((s) => s.milestones)
   const achievements = useStore((s) => s.achievements)
   const papers = useStore((s) => s.papers)
+  const meetings = useStore((s) => s.meetings)
+  const sessions = useStore((s) => s.sessions)
   const achievementTypes = useStore((s) => s.vocab.achievementTypes)
 
   const [draft, setDraft] = useState<DraftState>({ mode: 'idle' })
@@ -65,7 +67,12 @@ export default function ReportsPage() {
   const [customEnd, setCustomEnd] = useState(dayjs().format('YYYY-MM-DD'))
 
   const doGenerate = (kind: ReportKind, period: Period): void => {
-    const result = generateReport(kind, period, { projects, tasks, logs, ideas, milestones, achievements, papers, achievementTypes }, settings.reportTemplate)
+    const result = generateReport(
+      kind,
+      period,
+      { projects, tasks, logs, ideas, milestones, achievements, papers, achievementTypes, meetings, sessions },
+      settings.reportTemplate
+    )
     setDraft({ mode: 'new', kind, period, content: result.content, title: result.title })
   }
 

@@ -4,6 +4,7 @@
 import type {
   Achievement,
   Idea,
+  Meeting,
   Milestone,
   Paper,
   ProgressLog,
@@ -11,10 +12,16 @@ import type {
   Report,
   ReportKind,
   Task,
-  VocabTypeDef
+  VocabTypeDef,
+  WritingSession
 } from '@shared/types'
 import { ACHIEVEMENT_TYPE_LABELS } from '@shared/types'
 import { dayjs } from './date'
+// 会议/写作块构建与 fillTemplate 集中在 writing.ts（零运行时依赖，供 node:test 直接回归）
+import { buildMeetingsSection, buildWritingSection, fillTemplate } from './writing'
+
+// fillTemplate 的实现位于 writing.ts，此处保留再导出维持既有 API
+export { fillTemplate } from './writing'
 
 export interface ReportSource {
   projects: Project[]
@@ -25,6 +32,8 @@ export interface ReportSource {
   achievements: Achievement[]
   papers: Paper[]
   achievementTypes: VocabTypeDef[] // 成果类型展示名解析（词汇库）
+  meetings: Meeting[] // V2.6 {{MEETINGS}} 数据源
+  sessions: WritingSession[] // V2.6 {{WRITING}} 数据源
 }
 
 /** 成果类型展示名：词汇库优先，内置兜底，最后回退原始 id */
@@ -193,13 +202,8 @@ export interface GeneratedReport {
 }
 
 /**
- * 模板占位符渲染：函数式替换 + 一次正则覆盖所有出现位置。
- * 不能用字符串形式的 replace('{{X}}', v)：v 里的 $&/$`/$'/$$ 会被当作替换模式插回匹配文本，
- * 且只替换首个占位符（模板里写两次 {{WORK}} 时第二个会留在成品里）。
+ * 模板占位符渲染：见 reportBlocks.fillTemplate（此处为再导出的实现引用）。
  */
-export function fillTemplate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? '')
-}
 
 /** 生成报告草稿（模板占位符渲染） */
 export function generateReport(
@@ -220,6 +224,9 @@ export function generateReport(
   }
 
   const plan = kind === 'summary' ? '（工作总结不含下期计划）' : buildPlanSection(source, period)
+  // V2.6 新块（PRD 5.6）：周期内无会议/写作时为空串——模板含占位符也不产生空标题
+  const meetings = buildMeetingsSection(source.meetings, period)
+  const writing = buildWritingSection(source.sessions, source.papers, period)
 
   let content: string
   if (kind === 'summary') {
@@ -230,7 +237,9 @@ export function generateReport(
       PERIOD: periodText,
       WORK: `${extras.stats}\n\n${work}\n\n### 成果\n${extras.achievements}`,
       PLAN: plan,
-      THOUGHTS: ''
+      THOUGHTS: '',
+      MEETINGS: meetings,
+      WRITING: writing
     })
   } else {
     const title = kind === 'weekly' ? '周报' : '月报'
@@ -239,7 +248,9 @@ export function generateReport(
       PERIOD: periodText,
       WORK: work,
       PLAN: plan,
-      THOUGHTS: ''
+      THOUGHTS: '',
+      MEETINGS: meetings,
+      WRITING: writing
     })
   }
 

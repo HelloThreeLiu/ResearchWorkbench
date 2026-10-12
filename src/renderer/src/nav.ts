@@ -10,6 +10,7 @@ export type Page =
   | { name: 'milestones' }
   | { name: 'references' }
   | { name: 'ideas' }
+  | { name: 'meetings' }
   | { name: 'tools' }
   | { name: 'papers' }
   | { name: 'achievements' }

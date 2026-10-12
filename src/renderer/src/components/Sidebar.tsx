@@ -3,6 +3,7 @@ import { useNav, type Page } from '@/nav'
 import { useStore } from '@/store'
 import { useUpdateStore } from '@/updateStore'
 import { cn } from '@/lib/utils'
+import WritingTimerButton from '@/components/WritingTimerButton'
 import {
   BookOpen,
   CalendarDays,
@@ -13,6 +14,7 @@ import {
   FolderKanban,
   Lightbulb,
   ListTodo,
+  NotebookPen,
   Settings,
   Trophy,
   Wrench,
@@ -36,6 +38,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { page: { name: 'milestones' }, label: '时间节点', icon: Flag },
       { page: { name: 'references' }, label: '文献', icon: BookOpen },
       { page: { name: 'ideas' }, label: '灵感', icon: Lightbulb },
+      { page: { name: 'meetings' }, label: '会议纪要', icon: NotebookPen },
       { page: { name: 'tools' }, label: '工具箱', icon: Wrench }
     ]
   },
@@ -106,8 +109,9 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* 底部：设置 + 速记提示 */}
+      {/* 底部：写作计时 + 设置 + 速记提示 */}
       <div className="border-t border-border px-3 pt-2.5 pb-3">
+        <WritingTimerButton />
         <button
           onClick={() => navigate({ name: 'settings' })}
           title={hasUpdate ? '设置（有新版本可用）' : '设置'}

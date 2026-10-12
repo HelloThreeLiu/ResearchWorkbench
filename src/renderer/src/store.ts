@@ -9,6 +9,7 @@ import {
   type Idea,
   type LoadIssue,
   type LogTemplate,
+  type Meeting,
   type Milestone,
   type MilestoneTypeDef,
   type Paper,
@@ -23,6 +24,7 @@ import {
   type ToolFileData,
   type ToolGroup,
   type VocabFileData,
+  type WritingSession,
   type Achievement,
   BUILTIN_ACHIEVEMENT_TYPES,
   BUILTIN_LOG_TEMPLATES,
@@ -59,6 +61,8 @@ interface AppState {
   achievements: Achievement[]
   reports: Report[]
   references: Reference[]
+  meetings: Meeting[]
+  sessions: WritingSession[]
 
   bootstrap: () => Promise<void>
   chooseDataDir: () => Promise<boolean>
@@ -138,6 +142,14 @@ interface AppState {
   updateAchievement: (id: string, patch: Partial<Achievement>) => void
   deleteAchievement: (id: string) => void
 
+  // ---------- 会议纪要与写作度量（V2.6） ----------
+  addMeeting: (input: Partial<Meeting> & { title: string; date: string }) => Meeting
+  updateMeeting: (id: string, patch: Partial<Meeting>) => void
+  deleteMeeting: (id: string) => void
+  addWritingSession: (input: Partial<WritingSession> & { started_at: string }) => WritingSession
+  updateWritingSession: (id: string, patch: Partial<WritingSession>) => void
+  deleteWritingSession: (id: string) => void
+
   // ---------- 汇报（V2） ----------
   saveReport: (report: Report) => void
   deleteReport: (id: string) => void
@@ -215,6 +227,8 @@ function mutateArray<
     | 'achievements'
     | 'reports'
     | 'references'
+    | 'meetings'
+    | 'sessions'
 >(get: () => AppState, set: (partial: Partial<AppState>) => void, name: K, updater: (arr: AppState[K]) => AppState[K]): void {
   const next = updater(get()[name])
   set({ [name]: next } as unknown as Partial<AppState>)
@@ -265,6 +279,8 @@ export const useStore = create<AppState>((set, get) => ({
   achievements: [],
   reports: [],
   references: [],
+  meetings: [],
+  sessions: [],
 
   bootstrap: async () => {
     const result = await window.api.bootstrap()
@@ -384,6 +400,12 @@ export const useStore = create<AppState>((set, get) => ({
     mutateArray(get, set, 'references', (arr) =>
       arr.map((r) => (r.project_id === id ? { ...r, project_id: null } : r))
     )
+    mutateArray(get, set, 'meetings', (arr) =>
+      arr.map((m) => (m.project_id === id ? { ...m, project_id: null } : m))
+    )
+    mutateArray(get, set, 'sessions', (arr) =>
+      arr.map((s) => (s.project_id === id ? { ...s, project_id: null } : s))
+    )
   },
 
   // ---------- 任务 ----------
@@ -406,6 +428,7 @@ export const useStore = create<AppState>((set, get) => ({
     return task
   },
   updateTask: (id, patch) => {
+    const prev = get().tasks.find((t) => t.id === id)
     mutateArray(get, set, 'tasks', (arr) =>
       arr.map((t) => {
         if (t.id !== id) return t
@@ -433,6 +456,23 @@ export const useStore = create<AppState>((set, get) => ({
           }
         })
       )
+      // 会议行动项单向同步（决策 D12）：任务完成 → 行动项自动打勾；行动项手动勾选不回写任务。
+      // 仅在任务完成态真正变化时回写——普通编辑（改标题等）不得重置用户手动勾选的行动项
+      if (prev && prev.status !== updated.status) {
+        const taskDone = updated.status === 'done'
+        mutateArray(get, set, 'meetings', (meetings) =>
+          meetings.map((m) => {
+            if (!m.action_items.some((a) => a.task_id === id)) return m
+            return {
+              ...m,
+              updated_at: nowISO(),
+              action_items: m.action_items.map((a) =>
+                a.task_id === id ? { ...a, done: taskDone } : a
+              )
+            }
+          })
+        )
+      }
     }
   },
   deleteTask: (id) => {
@@ -914,6 +954,35 @@ export const useStore = create<AppState>((set, get) => ({
     ])
   },
 
+  // ---------- 会议纪要与写作度量（V2.6） ----------
+  addMeeting: (input) => {
+    const meeting = buildMeeting(input, nowISO())
+    mutateArray(get, set, 'meetings', (arr) => [meeting, ...arr])
+    return meeting
+  },
+  updateMeeting: (id, patch) => {
+    mutateArray(get, set, 'meetings', (arr) =>
+      arr.map((m) => (m.id === id ? { ...m, ...patch, updated_at: nowISO() } : m))
+    )
+  },
+  deleteMeeting: (id) => {
+    // 行动项关联的任务不级联删除（PRD 5.4）：回链存于 action_items 内，随会议删除自然解除
+    mutateArray(get, set, 'meetings', (arr) => arr.filter((m) => m.id !== id))
+  },
+  addWritingSession: (input) => {
+    const session = buildWritingSession(input, nowISO())
+    mutateArray(get, set, 'sessions', (arr) => [session, ...arr])
+    return session
+  },
+  updateWritingSession: (id, patch) => {
+    mutateArray(get, set, 'sessions', (arr) =>
+      arr.map((s) => (s.id === id ? { ...s, ...patch, updated_at: nowISO() } : s))
+    )
+  },
+  deleteWritingSession: (id) => {
+    mutateArray(get, set, 'sessions', (arr) => arr.filter((s) => s.id !== id))
+  },
+
   // ---------- 成果台账（V2） ----------
   addAchievement: (input) => {
     const now = nowISO()
@@ -959,6 +1028,40 @@ export const useStore = create<AppState>((set, get) => ({
     mutateArray(get, set, 'reports', (arr) => arr.filter((r) => r.id !== id))
   }
 }))
+
+/** 由输入补全会议条目的缺省字段 */
+function buildMeeting(input: Partial<Meeting> & { title: string; date: string }, now: string): Meeting {
+  return {
+    id: uid(),
+    date: input.date,
+    title: input.title,
+    attendees: input.attendees ?? '',
+    project_id: input.project_id ?? null,
+    content: input.content ?? '',
+    action_items: input.action_items ?? [],
+    created_at: now,
+    updated_at: now
+  }
+}
+
+/** 由输入补全写作 session 的缺省字段（ended_at 缺省 null = 进行中，供残留检测） */
+function buildWritingSession(
+  input: Partial<WritingSession> & { started_at: string },
+  now: string
+): WritingSession {
+  return {
+    id: uid(),
+    started_at: input.started_at,
+    ended_at: input.ended_at ?? null,
+    project_id: input.project_id ?? null,
+    paper_id: input.paper_id ?? null,
+    section: input.section ?? '',
+    words: input.words ?? null,
+    note: input.note ?? '',
+    created_at: now,
+    updated_at: now
+  }
+}
 
 /** 由输入补全文献条目的缺省字段（新建与批量导入共用） */
 function buildReference(input: Partial<Reference> & { title: string }, now: string): Reference {
@@ -1083,5 +1186,7 @@ export const EMPTY_COLLECTIONS: AllCollections = {
   papers: [],
   achievements: [],
   reports: [],
-  references: []
+  references: [],
+  meetings: [],
+  sessions: []
 }
