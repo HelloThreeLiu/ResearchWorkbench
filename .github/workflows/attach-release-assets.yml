@@ -51,3 +51,22 @@ jobs:
             release/*.zip \
             release/latest.yml \
             --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Checkout sync script (workflow ref)
+        # 上一步按 tag 检出的旧代码里可能还没有同步脚本，这里按 workflow 触发 ref
+        # （dispatch 所选分支）sparse 检出 scripts 目录，保证旧 tag 也能走镜像同步
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+          path: sync-scripts
+
+      - name: Sync assets to CNB mirror
+        # 国内下载加速：同步 exe/blockmap/latest.yml 到 cnb.cool 镜像仓库（自检失败即红灯）
+        shell: bash
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body > "$RUNNER_TEMP/cnb-notes.md"
+          node sync-scripts/scripts/sync-cnb-release.mjs "$TAG" release --notes-file "$RUNNER_TEMP/cnb-notes.md"
