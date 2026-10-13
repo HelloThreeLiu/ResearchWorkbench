@@ -21,6 +21,7 @@ import {
   type VocabFileData,
   resolveReportTemplate
 } from '@shared/types'
+import { resolveInitialTourVersion } from '@shared/tour'
 import { seedToolData } from './seed'
 import { vocabShapeValid } from './vocabShape'
 
@@ -51,7 +52,8 @@ let settings: AppSettings = {
   hotkey: 'Alt+N',
   closeToTray: true,
   lastBackupDate: null,
-  reportTemplate: DEFAULT_REPORT_TEMPLATE
+  reportTemplate: DEFAULT_REPORT_TEMPLATE,
+  tourVersion: 0
 }
 let storeMeta: StoreMeta = {}
 /** 数据文件最近一次【本应用】写入成功后的 mtimeMs，用于区分外部修改 */
@@ -73,8 +75,10 @@ export async function updateSettings(patch: Partial<AppSettings>): Promise<AppSe
 
 export function loadSettings(): void {
   try {
-    if (fs.existsSync(settingsPath())) {
-      const parsed = JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) as Partial<AppSettings>
+    const fileExists = fs.existsSync(settingsPath())
+    let parsed: Partial<AppSettings> = {}
+    if (fileExists) {
+      parsed = JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) as Partial<AppSettings>
       settings = { ...settings, ...parsed }
       if (typeof settings.dataDir === 'string' && settings.dataDir.trim() === '') {
         settings.dataDir = null
@@ -84,6 +88,8 @@ export function loadSettings(): void {
         settings.reportTemplate = resolveReportTemplate(settings.reportTemplate)
       }
     }
+    // 新手引导版本迁移：新装=0（进主界面弹引导）；老配置缺字段=TOUR_VERSION（升级后不打扰）
+    settings.tourVersion = resolveInitialTourVersion(fileExists, parsed)
   } catch (err) {
     console.error('[store] 读取设置失败，使用默认设置', err)
   }

@@ -318,6 +318,7 @@ export interface AppSettings {
   closeToTray: boolean
   lastBackupDate: string | null // YYYY-MM-DD，用于「每日首次运行备份」
   reportTemplate: string // 周报/月报 Markdown 模板（占位符方式）
+  tourVersion: number // 已读新手引导版本（TOUR_VERSION，见 shared/tour.ts）；完成或跳过引导后写入，0=未读
 }
 
 /**

@@ -258,7 +258,8 @@ export const useStore = create<AppState>((set, get) => ({
     hotkey: 'Alt+N',
     closeToTray: true,
     lastBackupDate: null,
-    reportTemplate: DEFAULT_REPORT_TEMPLATE
+    reportTemplate: DEFAULT_REPORT_TEMPLATE,
+    tourVersion: 0
   },
   lastWriteAt: null,
   loadIssues: [],
