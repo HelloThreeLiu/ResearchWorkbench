@@ -23,14 +23,16 @@ import {
 
 type NavItem = { page: Page; label: string; icon: typeof Zap }
 
-/** 三组导航：工作台 / 科研推进 / 成果与汇报 */
-const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
+/** 三组导航：工作台 / 科研推进 / 成果与汇报；tour 为新手引导聚光锚点（data-tour，见 lib/tour.ts） */
+const NAV_GROUPS: Array<{ label: string; tour: string; items: NavItem[] }> = [
   {
     label: '工作台',
+    tour: 'nav-workspace',
     items: [{ page: { name: 'dashboard' }, label: '今日概览', icon: Zap }]
   },
   {
     label: '科研推进',
+    tour: 'nav-research',
     items: [
       { page: { name: 'projects' }, label: '项目', icon: FolderKanban },
       { page: { name: 'tasks' }, label: '任务', icon: ListTodo },
@@ -44,6 +46,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   },
   {
     label: '成果与汇报',
+    tour: 'nav-output',
     items: [
       { page: { name: 'papers' }, label: '论文投稿', icon: FileText },
       { page: { name: 'achievements' }, label: '成果台账', icon: Trophy },
@@ -98,7 +101,7 @@ export default function Sidebar() {
       {/* 分组导航 */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-3">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="contents">
+          <div key={group.label} data-tour={group.tour} className="flex flex-col gap-0.5">
             <div className="px-2.5 pt-3.5 pb-1 text-[11px] font-semibold tracking-widest text-text-3">
               {group.label}
             </div>
@@ -113,6 +116,7 @@ export default function Sidebar() {
       <div className="border-t border-border px-3 pt-2.5 pb-3">
         <WritingTimerButton />
         <button
+          data-tour="settings"
           onClick={() => navigate({ name: 'settings' })}
           title={hasUpdate ? '设置（有新版本可用）' : '设置'}
           className={cn(

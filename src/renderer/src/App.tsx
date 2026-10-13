@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { nowISO } from '@shared/types'
+import { shouldShowTour } from '@shared/tour'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
 import { useUpdateStore } from '@/updateStore'
 import { useCaptureStore } from '@/captureStore'
 import { useTimerStore } from '@/timerStore'
+import { useTourStore } from '@/tourStore'
 import Sidebar from '@/components/Sidebar'
 import QuickCapture from '@/components/QuickCapture'
 import WritingSessionModal from '@/components/WritingSessionModal'
@@ -12,6 +14,7 @@ import UpdateModal from '@/components/UpdateModal'
 import UpdateNotice from '@/components/UpdateNotice'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import DataHealthBanner from '@/components/DataHealthBanner'
+import Tour from '@/components/Tour'
 import Onboarding from '@/pages/Onboarding'
 import Dashboard from '@/pages/Dashboard'
 import ProjectsPage from '@/pages/ProjectsPage'
@@ -87,6 +90,16 @@ export default function App() {
   useEffect(() => {
     bootstrap()
   }, [bootstrap])
+
+  // 新手引导：未读版本的用户进入主界面后自动开始（延迟一拍等首屏稳定）；
+  // 完成/跳过由 Tour 组件写 tourVersion 落盘，之后不再自动弹出
+  const settings = useStore((s) => s.settings)
+  useEffect(() => {
+    if (!ready || needsOnboarding) return
+    if (!shouldShowTour(settings)) return
+    const t = setTimeout(() => useTourStore.getState().start(), 300)
+    return () => clearTimeout(t)
+  }, [ready, needsOnboarding, settings])
 
   // 写作 session 残留检测（PRD 5.5.3/8.3）：启动或外部同步后存在「有开始无结束」的记录
   // 且并非当前正在计时 → 弹补记窗口（跨设备场景下另一台设备写入的残留同样触发）
@@ -195,6 +208,7 @@ export default function App() {
       <WritingSessionModal />
       <UpdateNotice />
       <UpdateModal />
+      <Tour />
     </div>
   )
 }

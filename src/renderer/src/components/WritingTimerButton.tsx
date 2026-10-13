@@ -42,6 +42,7 @@ export default function WritingTimerButton() {
   const timing = activeSessionId !== null
   return (
     <button
+      data-tour="writing-timer"
       onClick={onClick}
       title={timing ? '点击结束并记录本次写作' : '开始写作计时'}
       className={cn(
