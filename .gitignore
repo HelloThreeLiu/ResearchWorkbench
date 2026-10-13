@@ -8,6 +8,7 @@ Thumbs.db
 .env
 .env.*
 .zcode/
+.zcodeignore
 
 # 本地临时/脚手架目录
 target/
