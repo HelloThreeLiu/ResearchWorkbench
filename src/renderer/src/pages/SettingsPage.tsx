@@ -1,6 +1,7 @@
 // 设置（V3 §5.13，窄栏）：数据目录 / 主题 / 全局快捷键 / 关闭行为 / 备份 / 词汇库入口 / 报告模板
 import { useState } from 'react'
 import {
+  Compass,
   Database,
   FileText,
   FolderOpen,
@@ -16,6 +17,7 @@ import {
 import { DEFAULT_REPORT_TEMPLATE, type StyleTheme, type ThemeMode } from '@shared/types'
 import { useStore } from '@/store'
 import { useUpdateStore } from '@/updateStore'
+import { useTourStore } from '@/tourStore'
 import { Badge, Button, PageHeader, Select, Textarea } from '@/components/ui'
 import VocabManagerModal from '@/components/VocabManagerModal'
 import { cn } from '@/lib/utils'
@@ -139,6 +141,7 @@ export default function SettingsPage() {
   const hasUpdate = useUpdateStore((s) => s.available !== null)
   const available = useUpdateStore((s) => s.available)
   const checkForUpdates = useUpdateStore((s) => s.openModalWithCheck)
+  const startTour = useTourStore((s) => s.start)
 
   const [capturing, setCapturing] = useState(false)
   const [pendingHotkey, setPendingHotkey] = useState('')
@@ -387,6 +390,9 @@ export default function SettingsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" onClick={() => void checkForUpdates()}>
                 <RefreshCw /> 检查更新
+              </Button>
+              <Button size="sm" variant="ghost" onClick={startTour}>
+                <Compass /> 重新查看新手引导
               </Button>
               <Button
                 variant="ghost"

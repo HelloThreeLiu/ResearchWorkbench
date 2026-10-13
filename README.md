@@ -127,6 +127,7 @@ npm run dist       # 打包 Windows 安装包（release/，NSIS + 便携 zip）
 
 - [PRD.md](docs/prd/PRD.md) —— 完整产品需求文档（功能需求、验收标准、数据模型、决策记录）
 - [PRD-V2.4-V2.6.md](docs/prd/PRD-V2.4-V2.6.md) —— 新阶段演进 PRD（回顾统计 / 文献线索层 / 会议纪要 / 写作度量；V2.4–V2.6 已交付，V2.6 随 v2.7.0 发布）
+- [PRD-V2.8-ONBOARDING-TOUR.md](docs/prd/PRD-V2.8-ONBOARDING-TOUR.md) —— 新手引导 PRD（聚光分步引导 / 仅新用户触发 / 设置页重看；决策 D24–D28）
 - [design/V3-DESIGN-SPEC.md](design/V3-DESIGN-SPEC.md) —— V3 界面设计规范（设计令牌 / 字号 / 布局骨架 / 组件 / 页面级规则），后续所有界面开发依据
 - [design/prototypes/](design/prototypes/) —— 界面主题与布局设计原型
 - [WORKFLOW.md](WORKFLOW.md) —— 研发工作流程规范（需求 → 分析 → 开发 → 测试 → 审查 → 提交 → 发布，含规模分级与门禁矩阵）
