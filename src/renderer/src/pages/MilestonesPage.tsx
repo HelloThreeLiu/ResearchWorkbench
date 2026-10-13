@@ -52,7 +52,7 @@ export default function MilestonesPage() {
     <div className="page page-mid">
       <PageHeader
         title="时间节点"
-        sub="开题、投稿截止、会议、中期检查、答辩等重要日期；进入提醒窗口的节点会出现在今日概览"
+        sub="开题、投稿截止、会议、中期检查、答辩等重要日期；未来 30 天内的节点会出现在今日概览倒计时（按临近程度红黄分级）"
         actions={
           <Button variant="primary" onClick={() => setCreateOpen(true)}>
             <Plus /> 新建节点
