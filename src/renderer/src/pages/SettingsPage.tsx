@@ -72,7 +72,10 @@ function ReportTemplateEditor() {
           variant="primary"
           disabled={!dirty}
           onClick={async () => {
-            await updateSettings({ reportTemplate: text })
+            // 空模板会让周报静默生成为空内容：保存空值时回退默认模板
+            const toSave = text.trim() === '' ? DEFAULT_REPORT_TEMPLATE : text
+            await updateSettings({ reportTemplate: toSave })
+            setText(toSave)
             setSavedFlash(true)
             setTimeout(() => setSavedFlash(false), 2000)
           }}
@@ -86,7 +89,7 @@ function ReportTemplateEditor() {
         >
           <RotateCcw /> 恢复默认
         </Button>
-        {savedFlash && <span className="text-[11.5px] text-success">已保存，下次生成报告生效</span>}
+        {savedFlash && <span className="text-[11.5px] text-success">已保存，下次生成报告生效（空内容将回退默认模板）</span>}
       </div>
     </div>
   )

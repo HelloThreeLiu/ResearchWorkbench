@@ -360,9 +360,13 @@ export const LEGACY_DEFAULT_REPORT_TEMPLATE = `# {{TITLE}}（{{PERIOD}}）
 {{THOUGHTS}}
 `
 
-/** 模板兼容解析（PRD 5.6.3 旧用户自定义模板不变）：与旧默认逐字符相等视为未自定义 → 换用新默认；自定义过则原样保留 */
+/**
+ * 模板兼容解析（PRD 5.6.3 旧用户自定义模板不变）：与旧默认逐字符相等视为未自定义 → 换用新默认；
+ * 空串同样视为未自定义（空模板会让周报静默生成为空内容）；其余自定义内容原样保留。
+ */
 export function resolveReportTemplate(tpl: string): string {
-  return tpl === LEGACY_DEFAULT_REPORT_TEMPLATE ? DEFAULT_REPORT_TEMPLATE : tpl
+  if (tpl === '' || tpl === LEGACY_DEFAULT_REPORT_TEMPLATE) return DEFAULT_REPORT_TEMPLATE
+  return tpl
 }
 
 // 数据集合名 → 文件名（projects.json / tasks.json / ...）
