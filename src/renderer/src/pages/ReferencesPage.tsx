@@ -153,13 +153,17 @@ export default function ReferencesPage() {
     )
     setTimeout(() => setCopyMsg(''), 2500)
   }
+  const flashCopyFailed = (): void => {
+    setCopyMsg('复制失败，请重试')
+    setTimeout(() => setCopyMsg(''), 2500)
+  }
 
   const copyOne = async (ref: Reference, kind: 'gb' | 'bibtex' | 'apa'): Promise<void> => {
     // 单条复制为裸引用（[1][2] 编号仅批量复制时生成）
     const text =
       kind === 'gb' ? formatGB7714(ref) : kind === 'bibtex' ? formatBibTeX(ref) : formatAPA(ref)
-    await copyText(text)
-    flashCopied(kind)
+    if (await copyText(text)) flashCopied(kind)
+    else flashCopyFailed()
   }
 
   /** 批量复制：选中项按当前列表顺序生成（GB/T 带 [1][2] 编号，其余空行分隔） */
@@ -168,8 +172,8 @@ export default function ReferencesPage() {
     if (refs.length === 0) return
     const text =
       kind === 'gb' ? formatGB7714Block(refs) : kind === 'bibtex' ? formatBibTeXBlock(refs) : formatAPABlock(refs)
-    await copyText(text)
-    flashCopied(kind)
+    if (await copyText(text)) flashCopied(kind)
+    else flashCopyFailed()
   }
 
   const toggleSelected = (id: string, checked: boolean): void => {
@@ -334,7 +338,7 @@ export default function ReferencesPage() {
       )}
 
       {/* 复制反馈（行内 toast，提示格式名） */}
-      {copyMsg && <div className="mt-2 text-[12px] text-success">{copyMsg}</div>}
+      {copyMsg && <div className={`mt-2 text-[12px] ${copyMsg.includes('失败') ? 'text-danger' : 'text-success'}`}>{copyMsg}</div>}
 
       {references.length === 0 ? (
         <EmptyState

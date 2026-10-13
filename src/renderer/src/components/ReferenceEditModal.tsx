@@ -57,7 +57,7 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
   const [tags, setTags] = useState<string[]>([])
   const [pdfPath, setPdfPath] = useState('')
   const [note, setNote] = useState('')
-  const [copyMsg, setCopyMsg] = useState(false)
+  const [copyMsg, setCopyMsg] = useState('')
 
   const defaultsRef = useRef(reference)
   defaultsRef.current = reference
@@ -81,7 +81,7 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
     setTags(r?.tags ?? [])
     setPdfPath(r?.pdf_path ?? '')
     setNote(r?.note ?? '')
-    setCopyMsg(false)
+    setCopyMsg('')
   }, [open])
 
   const submit = (): void => {
@@ -145,9 +145,9 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
 
   const doCopy = async (kind: 'gb' | 'bibtex' | 'apa'): Promise<void> => {
     if (!reference) return
-    await copyText(kind === 'gb' ? formatGB7714(reference) : kind === 'bibtex' ? formatBibTeX(reference) : formatAPA(reference))
-    setCopyMsg(true)
-    setTimeout(() => setCopyMsg(false), 2500)
+    const ok = await copyText(kind === 'gb' ? formatGB7714(reference) : kind === 'bibtex' ? formatBibTeX(reference) : formatAPA(reference))
+    setCopyMsg(ok ? '已复制引用' : '复制失败，请重试')
+    setTimeout(() => setCopyMsg(''), 2500)
   }
 
   const currentReference = reference // 「已引用于」与复制仅编辑已有条目时可用（新建保存后再用）
@@ -274,7 +274,7 @@ export default function ReferenceEditModal({ open, onClose, reference }: Referen
           </Button>
           {currentReference && (
             <div className="ml-auto flex items-center gap-2">
-              {copyMsg && <span className="text-[11.5px] text-success">已复制引用</span>}
+              {copyMsg && <span className={`text-[11.5px] ${copyMsg.includes('失败') ? 'text-danger' : 'text-success'}`}>{copyMsg}</span>}
               <Button size="sm" onClick={() => doCopy('gb')}>
                 GB/T
               </Button>

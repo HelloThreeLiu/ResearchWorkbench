@@ -120,6 +120,7 @@ export default function PaperEditModal({ open, onClose, paper }: PaperEditModalP
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && title.trim() && submit()}
             placeholder="论文标题"
           />
         </Field>
