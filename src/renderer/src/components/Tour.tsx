@@ -111,8 +111,14 @@ function TourOverlay() {
   }, [])
 
   // 窗口尺寸变化：高亮框跟随目标元素
+  const [resizeTick, setResizeTick] = useState(0)
   useEffect(() => {
-    const onResize = (): void => setBox(targetBox(TOUR_STEPS[index].selector))
+    const onResize = (): void => {
+      setBox(targetBox(TOUR_STEPS[index].selector))
+      // 居中步骤的 box 恒为 null，React 状态 bail-out 不会触发下方定位 effect，
+      // 用 tick 强制重算，保证大幅缩窗后气泡仍在视口内（审查 N-1）
+      setResizeTick((t) => t + 1)
+    }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [index])
@@ -122,7 +128,7 @@ function TourOverlay() {
     const el = bubbleRef.current
     if (!el) return
     setPos(bubblePosition(box, el.offsetHeight))
-  }, [box])
+  }, [box, resizeTick])
 
   return (
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="新手引导">
