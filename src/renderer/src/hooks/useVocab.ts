@@ -60,14 +60,23 @@ export function useLogTemplates(): Array<{ id: string; name: string; builtin: bo
 
 export function useMilestoneTypeLabel(): (type: string) => string {
   const types = useMilestoneTypes()
-  return (type: string): string =>
-    types.find((t) => t.id === type)?.name ?? MILESTONE_TYPE_LABELS[type] ?? type
+  return (type: string): string => {
+    const found = types.find((t) => t.id === type)
+    if (found) return found.name
+    if (MILESTONE_TYPE_LABELS[type]) return MILESTONE_TYPE_LABELS[type]
+    // 词汇库被外部编辑删掉被引用的自定义类型时，按 PRD 6.11.3 语义回退显示「其他」
+    return types.find((t) => t.id === 'other')?.name ?? '其他'
+  }
 }
 
 export function useAchievementTypeLabel(): (type: string) => string {
   const types = useAchievementTypes()
-  return (type: string): string =>
-    types.find((t) => t.id === type)?.name ?? ACHIEVEMENT_TYPE_LABELS[type] ?? type
+  return (type: string): string => {
+    const found = types.find((t) => t.id === type)
+    if (found) return found.name
+    if (ACHIEVEMENT_TYPE_LABELS[type]) return ACHIEVEMENT_TYPE_LABELS[type]
+    return types.find((t) => t.id === 'other')?.name ?? '其他'
+  }
 }
 
 /** 标签全集：词库标签在前，数据中未入库的标签补充在后 */

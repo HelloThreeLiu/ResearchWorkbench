@@ -36,9 +36,12 @@ export interface ReportSource {
   sessions: WritingSession[] // V2.6 {{WRITING}} 数据源
 }
 
-/** 成果类型展示名：词汇库优先，内置兜底，最后回退原始 id */
+/** 成果类型展示名：词汇库优先，内置兜底；未知 id（词汇库被外部删除的类型）回退「其他」 */
 function achievementLabel(type: string, types: VocabTypeDef[]): string {
-  return types.find((t) => t.id === type)?.name ?? ACHIEVEMENT_TYPE_LABELS[type] ?? type
+  const found = types.find((t) => t.id === type)
+  if (found) return found.name
+  if (ACHIEVEMENT_TYPE_LABELS[type]) return ACHIEVEMENT_TYPE_LABELS[type]
+  return types.find((t) => t.id === 'other')?.name ?? '其他'
 }
 
 export interface Period {
