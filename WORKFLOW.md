@@ -40,7 +40,7 @@
 
 **分类标签**（后续提交 type 与之一致）：`feat` / `fix` / `refactor` / `perf` / `test` / `docs` / `chore`。
 
-**登记位置**：L 级新功能写入 [PRD-V2.4-V2.6.md](PRD-V2.4-V2.6.md) 或新建 PRD 小节（含决策记录）；缺陷与 M 级需求在对话中登记即可，但**必须进入「本批待办」清单**，不允许只存在于记忆里。
+**登记位置**：L 级新功能写入 [PRD-V2.4-V2.6.md](docs/prd/PRD-V2.4-V2.6.md) 或新建 PRD 小节（含决策记录）；缺陷与 M 级需求在对话中登记即可，但**必须进入「本批待办」清单**，不允许只存在于记忆里。
 
 ---
 
@@ -48,7 +48,7 @@
 
 进入开发前必须达成方案共识。**检查清单**（逐项过，不适用则注明「不涉及」）：
 
-- [ ] **与 PRD 一致**：与 [PRD.md](PRD.md) / PRD-V2.4-V2.6.md 的现有决策冲突？冲突则先补决策记录、再开发；
+- [ ] **与 PRD 一致**：与 [PRD.md](docs/prd/PRD.md) / PRD-V2.4-V2.6.md 的现有决策冲突？冲突则先补决策记录、再开发；
 - [ ] **与设计规范一致**：UI 改动必须对照 [design/V3-DESIGN-SPEC.md](design/V3-DESIGN-SPEC.md)（7 档字号 / 8pt 网格 / 圆角 token / 组件规则）；改原型则同步 `design/prototypes/` 并跑 `node scripts/check-prototype.cjs`；
 - [ ] **数据结构影响**：新增字段 / 文件？→ 新字段必须**可选 + 校验向后兼容**（参照 vocabShape 模式：旧版数据缺后加字段不得误报不合法），评估是否需要 schema 版本号推进；
 - [ ] **安全边界影响**：是否新增 IPC handler、导航目标、网络请求？→ 必须沿用主进程四层防护（沙箱隔离 / 导航白名单 / IPC 来源与入参校验 / SSRF 防护），禁止旁路；
@@ -201,7 +201,7 @@ npm audit --omit=dev     # 生产依赖漏洞必须为 0，出现即红灯
 - [ ] 产物上传：本地网络不稳时用 **Actions「Attach release assets」**（填 tag 触发，云端构建并上传 `exe / exe.blockmap / zip / latest.yml`，随后自动同步 CNB 国内镜像，同步自检失败即红灯）；
 - [ ] 发布后验证：从 Release 下载安装；旧版本应用内「检查更新」能看到新版本并完成静默更新；
 - [ ] CNB 镜像验证：抽查 `https://cnb.cool/HelloThreeLiu/researchworkbench-release/-/releases/latest/download/latest.yml` 匿名可访问且指向新版本（应用内检查更新应命中 CNB 源，弹窗含「国内高速下载」入口）；
-- [ ] 更新 [PRD-V2.4-V2.6.md](PRD-V2.4-V2.6.md) 交付状态标注。
+- [ ] 更新 [PRD-V2.4-V2.6.md](docs/prd/PRD-V2.4-V2.6.md) 交付状态标注。
 
 **回滚预案**：Release 资产可覆盖重传（`gh release upload --clobber`）；发现重大缺陷 → 立即发 patch 版本并让 `latest.yml` 指向修正版；数据结构出问题 → 停止推广新版本，优先保用户数据可回退加载。
 
