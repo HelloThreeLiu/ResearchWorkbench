@@ -22,3 +22,8 @@ export function resolveInitialTourVersion(fileExists: boolean, parsed: { tourVer
   }
   return TOUR_VERSION
 }
+
+/** 是否需要自动弹新手引导（进主界面时调用；tourVersion 缺省按未读处理） */
+export function shouldShowTour(settings: { tourVersion?: number }): boolean {
+  return (settings.tourVersion ?? 0) < TOUR_VERSION
+}
