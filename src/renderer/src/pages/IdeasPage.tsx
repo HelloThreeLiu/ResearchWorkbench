@@ -1,6 +1,6 @@
 // 灵感页（V3 §5.8）：左缘状态色条卡片；搜索 + 状态 Chips + 项目/标签筛选；一键转任务
 import { useMemo, useState } from 'react'
-import { Check, Lightbulb, ListPlus, Search, Trash2 } from 'lucide-react'
+import { Check, Lightbulb, Link2, ListPlus, Search, Trash2 } from 'lucide-react'
 import type { Idea, IdeaStatus } from '@shared/types'
 import { IDEA_STATUS_LABELS } from '@shared/types'
 import { useStore } from '@/store'
@@ -39,6 +39,7 @@ export default function IdeasPage() {
   const ideas = useStore((s) => s.ideas)
   const hotkey = useStore((s) => s.settings.hotkey)
   const projects = useStore((s) => s.projects)
+  const tasks = useStore((s) => s.tasks)
   const addTask = useStore((s) => s.addTask)
   const updateIdea = useStore((s) => s.updateIdea)
   const deleteIdea = useStore((s) => s.deleteIdea)
@@ -160,6 +161,9 @@ export default function IdeasPage() {
         <div className="mt-4 flex flex-col gap-3">
           {filtered.map((idea) => {
             const project = idea.project_id ? projectMap.get(idea.project_id) : undefined
+            const convertedTask = idea.converted_task_id
+              ? tasks.find((t) => t.id === idea.converted_task_id)
+              : undefined
             return (
               <div
                 key={idea.id}
@@ -217,6 +221,16 @@ export default function IdeasPage() {
                 <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-dashed border-border pt-2 text-[11.5px] text-text-3">
                   <Badge color={STATUS_BADGE[idea.status]}>{IDEA_STATUS_LABELS[idea.status]}</Badge>
                   <span>{friendlyDateTime(idea.created_at)}</span>
+                  {idea.status === 'converted' && convertedTask && (
+                    <button
+                      className="flex items-center gap-1 hover:text-accent cursor-pointer"
+                      title={`已转任务：${convertedTask.title}`}
+                      onClick={() => navigate({ name: 'tasks' })}
+                    >
+                      <Link2 size={12} />
+                      已转任务
+                    </button>
+                  )}
                   {project && (
                     <button
                       className="flex items-center gap-1.5 hover:text-accent cursor-pointer"

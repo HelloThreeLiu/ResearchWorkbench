@@ -12,6 +12,7 @@ import {
 import type { Milestone } from '@shared/types'
 import { useStore } from '@/store'
 import { useNav } from '@/nav'
+import { useCaptureStore } from '@/captureStore'
 import { useMilestoneTypeLabel } from '@/hooks/useVocab'
 import { Badge, Button, CheckBox, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import TaskRow from '@/components/TaskRow'
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const lastWriteAt = useStore((s) => s.lastWriteAt)
   const dataDir = useStore((s) => s.dataDir)
   const navigate = useNav((s) => s.navigate)
+  const showQuickCapture = useCaptureStore((s) => s.show)
 
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [editTaskId, setEditTaskId] = useState<string | null>(null)
@@ -140,6 +142,9 @@ export default function Dashboard() {
         }
         actions={
           <>
+            <Button onClick={() => showQuickCapture()}>
+              <Lightbulb /> 新建灵感
+            </Button>
             <Button onClick={() => setMilestoneModalOpen(true)}>
               <CalendarPlus /> 新建节点
             </Button>
