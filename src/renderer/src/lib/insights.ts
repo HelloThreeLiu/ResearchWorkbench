@@ -26,6 +26,19 @@ export interface InsightsSource {
   sessions: WritingSession[] // V2.6 写作口径
 }
 
+/**
+ * 回顾页任务级统计使用的任务集：排除「已归档」项目的任务（PRD 6.2.4 归档不参与默认统计）；
+ * 「已完成」项目保留——工作确实发生过。周报/月报不在此列（记录事实，含归档）。
+ */
+function tasksExcludingArchived(source: InsightsSource): Task[] {
+  const archived = new Set(
+    source.projects.filter((p) => p.status === 'archived').map((p) => p.id)
+  )
+  return archived.size === 0
+    ? source.tasks
+    : source.tasks.filter((t) => !t.project_id || !archived.has(t.project_id))
+}
+
 // ---------- 概览统计卡 ----------
 
 export interface OverviewStats {
@@ -39,8 +52,9 @@ export interface OverviewStats {
 
 export function overviewStats(source: InsightsSource, year: number): OverviewStats {
   const y = String(year)
+  const tasks = tasksExcludingArchived(source)
   return {
-    tasksDoneThisYear: source.tasks.filter(
+    tasksDoneThisYear: tasks.filter(
       (t) => t.completed_at && t.completed_at.slice(0, 4) === y
     ).length,
     activeProjects: source.projects.filter((p) => p.status === 'active').length,
@@ -71,7 +85,7 @@ export function activityByDay(source: InsightsSource): Map<string, DayActivity> 
     }
     return d
   }
-  for (const t of source.tasks) {
+  for (const t of tasksExcludingArchived(source)) {
     if (t.completed_at) get(t.completed_at.slice(0, 10)).tasks += 1
   }
   for (const l of source.logs) get(l.date).logs += 1
@@ -198,12 +212,13 @@ export const MISC_COLOR = 'var(--color-text-3)'
 
 export function projectInvestment(source: InsightsSource, months = 6): MonthInvestment[] {
   const today = dayjs()
+  const tasks = tasksExcludingArchived(source)
   const result: MonthInvestment[] = []
   for (let i = months - 1; i >= 0; i--) {
     const m = today.subtract(i, 'month')
     const key = m.format('YYYY-MM')
     const counts = new Map<string | null, number>()
-    for (const t of source.tasks) {
+    for (const t of tasks) {
       if (t.completed_at && t.completed_at.slice(0, 7) === key) {
         counts.set(t.project_id, (counts.get(t.project_id) ?? 0) + 1)
       }
@@ -240,7 +255,9 @@ export interface YearlyStats {
 export function yearlyStats(source: InsightsSource, year: number): YearlyStats {
   const y = String(year)
   return {
-    doneTasks: source.tasks.filter((t) => t.completed_at && t.completed_at.slice(0, 4) === y).length,
+    doneTasks: tasksExcludingArchived(source).filter(
+      (t) => t.completed_at && t.completed_at.slice(0, 4) === y
+    ).length,
     logs: source.logs.filter((l) => l.date.slice(0, 4) === y).length,
     doneMilestones: source.milestones.filter(
       (m) => m.status === 'done' && m.date.slice(0, 4) === y

@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   ChevronRight,
+  Columns2,
   Copy,
   FileDown,
   FileText,
@@ -19,10 +20,12 @@ import { useStore } from '@/store'
 import {
   Badge,
   Button,
+  CheckBox,
   ConfirmDialog,
   EmptyState,
   IconButton,
   Input,
+  Modal,
   PageHeader,
   Textarea
 } from '@/components/ui'
@@ -61,6 +64,16 @@ export default function ReportsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Report | null>(null)
   const [exportMsg, setExportMsg] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
+  // 历史报告并排对比（PRD 6.10.1-4）：勾选至多两份，只读对照
+  const [compareIds, setCompareIds] = useState<string[]>([])
+  const [compareOpen, setCompareOpen] = useState(false)
+
+  const toggleCompare = (id: string, checked: boolean): void => {
+    setCompareIds((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev.slice(-1), id]
+      return prev.filter((x) => x !== id)
+    })
+  }
 
   // 自定义时间段（工作总结）
   const [customStart, setCustomStart] = useState(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
@@ -294,6 +307,11 @@ export default function ReportsPage() {
         <FileText size={15} className="text-accent" />
         <h2 className="text-[15px] font-semibold">历史报告</h2>
         <span className="text-[11.5px] text-text-3">{reports.length}</span>
+        {compareIds.length === 2 && (
+          <Button size="sm" variant="soft" className="ml-1.5" onClick={() => setCompareOpen(true)}>
+            <Columns2 size={13} /> 并排对比所选两期
+          </Button>
+        )}
       </div>
       {reports.length === 0 ? (
         <EmptyState
@@ -305,6 +323,11 @@ export default function ReportsPage() {
         <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
           {reports.map((r) => (
             <div key={r.id} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4.5 py-3.5 hover:bg-surface-2/40">
+              <CheckBox
+                checked={compareIds.includes(r.id)}
+                onChange={(v) => toggleCompare(r.id, v)}
+                title="勾选两份报告可并排对比"
+              />
               <button
                 className="min-w-0 flex-1 text-left"
                 onClick={() =>
@@ -333,8 +356,8 @@ export default function ReportsPage() {
                 <IconButton
                   title="复制全文"
                   onClick={async () => {
-                    await copyText(r.content)
-                    setExportMsg('已复制到剪贴板')
+                    const ok = await copyText(r.content)
+                    setExportMsg(ok ? '已复制到剪贴板' : '复制失败，请重试')
                     setTimeout(() => setExportMsg(null), 2500)
                   }}
                 >
@@ -366,6 +389,33 @@ export default function ReportsPage() {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* 两期报告并排对比（只读） */}
+      <Modal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        title="报告并排对比（只读）"
+        width="max-w-5xl"
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {compareIds
+            .map((id) => reports.find((r) => r.id === id))
+            .filter((r): r is Report => r !== undefined)
+            .map((r) => (
+              <div key={r.id} className="flex min-w-0 flex-col rounded-xl border border-border">
+                <div className="border-b border-border px-3 py-2">
+                  <div className="truncate text-[13px] font-medium">{r.title}</div>
+                  <div className="mt-0.5 text-[11px] text-text-3">
+                    {r.period_start} ~ {r.period_end} · 生成于 {friendlyDateTime(r.generated_at)}
+                  </div>
+                </div>
+                <pre className="max-h-[60vh] overflow-auto px-3 py-2.5 font-mono text-[12px] leading-relaxed whitespace-pre-wrap">
+                  {r.content}
+                </pre>
+              </div>
+            ))}
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -202,8 +202,7 @@ function TypesPanel({ kind }: { kind: 'milestone' | 'achievement' }) {
   return (
     <div>
       <p className="text-[11.5px] leading-relaxed text-text-3">
-        内置类型可改名、不可删除；自定义类型被{entityLabel}引用时无法删除（显示引用数），删除后对应
-        {entityLabel}回退为「其他」。
+        内置类型可改名、不可删除；自定义类型被{entityLabel}引用时无法删除（显示引用数），未被引用时可删除。
       </p>
       <div className="mt-3 flex gap-2">
         <Input
@@ -285,7 +284,7 @@ function TypesPanel({ kind }: { kind: 'milestone' | 'achievement' }) {
                       t.builtin
                         ? '内置类型不可删除'
                         : deletable
-                          ? `删除（${entityLabel}回退为「其他」）`
+                          ? '删除'
                           : `有${entityLabel}引用，不可删除`
                     }
                     disabled={!deletable}

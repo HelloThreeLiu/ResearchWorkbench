@@ -31,7 +31,7 @@ export default function AchievementsPage() {
   const [editTarget, setEditTarget] = useState<Achievement | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Achievement | null>(null)
-  const [copyMsg, setCopyMsg] = useState(false)
+  const [copyMsg, setCopyMsg] = useState('')
 
   const filtered = useMemo(
     () =>
@@ -43,10 +43,11 @@ export default function AchievementsPage() {
 
   const typeCount = (typeId: string): number => achievements.filter((a) => a.type === typeId).length
 
+  // 复制跟随当前筛选结果（未筛选时为全部）
   const doCopy = async (): Promise<void> => {
-    await copyText(achievementsToPlainText(achievements, projects, useStore.getState().vocab.achievementTypes))
-    setCopyMsg(true)
-    setTimeout(() => setCopyMsg(false), 2500)
+    const ok = await copyText(achievementsToPlainText(filtered, projects, useStore.getState().vocab.achievementTypes))
+    setCopyMsg(ok ? `已复制 ${filtered.length} 项到剪贴板（当前筛选结果）` : '复制失败，请重试')
+    setTimeout(() => setCopyMsg(''), 2500)
   }
 
   return (
@@ -73,8 +74,8 @@ export default function AchievementsPage() {
         </div>
       )}
       {copyMsg && (
-        <div className="mt-2 text-[12px] text-success">
-          已复制 {achievements.length} 项到剪贴板（可直接粘贴进简历/年终总结）
+        <div className={`mt-2 text-[12px] ${copyMsg.includes('失败') ? 'text-danger' : 'text-success'}`}>
+          {copyMsg}
         </div>
       )}
 
@@ -213,7 +214,13 @@ function AchievementEditModal({
           </Field>
         </div>
         <Field label="名称（必填）">
-          <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="成果名称" />
+          <Input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && title.trim() && submit()}
+            placeholder="成果名称"
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="级别" hint="如 CCF-A / SCI 一区 / 校级">

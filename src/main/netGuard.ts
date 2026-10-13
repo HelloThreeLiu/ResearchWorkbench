@@ -120,3 +120,42 @@ export async function safeFetch(rawUrl: string, timeoutMs = 5000): Promise<Respo
   }
   return resp
 }
+
+/**
+ * 流式读取响应体，最多读取 maxBytes 字节即取消下载：
+ * 防止超大 body 全量读入（内存尖峰）与慢速发送无限挂起（safeFetch 的超时只覆盖响应头到达）。
+ * truncated=true 表示实际内容超过 maxBytes（已截断）。
+ */
+export async function readBodyLimited(
+  resp: Response,
+  maxBytes: number,
+  timeoutMs = 5000
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  const reader = resp.body?.getReader()
+  if (!reader) {
+    const buf = Buffer.from(await resp.arrayBuffer())
+    return { bytes: buf.subarray(0, maxBytes), truncated: buf.length > maxBytes }
+  }
+  const chunks: Buffer[] = []
+  let received = 0
+  let truncated = false
+  const timer = setTimeout(() => void reader.cancel().catch(() => {}), timeoutMs)
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (received + value.length > maxBytes) {
+        chunks.push(Buffer.from(value.buffer, value.byteOffset, maxBytes - received))
+        received = maxBytes
+        truncated = true
+        void reader.cancel().catch(() => {})
+        break
+      }
+      chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength))
+      received += value.length
+    }
+  } finally {
+    clearTimeout(timer)
+  }
+  return { bytes: Buffer.concat(chunks, received), truncated }
+}
