@@ -28,7 +28,7 @@ import {
 import { exportToFile, markdownToDocx } from './exporter'
 import { parseReferencesFile } from './importer'
 import { isValidAccelerator, setQuickCaptureShortcut } from './shortcuts'
-import { safeFetch } from './netGuard'
+import { safeFetch, readBodyLimited } from './netGuard'
 import { checkForUpdates, quitAndInstallNow, startDownloadUpdate } from './updater'
 
 const COLLECTION_WHITELIST = new Set<string>(Object.keys(COLLECTION_FILES))
@@ -187,6 +187,20 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
   handle('settings:update', async (_e, patch: unknown): Promise<AppSettings> => {
     if (typeof patch !== 'object' || patch === null) throw new Error('非法设置项')
     const p = patch as Partial<AppSettings>
+    // 键名白名单：只接受已知设置键（纵深防御，防渲染层写入任意键值）
+    const allowedKeys = new Set([
+      'dataDir',
+      'theme',
+      'styleTheme',
+      'hotkey',
+      'closeToTray',
+      'lastBackupDate',
+      'reportTemplate',
+      'tourVersion'
+    ])
+    for (const key of Object.keys(p)) {
+      if (!allowedKeys.has(key)) throw new Error(`未知设置项: ${key}`)
+    }
     if (p.hotkey !== undefined) {
       // 双层校验：不允许无修饰键的字母/数字成为全局热键（会跨应用抢占输入）
       if (!isValidAccelerator(p.hotkey)) throw new Error(`非法快捷键: ${String(p.hotkey)}`)
@@ -282,7 +296,9 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
     try {
       const resp = await safeFetch(url)
       if (!resp || !resp.ok) return { title: null }
-      const html = (await resp.text()).slice(0, 200_000)
+      // 流式限长读取（200KB 足够覆盖 <head>）：防超大/慢速 body 全量读入
+      const { bytes } = await readBodyLimited(resp, 200_000)
+      const html = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
       const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i)
       if (!titleMatch) return { title: null }
       try {
@@ -304,9 +320,10 @@ export function registerIpcHandlers(getMainWindow: () => Electron.BrowserWindow 
       if (!resp || !resp.ok) return null
       const type = (resp.headers.get('content-type') ?? '').split(';')[0].trim()
       if (!type.startsWith('image/')) return null
-      const buf = Buffer.from(await resp.arrayBuffer())
-      if (buf.length === 0 || buf.length > 256 * 1024) return null
-      return `data:${type};base64,${buf.toString('base64')}`
+      // 流式限长：读到 256KB+1 即可判定超限，超限整份拒绝（不把超大文件读进内存再扔掉）
+      const { bytes } = await readBodyLimited(resp, 256 * 1024 + 1)
+      if (bytes.length === 0 || bytes.length > 256 * 1024) return null
+      return `data:${type};base64,${Buffer.from(bytes).toString('base64')}`
     } catch {
       return null
     }
