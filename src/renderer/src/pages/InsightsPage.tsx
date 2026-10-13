@@ -60,7 +60,7 @@ export default function InsightsPage() {
 
   const today = todayStr()
   const [year, setYear] = useState<string>(String(dayjs().year()))
-  const [copyMsg, setCopyMsg] = useState(false)
+  const [copyMsg, setCopyMsg] = useState('')
 
   const source: InsightsSource = useMemo(
     () => ({ projects, tasks, milestones, ideas, logs, papers, achievements, sessions }),
@@ -110,9 +110,9 @@ export default function InsightsPage() {
   const yd = useMemo(() => yearlyStats(source, selectedYear), [source, selectedYear])
 
   const doCopy = async (): Promise<void> => {
-    await copyText(yearSummaryPlainText(selectedYear, yd, source, achievementTypes))
-    setCopyMsg(true)
-    setTimeout(() => setCopyMsg(false), 2500)
+    const ok = await copyText(yearSummaryPlainText(selectedYear, yd, source, achievementTypes))
+    setCopyMsg(ok ? '已复制年度总结' : '复制失败，请重试')
+    setTimeout(() => setCopyMsg(''), 2500)
   }
 
   return (
@@ -127,7 +127,7 @@ export default function InsightsPage() {
         <StatCard
           label="本年完成任务"
           value={ov.tasksDoneThisYear}
-          hint="口径：1 月 1 日至今"
+          hint="口径：1 月 1 日至今 · 不含已归档项目"
           icon={<CheckCircle2 />}
           onClick={() => navigate({ name: 'tasks' })}
         />
@@ -371,7 +371,7 @@ export default function InsightsPage() {
             年度回顾
           </h2>
           <div className="flex items-center gap-2">
-            {copyMsg && <span className="text-[12px] text-success">已复制年度总结</span>}
+            {copyMsg && <span className={`text-[12px] ${copyMsg.includes('失败') ? 'text-danger' : 'text-success'}`}>{copyMsg}</span>}
             <Select
               value={String(selectedYear)}
               onChange={(e) => setYear(e.target.value)}
